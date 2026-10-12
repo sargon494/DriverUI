@@ -1,0 +1,60 @@
+name: Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Marcar como Pre-release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish-and-release:
+    runs-on: windows-latest
+    name: Package & Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify formatting and tests prior to packaging
+        run: |
+          dotnet format --verify-no-changes
+          dotnet test -c Release --verbosity normal
+
+      - name: Publish CLI
+        run: |
+          dotnet publish src/Cli/Cli.csproj -c Release -r win-x64 --no-self-contained -o dist/cli
+          Compress-Archive -Path dist/cli/* -DestinationPath dist/DriverUpdater-CLI-win-x64.zip
+
+      - name: Publish Agent Service
+        run: |
+          dotnet publish src/Agent.Service/Agent.Service.csproj -c Release -r win-x64 --no-self-contained -o dist/service
+          Compress-Archive -Path dist/service/* -DestinationPath dist/DriverUpdater-Service-win-x64.zip
+
+      - name: Publish WPF UI
+        run: |
+          dotnet publish src/Ui.Wpf/Ui.Wpf.csproj -c Release -r win-x64 --no-self-contained -o dist/ui
+          Compress-Archive -Path dist/ui/* -DestinationPath dist/DriverUpdater-UI-win-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/DriverUpdater-CLI-win-x64.zip
+            dist/DriverUpdater-Service-win-x64.zip
+            dist/DriverUpdater-UI-win-x64.zip
+          prerelease: ${{ inputs.prerelease || contains(github.ref, '-alpha') || contains(github.ref, '-beta') }}
+          generate_release_notes: true

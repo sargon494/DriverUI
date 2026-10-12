@@ -176,4 +176,25 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - Agregar comando `updates` a la CLI (`dotnet run --project src/Cli -- updates`).
 - **Hito 0 — Decisión go/no-go**: Evaluar la disponibilidad y riqueza de actualizaciones ofrecidas por Windows Update.
 
+---
+
+## Infraestructura CI/CD — GitHub Actions
+
+- **Fecha**: 2026-10-12
+- **Estado**: ✅ Configurado y validado
+- **Workflows añadidos**:
+  1. `.github/workflows/ci.yml`:
+     - Disparadores: `push` a ramas principales (`main`, `master`) y `pull_request`.
+     - Runner: `windows-latest`.
+     - Pasos: Setup .NET 10.0.x, `dotnet format --verify-no-changes`, `dotnet restore`, `dotnet build -c Release --no-restore` y `dotnet test -c Release --no-build` con reporte de cobertura `XPlat Code Coverage`.
+  2. `.github/workflows/release.yml`:
+     - Disparadores: Tags de versión `v*` (ej: `v1.0.0`) o ejecución manual vía `workflow_dispatch`.
+     - Runner: `windows-latest`.
+     - Pasos: Validación de formato y tests, publicación de paquetes win-x64 (`Cli`, `Agent.Service`, `Ui.Wpf`), compresión de artefactos `.zip` y creación automática de GitHub Release con `softprops/action-gh-release@v2`.
+- **Verificación local**:
+  - Compilación y pruebas validadas con 0 advertencias y 0 errores.
+  - Empaquetado y ejecución de artefactos publicado verificado con éxito (`dist/cli/Cli.exe`).
+  - `.gitignore` actualizado con exclusión de `dist/`.
+
+
 
