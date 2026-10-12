@@ -122,3 +122,58 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - Implementar el comando `scan` en `src/Cli` con tabla formateada por consola y logging con Serilog.
 - Verificar ejecución de `dotnet run --project src/Cli -- scan` en el equipo de desarrollo.
 
+---
+
+## Sprint 2 — Inventario de drivers con WMI (`Agent.Drivers`)
+
+- **Fecha**: 2026-10-12
+- **Estado**: ✅ Completado
+- **Hito**: Hito 0 (Inventario real en Windows)
+
+### Tareas completadas
+- [x] **S2-T1: `WmiDriverInventory`** (`src/Agent.Drivers/Inventory/WmiDriverInventory.cs`):
+  - Implementación completa de `IDriverInventory` sobre WMI (`Win32_PnPSignedDriver`).
+  - Mapeo de `DeviceID`, `DeviceName` (con fallback a `Description` y `Caption`), `Manufacturer`, `DriverVersion`, `InfName`, `DeviceClass`, `DriverDate` (usando `ManagementDateTimeConverter`) y `HardwareID`.
+  - Normalización de estados PnP a `DriverStatus` (Ok, Error, Degraded, Unknown).
+  - Consulta ejecutada en background thread (`Task.Run`) con soporte de `CancellationToken` y `ConfigureAwait(false)`.
+- [x] **S2-T2: Contenedor DI en `Agent.Drivers`** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - Extensión `AddDriverServices` para registrar `WmiDriverInventory` como singleton de `IDriverInventory`.
+- [x] **S2-T3: Comando `scan` en la CLI** (`src/Cli/Program.cs`):
+  - Comando `dotnet run --project src/Cli -- scan` mediante `System.CommandLine`.
+  - Muestra tabla formateada con columnas: Dispositivo, Fabricante, Versión, Fecha y Estado.
+  - Ordenado por clase de dispositivo y nombre.
+  - Temporizador de ejecución (`Stopwatch`).
+- [x] **S2-T4: Logging con Serilog**:
+  - Sink de archivo rotatorio diario en `logs/cli-.log` con formato invariante.
+  - Registro de inicio y finalización con conteo total de controladores detectados.
+- [x] **S2-T5: Tests de integración**:
+  - `tests/Agent.Drivers.Tests/WmiDriverInventoryTests.cs` con tests marcados como `[Trait("Category", "Integration")]`:
+    - Verifica recuperación de drivers reales con campos requeridos en Windows.
+    - Verifica propagación de `OperationCanceledException`.
+
+### Decisiones técnicas tomadas
+1. **System.CommandLine**:
+   - Se empleó `System.CommandLine 2.0.0-beta4.22272.1` por estabilidad de API con `SetHandler(async (context) => ...)`, pasando `context.GetCancellationToken()`.
+2. **Robustez ante campos opcionales de WMI**:
+   - `DriverDate` contempla fallos de formateo WMI intentando `DateTime.TryParse` antes de fallback a `DateTime.MinValue`.
+   - `DeviceName` utiliza encadenamiento coalescente de `DeviceName`, `Description` y `Caption` para evitar nombres vacíos.
+   - Colección de hardware IDs incluye tanto el `HardwareID` primario como el `DeviceID` para maximizar coincidencias con catálogos de actualización.
+
+### Pruebas ejecutadas
+- `dotnet run --project src/Cli -- scan`:
+  - **Resultado**: 185 controladores reales listados en la máquina en **1.50 segundos** (criterio: < 30 segundos).
+- `dotnet test -c Release`:
+  - **Resultado**: 42/42 tests pasados (39 unitarios en `Core.Tests`, 3 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`:
+  - **Resultado**: 0 discrepancias de estilo y formato.
+- Log verificado en `logs/cli-20261012.log`.
+
+### Notas para el siguiente sprint (Sprint 3)
+- El siguiente sprint es **Sprint 3 — Búsqueda de actualizaciones con WUA**.
+- Objetivo: Implementar `IUpdateSource` usando Windows Update Agent (`Microsoft.Update.Session` COM).
+- Criterio de búsqueda: `"IsInstalled=0 AND Type='Driver'"`.
+- Cruzar resultados con los drivers instalados usando `DriverMatcher` por hardware ID.
+- Agregar comando `updates` a la CLI (`dotnet run --project src/Cli -- updates`).
+- **Hito 0 — Decisión go/no-go**: Evaluar la disponibilidad y riqueza de actualizaciones ofrecidas por Windows Update.
+
+
