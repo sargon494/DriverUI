@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Agent.Drivers/Agent.Drivers.csproj" />
+    <Project Path="src/Agent.Service/Agent.Service.csproj" />
+    <Project Path="src/Cli/Cli.csproj" />
+    <Project Path="src/Core/Core.csproj" />
+    <Project Path="src/Ui.Wpf/Ui.Wpf.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Agent.Drivers.Tests/Agent.Drivers.Tests.csproj" />
+    <Project Path="tests/Core.Tests/Core.Tests.csproj" />
+  </Folder>
+</Solution>
