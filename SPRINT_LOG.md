@@ -196,5 +196,140 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
   - Empaquetado y ejecución de artefactos publicado verificado con éxito (`dist/cli/Cli.exe`).
   - `.gitignore` actualizado con exclusión de `dist/`.
 
+---
+
+## Sprint 3 — Búsqueda de actualizaciones con WUA (`Agent.Drivers`)
+
+- **Fecha**: 2026-10-13
+- **Estado**: ✅ Completado
+- **Hito**: Hito 0 (Búsqueda de actualizaciones via Windows Update)
+
+### Tareas completadas
+- [x] **S3-T1: `WuaUpdateSource`** (`src/Agent.Drivers/Updates/WuaUpdateSource.cs`):
+  - Implementación completa de `IUpdateSource` sobre Windows Update Agent (COM).
+  - Creación de `Microsoft.Update.Session` vía `Type.GetTypeFromProgID` + `Activator.CreateInstance`.
+  - Criterio de búsqueda: `"IsInstalled=0 AND Type='Driver'"`.
+  - Mapeo de propiedades COM: `UpdateID`, `Title`, `Description`, `MaxDownloadSize`, `IsMandatory`, `LastDeploymentChangeTime`, `DriverHardwareID`.
+  - Extracción de versión del título WUA mediante parsing de segmentos `"Fabricante - Categoría - Versión"` con fallback a tokens sueltos, validados con `VersionComparer.IsValid()`.
+  - Cruce de hardware IDs con el inventario instalado para obtener `CurrentVersion` y `DeviceName`.
+  - Búsqueda COM ejecutada en background thread (`Task.Run`) con soporte de `CancellationToken`.
+  - Liberación correcta de objetos COM con `Marshal.ReleaseComObject` en bloques `finally`.
+  - Manejo de `COMException` y `RuntimeBinderException` para actualizaciones sin `IWindowsDriverUpdate`.
+- [x] **S3-T2: Registro en DI** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - `WuaUpdateSource` registrado como singleton de `IUpdateSource`.
+- [x] **S3-T3: Comando `updates` en la CLI** (`src/Cli/Program.cs`):
+  - Comando `dotnet run --project src/Cli -- updates`.
+  - Flujo: escaneo de inventario → búsqueda WUA → tabla formateada con columnas: Dispositivo, Versión actual, Versión nueva, Tamaño y Título.
+  - Formato de tamaño humano (B, KB, MB).
+  - Mensaje verde de confirmación cuando no hay actualizaciones pendientes.
+- [x] **S3-T4: Tests** (`tests/Agent.Drivers.Tests/WuaUpdateSourceTests.cs`):
+  - Test de integración: `FindUpdatesAsync_Should_Return_Without_Throwing` — búsqueda real contra WUA con validación de campos requeridos.
+  - Test de integración: `FindUpdatesAsync_Should_Propagate_Cancellation` — verificación de cancelación.
+  - Test unitario: `FindUpdatesAsync_Should_Throw_When_InstalledDrivers_Is_Null`.
+  - 6 tests con `[Theory]` para `ExtractVersionFromTitle` con formatos estándar de WUA.
+  - 3 tests con `[Theory]` para entradas vacías/nulas.
+  - Tests de fallback y caso sin versión.
+- [x] **S3-T5: Configuración y calidad**:
+  - `InternalsVisibleTo` añadido a `Agent.Drivers.csproj` para permitir tests de métodos internos.
+  - `.editorconfig` corregido: regla de nombres separada para `const` (PascalCase) vs campos de instancia (`_camelCase`).
+
+### Decisiones técnicas tomadas
+1. **COM interop con `dynamic`**:
+   - Se usa `dynamic` en lugar de interop tipado porque WUA no tiene un assembly de interop oficial para .NET moderno. `dynamic` con `Type.GetTypeFromProgID` es la forma estándar y mantenida.
+2. **Extracción de versión del título**:
+   - Los títulos WUA de drivers siguen el patrón "Fabricante - Categoría - Versión". Se extrae iterando segmentos desde el final y validando con `VersionComparer.IsValid()`. Como fallback, se buscan tokens sueltos tipo versión.
+3. **Manejo de `RuntimeBinderException`**:
+   - Se añadió `Microsoft.CSharp.RuntimeBinder` para capturar la excepción cuando una actualización no implementa `IWindowsDriverUpdate` y no expone `DriverHardwareID`.
+4. **Convención de naming para constantes**:
+   - Se separó la regla de naming en `.editorconfig`: campos de instancia privados usan `_camelCase`, campos `const` usan `PascalCase`. Esto sigue las convenciones estándar de C#.
+
+### Pruebas ejecutadas
+- `dotnet run --project src/Cli -- updates`:
+  - **Resultado**: 1 actualización de driver real encontrada (Intel Extension 2.1.10103.18) en **6.31 segundos**.
+  - 185 controladores escaneados en el inventario.
+- `dotnet build -c Release`:
+  - **Resultado**: 7 proyectos compilados, 0 advertencias, 0 errores.
+- `dotnet test -c Release`:
+  - **Resultado**: 56/56 tests pasados (39 en `Core.Tests`, 17 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`:
+  - **Resultado**: 0 discrepancias de formato.
+
+### Hito 0 — Decisión go/no-go
+- ✅ **GO**: Windows Update Agent devuelve actualizaciones de drivers reales (1 encontrada en el equipo de desarrollo). La fuente es funcional y la integración COM es estable.
+- La cantidad de actualizaciones variará según el equipo y su estado. El criterio `Type='Driver'` filtra correctamente.
+
+### Notas para el siguiente sprint (Sprint 4A)
+- Se procedió a completar el backend en **Sprint 4A**.
+
+---
+
+## Sprint 4A — Implementaciones Core del Backend (`Agent.Drivers`)
+
+- **Fecha**: 2026-10-13
+- **Estado**: ✅ Completado
+- **Hito**: Hito 1 (Backend funcional de extremo a extremo)
+
+### Tareas completadas
+- [x] **S4-T1: `SqliteOperationHistory` — Persistencia en SQLite** (`src/Agent.Drivers/History/SqliteOperationHistory.cs`):
+  - Implementación completa de `IOperationHistory` usando `Microsoft.Data.Sqlite`.
+  - Creación automática de directorio y tabla de persistencia (`CREATE TABLE IF NOT EXISTS operations`).
+  - Esquema estricto: `Id` (INTEGER PK AUTOINCREMENT), `OperationType`, `UpdateId`, `DeviceName`, `HardwareId`, `DriverTitle`, `PreviousVersion`, `NewVersion`, `Success`, `ErrorMessage`, `Timestamp` (ISO 8601).
+  - Operaciones asíncronas con soporte de cancelación (`CancellationToken`).
+  - Ruta de base de datos configurable con valor por defecto en `%ProgramData%\DriverUpdater\history.db`.
+  - Suite de pruebas unitarias (`tests/Agent.Drivers.Tests/SqliteOperationHistoryTests.cs`): inserción, consulta global, consulta por ID, manejo de valores nulos y validación de argumentos.
+- [x] **S4-T2: `WinTrustSignatureVerifier` — Verificación de firma digital** (`src/Agent.Drivers/Security/`):
+  - `NativeMethods.cs`: P/Invoke a `wintrust.dll!WinVerifyTrust` con acción `WINTRUST_ACTION_GENERIC_VERIFY_V2`.
+  - Mapeo de estructuras `WintrustData`, `WintrustFileInfo` con liberación manual de memoria no administrada (`Marshal.StringToCoTaskMemUni` / `FreeCoTaskMem`).
+  - Extracción y validación de certificados y distinción de firmas WHQL / Microsoft.
+  - Mapeo de códigos HRESULT nativos: `TRUST_E_NOSIGNATURE`, `TRUST_E_EXPLICIT_DISTRUST`, `TRUST_E_SUBJECT_NOT_TRUSTED`, `CRYPT_E_SECURITY_SETTINGS`, `CERT_E_EXPIRED`, `CERT_E_REVOKED`, `TRUST_E_BAD_DIGEST`.
+  - Tests en `tests/Agent.Drivers.Tests/WinTrustSignatureVerifierTests.cs`: archivos inexistentes, archivos sin firma y verificación real de binarios firmados del sistema Windows (`kernel32.dll`).
+- [x] **S4-T3: `WmiRestorePointService` — Puntos de restauración de Windows** (`src/Agent.Drivers/Restore/WmiRestorePointService.cs`):
+  - Implementación de `IRestorePointService` mediante invocación WMI a `root\default:SystemRestore.CreateRestorePoint`.
+  - Parámetros: `RestorePointType = 10` (`DEVICE_DRIVER_INSTALL`), `EventType = 100` (`BEGIN_SYSTEM_CHANGE`).
+  - Manejo seguro de `ManagementException`, `UnauthorizedAccessException` y retorno booleano garantizado.
+- [x] **S4-T4: `WuaDriverInstaller` — Orquestación de instalación y rollback** (`src/Agent.Drivers/Install/`):
+  - Abstracción desacoplada `IWuaExecutor` y ejecutor COM `DefaultWuaExecutor` para descargas e instalaciones seguras.
+  - Cumplimiento estricto de las reglas de seguridad de `AGENTS.md`:
+    1. **Regla 1**: Aborta de inmediato si la firma digital no es válida o de confianza.
+    2. **Regla 2**: Aborta de inmediato si falla la creación del punto de restauración del sistema previo a la instalación.
+    3. **Regla 5**: Ejecución de comandos del sistema (`pnputil`) mediante `ProcessStartInfo.ArgumentList` sin concatenación de cadenas externas para evitar inyecciones.
+    4. **Regla 8**: Registro exhaustivo y garantizado de cada operación (éxito o fallo) en `IOperationHistory`.
+  - Notificación de progreso en 8 fases (`InstallProgress`): Downloading (10-25%), Verifying (30-45%), CreatingRestorePoint (50-65%), Installing (70-85%), Validating (90%), Complete (100%) o Failed.
+  - Implementación de `RollbackAsync` consultando el historial y revirtiendo el controlador de forma segura.
+  - Tests unitarios exhaustivos con dobles de prueba (`tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs`): flujo exitoso, aborto por firma inválida, aborto por fallo en restore point, aborto por fallo de red, y reversión con rollback.
+- [x] **S4-T5: Registro en contenedor de inyección de dependencias** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - Registro de las 6 interfaces del dominio: `IDriverInventory`, `IUpdateSource`, `ISignatureVerifier`, `IRestorePointService`, `IOperationHistory` y `IDriverInstaller`.
+  - Soporte para ruta configurable de base de datos SQLite en `AddDriverServices(databasePath)`.
+- [x] **S4-T6: Ampliación de comandos CLI** (`src/Cli/Program.cs`):
+  - `log`: consulta y presenta en tabla el historial de operaciones de auditoría.
+  - `install <updateId>`: ejecuta el flujo de instalación con reporte de progreso en consola y advertencia de elevación de privilegios.
+  - `rollback <operationId>`: revierte una instalación previa según su identificador en el registro.
+- [x] **S4-T7: Verificación completa de calidad**:
+  - Compilación Release: 0 advertencias, 0 errores en los 7 proyectos.
+  - Pruebas automatizadas: 72 tests superados (39 en `Core.Tests`, 33 en `Agent.Drivers.Tests`).
+  - Verificación de formato: `dotnet format --verify-no-changes` validado con código 0.
+
+### Decisiones técnicas tomadas
+1. **Desacoplamiento de `IWuaExecutor`**:
+   - Para permitir pruebas unitarias exhaustivas del flujo de seguridad sin requerir privilegios administrativos ni invocar APIs COM reales durante la ejecución de CI/CD, se separó la interacción COM en la interfaz interna `IWuaExecutor`.
+2. **Acceso a tipos internos para NSubstitute**:
+   - Se configuró `<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />` en `Agent.Drivers.csproj` para que el generador de proxies dinámicos de Castle/NSubstitute pueda instanciar dobles sobre interfaces internas sin comprometer el encapsulamiento público.
+3. **Persistencia SQLite**:
+   - Se utilizó `Microsoft.Data.Sqlite` con `ISO 8601` (`"O"`) en `InvariantCulture` para los campos de marca temporal, asegurando portabilidad de fechas independientemente de la configuración regional del sistema operativo.
+4. **Seguridad en rollback**:
+   - `pnputil.exe` se ejecuta a través de `ProcessStartInfo.ArgumentList`, pasando los identificadores de hardware como argumentos discretos para cumplir la regla 5 de seguridad contra inyección de comandos.
+
+### Pruebas ejecutadas
+- `dotnet build -c Release`: 7 proyectos compilados, 0 advertencias, 0 errores.
+- `dotnet test -c Release`: 72/72 tests pasados (39 en `Core.Tests`, 33 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
+- `dotnet run --project src/Cli -- log`: ejecución correcta en consola consultando base de datos SQLite.
+- `dotnet run --project src/Cli -- --help`: comandos `scan`, `updates`, `log`, `install`, `rollback` verificados.
+
+### Notas para el siguiente sprint (Sprint 4B o Sprint 5)
+- El backend (`Core` + `Agent.Drivers`) está **100% completo, probado y verificado**.
+- Los siguientes pasos en el MVP son:
+  1. **Sprint 4B — Servicio de Windows (`Agent.Service`)**: Implementar Worker Service con gRPC sobre Named Pipes para comunicar la UI no privilegiada con el servicio SYSTEM.
+  2. **Sprint 5 — Interfaz de usuario WPF (`Ui.Wpf`)**: Desarrollar la interfaz visual en MVVM (con CommunityToolkit.Mvvm) consumiendo el servicio gRPC o la capa de abstracción.
 
 

@@ -19,17 +19,28 @@ indent_size = 2
 trim_trailing_whitespace = false
 
 [*.cs]
-# Naming conventions
+# Naming conventions — private instance fields: _camelCase
 dotnet_naming_rule.private_fields_should_be_camel_case.severity = warning
-dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_instance_fields
 dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case_with_underscore
 
-dotnet_naming_symbols.private_fields.applicable_kinds = field
-dotnet_naming_symbols.private_fields.applicable_accessibilities = private, protected
-dotnet_naming_symbols.private_fields.required_modifiers =
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private, protected
+dotnet_naming_symbols.private_instance_fields.required_modifiers =
 
 dotnet_naming_style.camel_case_with_underscore.required_prefix = _
 dotnet_naming_style.camel_case_with_underscore.capitalization = camel_case
+
+# Naming conventions — const fields: PascalCase
+dotnet_naming_rule.const_fields_should_be_pascal_case.severity = warning
+dotnet_naming_rule.const_fields_should_be_pascal_case.symbols = const_fields
+dotnet_naming_rule.const_fields_should_be_pascal_case.style = pascal_case_style
+
+dotnet_naming_symbols.const_fields.applicable_kinds = field
+dotnet_naming_symbols.const_fields.applicable_accessibilities = *
+dotnet_naming_symbols.const_fields.required_modifiers = const
+
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
 # Code style
 csharp_style_namespace_declarations = file_scoped:warning
