@@ -37,4 +37,21 @@ public class NamedPipeSecurityFactoryTests
             && !rule.PipeAccessRights.HasFlag(PipeAccessRights.ChangePermissions)
             && rule.AccessControlType == AccessControlType.Allow);
     }
+
+    [Fact]
+    public void CreateDefault_Should_Not_Grant_WriteDac_Or_TakeOwnership_To_Interactive_Users()
+    {
+        var security = NamedPipeSecurityFactory.CreateDefault();
+        var rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier))
+            .Cast<PipeAccessRule>()
+            .Where(rule => ((SecurityIdentifier)rule.IdentityReference).Value == NamedPipeSecurityFactory.InteractiveSid)
+            .ToList();
+
+        rules.Should().ContainSingle();
+        var interactiveRule = rules.Single();
+
+        // WRITE_DAC / ChangePermissions y WRITE_OWNER / TakeOwnership no deben estar concedidos
+        interactiveRule.PipeAccessRights.HasFlag(PipeAccessRights.ChangePermissions).Should().BeFalse();
+        interactiveRule.PipeAccessRights.HasFlag(PipeAccessRights.TakeOwnership).Should().BeFalse();
+    }
 }

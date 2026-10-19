@@ -401,15 +401,16 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 
 ### Pruebas ejecutadas
 - `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: **110/110 tests pasados** (39 en `Core.Tests`, 38 en `Agent.Service.Tests`, 33 en `Agent.Drivers.Tests`).
+- `dotnet test -c Release`: **125/125 tests pasados** (39 en `Core.Tests`, 46 en `Agent.Service.Tests`, 40 en `Agent.Drivers.Tests`).
 - `dotnet format --verify-no-changes`: 0 discrepancias de formato.
 - E2E del binario real: servicio iniciado en consola, pipe `\\.\pipe\DriverUpdater` publicado, cliente real con `Scan` de 266 controladores reales, `GetStatus` y `GetHistory` verificados.
 
 ### Notas para el siguiente sprint (Sprint 5)
 - El canal IPC completo (servicio + contrato + cliente) está operativo y probado. Quedan para completar el Hito 2:
-  1. **Sprint 5 — UI WPF (`Ui.Wpf`)**: MVVM con CommunityToolkit.Mvvm consumiendo `Agent.Ipc` (pantallas: inicio/escaneo, actualizaciones, historial, ajustes). Referenciar `Agent.Ipc` desde `Ui.Wpf`.
+  1. **Sprint 5 — UI WPF (`Ui.Wpf`)**: MVVM con CommunityToolkit.Mvvm consumiendo `Agent.Ipc` (pantallas: inicio/escaneo, actualizaciones, historial, ajustes). Referenciar `Agent.Ipc` desde `Ui.Wpf`. Contemplar en UX la cancelación diferida de la fase de instalación nativa (*"Cancelando... esperando a que finalice el controlador en curso"*).
   2. **Ajustes y exclusiones (U7)**: `config.json` en `%ProgramData%\DriverUpdater\`, RPCs `GetSettings`/`UpdateSettings` en el proto y aplicación de exclusiones en `CheckUpdates`/`Install`.
   3. **Comprobación programada y notificaciones (U8)**: planificador en el servicio (sin polling), notificación toast si hay novedades y aviso de reinicio pendiente.
   4. **Instalación del servicio de Windows**: registrar el binario como servicio (`sc create` o WiX en el Hito 4). Probar en VM (nunca en el equipo de desarrollo con operaciones reales).
+  5. **Validación E2E de la ACL en VM con cuenta estándar (reserva de auditoría)**: Verificar en VM que un usuario local interactivo sin privilegios administrativos puede conectar y realizar operaciones I/O en el pipe (`ReadWrite`), y certificar que cualquier intento de alterar la ACL/DACL es denegado con `Access Denied`.
 
 

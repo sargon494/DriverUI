@@ -12,7 +12,7 @@ service DriverAgent {
   // Inventario de controladores instalados.
   rpc Scan (ScanRequest) returns (ScanResponse);
 
-  // Busca actualizaciones via Windows Update y las transmite conforme se detectan.
+  // Busca actualizaciones via Windows Update y las transmite al cliente al finalizar la busqueda.
   rpc CheckUpdates (CheckUpdatesRequest) returns (stream DriverUpdateMsg);
 
   // Instala uno o varios drivers secuencialmente (una operacion a la vez).

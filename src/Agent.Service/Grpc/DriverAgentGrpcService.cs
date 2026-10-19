@@ -216,26 +216,11 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                 continue;
             }
 
+            InstallResult result;
             try
             {
-                var result = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
+                result = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
                     .ConfigureAwait(false);
-
-                completedUpdates++;
-                if (result.RebootRequired)
-                {
-                    _operationQueue.MarkPendingReboot();
-                }
-
-                await WriteFinishedResultAsync(
-                    responseStream,
-                    match.UpdateId,
-                    result.Success,
-                    result.ErrorMessage,
-                    result.RebootRequired,
-                    totalUpdates,
-                    completedUpdates,
-                    ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -243,22 +228,38 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             }
             catch (Exception ex)
             {
-                completedUpdates++;
                 if (_logger.IsEnabled(LogLevel.Error))
                 {
                     _logger.LogError(ex, "Excepción inesperada al instalar la actualización {UpdateId}.", match.UpdateId);
                 }
 
-                await WriteFinishedResultAsync(
-                    responseStream,
-                    match.UpdateId,
-                    success: false,
-                    errorMessage: $"Error inesperado al instalar '{match.UpdateId}': {ex.Message}",
-                    rebootRequired: false,
-                    totalUpdates,
-                    completedUpdates,
-                    ct).ConfigureAwait(false);
+                result = new InstallResult
+                {
+                    UpdateId = match.UpdateId,
+                    Success = false,
+                    ErrorMessage = $"Error inesperado al instalar '{match.UpdateId}': {ex.Message}",
+                    RebootRequired = false,
+                    PreviousVersion = match.CurrentVersion,
+                    InstalledVersion = match.CurrentVersion,
+                    Timestamp = DateTime.UtcNow
+                };
             }
+
+            completedUpdates++;
+            if (result.RebootRequired)
+            {
+                _operationQueue.MarkPendingReboot();
+            }
+
+            await WriteFinishedResultAsync(
+                responseStream,
+                match.UpdateId,
+                result.Success,
+                result.ErrorMessage,
+                result.RebootRequired,
+                totalUpdates,
+                completedUpdates,
+                ct).ConfigureAwait(false);
         }
     }
 
