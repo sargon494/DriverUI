@@ -401,7 +401,7 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 
 ### Pruebas ejecutadas
 - `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: **127/127 tests pasados** (39 en `Core.Tests`, 47 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
+- `dotnet test -c Release`: **129/129 tests pasados** (39 en `Core.Tests`, 49 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
 - `dotnet format --verify-no-changes`: 0 discrepancias de formato.
 - E2E del binario real: servicio iniciado en consola, pipe `\\.\pipe\DriverUpdater` publicado, cliente real con `Scan` de 266 controladores reales, `GetStatus` y `GetHistory` verificados.
 

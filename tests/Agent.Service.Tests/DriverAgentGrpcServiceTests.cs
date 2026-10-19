@@ -82,6 +82,24 @@ public class DriverAgentGrpcServiceTests
         return items;
     }
 
+    private sealed class TestServerCallContext : ServerCallContext
+    {
+        private readonly CancellationToken _cancellationToken;
+        public TestServerCallContext(CancellationToken cancellationToken = default) => _cancellationToken = cancellationToken;
+        protected override string MethodCore => "Install";
+        protected override string HostCore => "localhost";
+        protected override string PeerCore => "peer";
+        protected override DateTime DeadlineCore => DateTime.MaxValue;
+        protected override Metadata RequestHeadersCore => [];
+        protected override CancellationToken CancellationTokenCore => _cancellationToken;
+        protected override Metadata ResponseTrailersCore => [];
+        protected override Status StatusCore { get; set; }
+        protected override WriteOptions? WriteOptionsCore { get; set; }
+        protected override AuthContext AuthContextCore => new(null, new Dictionary<string, List<AuthProperty>>());
+        protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options) => null!;
+        protected override Task WriteResponseHeadersAsyncCore(Metadata responseHeaders) => Task.CompletedTask;
+    }
+
     private sealed class AgentHarness : IAsyncDisposable
     {
         private readonly WebApplication _app;
@@ -443,6 +461,76 @@ public class DriverAgentGrpcServiceTests
                 s => !s.OperationInProgress && s.QueuedOperations == 0,
                 TimeSpan.FromSeconds(10));
             status.OperationInProgress.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Should_Break_Batch_Without_Extra_Failure_When_Stream_Write_Throws_IOException()
+        {
+            var inventory = Substitute.For<IDriverInventory>();
+            var updateSource = Substitute.For<IUpdateSource>();
+            var installer = Substitute.For<IDriverInstaller>();
+            var history = Substitute.For<IOperationHistory>();
+            var queue = new OperationQueue();
+            var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
+
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
+            inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            installer.InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo => CreateInstallResult(callInfo.ArgAt<DriverUpdate>(0).UpdateId, success: true));
+
+            var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
+            // La llamada de escritura al stream falla simulando desconexión/pipe roto
+            streamWriter.WriteAsync(Arg.Is<InstallProgressMsg>(m => m.Finished), Arg.Any<CancellationToken>())
+                .Returns<Task>(_ => throw new IOException("Named pipe roto"));
+
+            var context = new TestServerCallContext();
+
+            await service.Install(new InstallRequest { UpdateIds = { "update-1", "update-2" } }, streamWriter, context);
+
+            // El lote se interrumpe tras el fallo de escritura: no se procesa update-2
+            await installer.Received(1).InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>());
+
+            // No se registra ningún fallo redundante en el historial por el error de transporte
+            await history.DidNotReceive().RecordAsync(
+                Arg.Is<OperationLogEntry>(e => !e.Success && e.ErrorMessage != null && e.ErrorMessage.Contains("roto")),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task Should_Not_Duplicate_History_Recording_When_Installer_Returns_Failed_Result()
+        {
+            var inventory = Substitute.For<IDriverInventory>();
+            var updateSource = Substitute.For<IUpdateSource>();
+            var installer = Substitute.For<IDriverInstaller>();
+            var history = Substitute.For<IOperationHistory>();
+            var queue = new OperationQueue();
+            var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
+
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1") };
+            inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            // El instalador gestiona internamente el error y devuelve Success = false
+            installer.InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(CreateInstallResult("update-1", success: false));
+
+            var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
+            var context = new TestServerCallContext();
+
+            await service.Install(new InstallRequest { UpdateIds = { "update-1" } }, streamWriter, context);
+
+            // DriverAgentGrpcService no duplica el registro en el historial porque el instalador ya gestionó el resultado
+            await history.DidNotReceiveWithAnyArgs().RecordAsync(default!, default);
         }
 
         [Fact]

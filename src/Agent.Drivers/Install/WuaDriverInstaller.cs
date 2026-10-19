@@ -226,7 +226,9 @@ public sealed class WuaDriverInstaller : IDriverInstaller
         }
         catch (Exception ex)
         {
-            var errorMessage = $"Excepción inesperada durante la fase {currentPhase}: {ex.Message}";
+            var errorMessage = currentPhase is InstallPhase.Installing or InstallPhase.Validating
+                ? $"Excepción inesperada durante la fase {currentPhase} (la instalación nativa ya había iniciado, verifique el estado del dispositivo): {ex.Message}"
+                : $"Excepción inesperada durante la fase {currentPhase}: {ex.Message}";
             return await RecordFailureAsync(update, errorMessage, currentPhase, progress, CancellationToken.None).ConfigureAwait(false);
         }
     }
