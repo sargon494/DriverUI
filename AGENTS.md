@@ -17,7 +17,7 @@ Documentos relacionados:
 | Lenguaje | C# 14 / .NET 10 (LTS) |
 | Servicio de agente | Worker Service (servicio de Windows, cuenta SYSTEM) |
 | Acceso a Windows | WMI (`System.Management`), Windows Update Agent (COM), `pnputil`, WinVerifyTrust (P/Invoke) |
-| IPC UI ↔ servicio | gRPC sobre named pipes |
+| IPC UI ↔ servicio | gRPC sobre named pipes (transporte nativo de Kestrel) |
 | UI | WPF (MVVM con CommunityToolkit.Mvvm) |
 | Backend (fase posterior) | ASP.NET Core + EF Core + PostgreSQL |
 | Tests | xUnit, FluentAssertions, NSubstitute |
@@ -31,6 +31,7 @@ DriverUpdater/
 │  ├─ Core/            # modelos, versiones, matching de hardware IDs (sin dependencias de Windows)
 │  ├─ Agent.Drivers/   # WMI, WUA, pnputil, firmas, restore points
 │  ├─ Agent.Service/   # Worker Service y servidor gRPC
+│  ├─ Agent.Ipc/       # contrato gRPC (proto) y fábrica de canal cliente sobre named pipe
 │  ├─ Ui.Wpf/          # interfaz de usuario
 │  ├─ Cli/             # herramienta de pruebas sin UI
 │  └─ Backend.Api/     # (fase posterior)

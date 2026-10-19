@@ -81,6 +81,9 @@ Implementaciones Windows de las interfaces de `Core`:
 ### 4.5 `Cli`
 Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `rollback <opId>`, `log`. Reutiliza `Agent.Drivers` directamente.
 
+### 4.6 `Agent.Ipc`
+Proyecto compartido con el **contrato gRPC** (`Protos/driveragent.proto`, generado con `Grpc.Services=Both`) y la **fábrica de canal cliente** (`DriverAgentChannel.CreateChannel`) que conecta por named pipe mediante `SocketsHttpHandler.ConnectCallback`. Lo consumen el servicio (base del servidor), la UI (cliente) y los tests de integración IPC.
+
 ### 4.6 `Backend.Api` (fase posterior)
 - ASP.NET Core minimal API + EF Core + PostgreSQL.
 - Catálogo de drivers por hardware ID, versiones, compatibilidad, listas de bloqueo (drivers conocidos como problemáticos).
@@ -89,19 +92,28 @@ Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `ro
 
 ## 5. Contrato IPC (gRPC)
 
+Contrato en `src/Agent.Ipc/Protos/driveragent.proto` (namespace C# `Agent.Ipc.Grpc`):
+
 ```proto
 service DriverAgent {
   rpc Scan (ScanRequest) returns (ScanResponse);
-  rpc CheckUpdates (CheckUpdatesRequest) returns (stream UpdateFound);
-  rpc Install (InstallRequest) returns (stream InstallProgress);
-  rpc Rollback (RollbackRequest) returns (RollbackResult);
+  rpc CheckUpdates (CheckUpdatesRequest) returns (stream DriverUpdateMsg);
+  rpc Install (InstallRequest) returns (stream InstallProgressMsg);
+  rpc Rollback (RollbackRequest) returns (RollbackResultMsg);
   rpc GetHistory (HistoryRequest) returns (HistoryResponse);
-  rpc GetSettings (Empty) returns (Settings);
-  rpc UpdateSettings (Settings) returns (Settings);
+  rpc GetStatus (StatusRequest) returns (StatusResponse);
 }
 ```
 
 El streaming permite mostrar progreso en la UI en tiempo real.
+
+Implementación:
+- **Transporte**: transporte nativo de named pipes de Kestrel (`ListenNamedPipe`), HTTP/2 en claro (sin TLS: el pipe es local y su ACL restringe el acceso).
+- **ACL del pipe**: SYSTEM y Administradores con control completo; usuarios interactivos (SID `S-1-5-4`) con control completo. Sin `CurrentUserOnly` (incompatible con ACL explícita y bloquearía a los usuarios de sesiones interactivas, ya que el servicio corre como SYSTEM).
+- **Instalación segura**: `Install` recibe solo identificadores de actualización; el servicio **re-resuelve** cada ID contra Windows Update en el momento de instalar, de modo que el cliente no puede inyectar metadatos de driver manipulados.
+- **Cola de operaciones**: `OperationQueue` serializa instalaciones, rollbacks y búsquedas (una a la vez, la sesión COM de WUA no debe atenderlas en paralelo). Cancelar la llamada gRPC aborta la operación en curso y libera la cola.
+- **Creación de instancias del pipe**: hook `CreateNamedPipeServerStream` con `NamedPipeStreamFactory`, que normaliza `FirstPipeInstance` (solo la primera instancia real) y aplica la ACL del contexto.
+- **Ajustes** (`GetSettings`/`UpdateSettings`): se añadirán al contrato junto con la gestión de ajustes y exclusiones (Hito 2).
 
 ## 6. Flujo de actualización
 

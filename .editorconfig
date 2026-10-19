@@ -59,5 +59,10 @@ dotnet_separate_import_directive_groups = false
 # Code analysis suppressions
 dotnet_diagnostic.CA1848.severity = none
 
+[src/Agent.Service/Operations/**.cs]
+# CA1711: la "cola de operaciones" del diseño (MVP.md, Hito 2) es genuinamente una
+# cola serializada de una entrada; el sufijo "Queue" es semánticamente correcto.
+dotnet_diagnostic.CA1711.severity = none
+
 [tests/**.cs]
 dotnet_diagnostic.CA1707.severity = none

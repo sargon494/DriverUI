@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+option csharp_namespace = "Agent.Ipc.Grpc";
+
+package driverupdater;
+
+import "google/protobuf/timestamp.proto";
+
+// Contrato IPC entre la UI WPF (sin privilegios) y el servicio de Windows (SYSTEM).
+// Transporte: gRPC sobre named pipe con ACL restringida a usuarios interactivos.
+service DriverAgent {
+  // Inventario de controladores instalados.
+  rpc Scan (ScanRequest) returns (ScanResponse);
+
+  // Busca actualizaciones via Windows Update y las transmite conforme se detectan.
+  rpc CheckUpdates (CheckUpdatesRequest) returns (stream DriverUpdateMsg);
+
+  // Instala uno o varios drivers secuencialmente (una operacion a la vez).
+  // El cliente puede cancelar cerrando el stream.
+  rpc Install (InstallRequest) returns (stream InstallProgressMsg);
+
+  // Revierte una instalacion previa segun su identificador de operacion.
+  rpc Rollback (RollbackRequest) returns (RollbackResultMsg);
+
+  // Historial de operaciones registradas.
+  rpc GetHistory (HistoryRequest) returns (HistoryResponse);
+
+  // Estado actual del servicio: operacion en curso, reinicio pendiente, ultimo escaneo.
+  rpc GetStatus (StatusRequest) returns (StatusResponse);
+}
+
+message ScanRequest {
+}
+
+message ScanResponse {
+  repeated InstalledDriverMsg drivers = 1;
+}
+
+message InstalledDriverMsg {
+  string device_id = 1;
+  string device_name = 2;
+  string manufacturer = 3;
+  string driver_version = 4;
+  google.protobuf.Timestamp driver_date = 5;
+  string inf_name = 6;
+  repeated string hardware_ids = 7;
+  DriverStatusProto status = 8;
+  string device_class = 9;
+}
+
+enum DriverStatusProto {
+  DRIVER_STATUS_UNSPECIFIED = 0;
+  DRIVER_STATUS_OK = 1;
+  DRIVER_STATUS_ERROR = 2;
+  DRIVER_STATUS_DEGRADED = 3;
+  DRIVER_STATUS_UNKNOWN = 4;
+}
+
+message CheckUpdatesRequest {
+}
+
+message DriverUpdateMsg {
+  string update_id = 1;
+  string title = 2;
+  string description = 3;
+  string new_version = 4;
+  string current_version = 5;
+  string hardware_id = 6;
+  string device_name = 7;
+  int64 download_size_bytes = 8;
+  bool is_mandatory = 9;
+  google.protobuf.Timestamp release_date = 10;
+}
+
+message InstallRequest {
+  repeated string update_ids = 1;
+}
+
+enum InstallPhaseProto {
+  INSTALL_PHASE_UNSPECIFIED = 0;
+  INSTALL_PHASE_DOWNLOADING = 1;
+  INSTALL_PHASE_VERIFYING = 2;
+  INSTALL_PHASE_CREATING_RESTORE_POINT = 3;
+  INSTALL_PHASE_INSTALLING = 4;
+  INSTALL_PHASE_VALIDATING = 5;
+  INSTALL_PHASE_COMPLETE = 6;
+  INSTALL_PHASE_FAILED = 7;
+  INSTALL_PHASE_ROLLING_BACK = 8;
+}
+
+message InstallProgressMsg {
+  string update_id = 1;
+  int32 percent_complete = 2;
+  InstallPhaseProto phase = 3;
+  string status_message = 4;
+  // Indica el final del procesamiento de un driver; el resto de campos
+  // transporta el resultado individual.
+  bool finished = 5;
+  bool success = 6;
+  string error_message = 7;
+  bool reboot_required = 8;
+  int32 total_updates = 9;
+  int32 completed_updates = 10;
+}
+
+message RollbackRequest {
+  string operation_id = 1;
+}
+
+message RollbackResultMsg {
+  bool success = 1;
+  string error_message = 2;
+  string installed_version = 3;
+  string previous_version = 4;
+  bool reboot_required = 5;
+}
+
+message HistoryRequest {
+  // Maximo de entradas a devolver (las mas recientes). 0 = todas.
+  int32 limit = 1;
+}
+
+message HistoryResponse {
+  repeated OperationLogEntryMsg entries = 1;
+}
+
+message OperationLogEntryMsg {
+  int64 id = 1;
+  string operation_type = 2;
+  string update_id = 3;
+  string device_name = 4;
+  string hardware_id = 5;
+  string driver_title = 6;
+  string previous_version = 7;
+  string new_version = 8;
+  bool success = 9;
+  string error_message = 10;
+  google.protobuf.Timestamp timestamp = 11;
+}
+
+message StatusRequest {
+}
+
+message StatusResponse {
+  bool operation_in_progress = 1;
+  string current_update_id = 2;
+  int32 percent_complete = 3;
+  InstallPhaseProto phase = 4;
+  bool pending_reboot = 5;
+  google.protobuf.Timestamp last_scan = 6;
+  int32 queued_operations = 7;
+}
