@@ -299,4 +299,29 @@ public sealed class WuaDriverInstallerTests
                 e.ErrorMessage.Contains("cancelada")),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task InstallAsync_Should_Record_Failure_And_Return_Failure_When_Unexpected_Exception_Occurs()
+    {
+        var update = CreateSampleUpdate();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns<Task<WuaDownloadResult>>(_ => throw new InvalidOperationException("Fallo COM inesperado"));
+
+        var result = await _installer.InstallAsync(update);
+
+        result.Success.Should().BeFalse();
+        result.InstalledVersion.Should().BeEmpty();
+        result.ErrorMessage.Should().Contain("Fallo COM inesperado");
+
+        // Regla 8 de AGENTS.md: Cada instalación deja registro en el log de operaciones
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                e.UpdateId == update.UpdateId &&
+                !e.Success &&
+                e.ErrorMessage != null &&
+                e.ErrorMessage.Contains("Fallo COM inesperado")),
+            Arg.Any<CancellationToken>());
+    }
 }

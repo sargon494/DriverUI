@@ -224,6 +224,11 @@ public sealed class WuaDriverInstaller : IDriverInstaller
             await RecordFailureAsync(update, cancelMessage, currentPhase, progress, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Excepción inesperada durante la fase {currentPhase}: {ex.Message}";
+            return await RecordFailureAsync(update, errorMessage, currentPhase, progress, CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc/>
@@ -388,7 +393,7 @@ public sealed class WuaDriverInstaller : IDriverInstaller
             ErrorMessage = errorMessage,
             RebootRequired = false,
             PreviousVersion = update.CurrentVersion,
-            InstalledVersion = update.CurrentVersion,
+            InstalledVersion = string.Empty,
             Timestamp = timestamp
         };
     }

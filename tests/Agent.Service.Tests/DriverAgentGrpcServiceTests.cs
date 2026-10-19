@@ -396,6 +396,53 @@ public class DriverAgentGrpcServiceTests
             finished[1].UpdateId.Should().Be("update-2");
             finished[1].Success.Should().BeTrue();
             finished[1].CompletedUpdates.Should().Be(2);
+
+            // Regla 8 de AGENTS.md: Registro obligatorio en el historial ante excepciones
+            await harness.History.Received(1).RecordAsync(
+                Arg.Is<OperationLogEntry>(e =>
+                    e.UpdateId == "update-1" &&
+                    !e.Success &&
+                    e.ErrorMessage != null &&
+                    e.ErrorMessage.Contains("Fallo catastrofico COM simulado")),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task Should_Stop_Batch_Without_Retrying_When_Client_Disconnects()
+        {
+            await using var harness = await AgentHarness.StartAsync();
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
+
+            harness.Inventory
+                .GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            harness.UpdateSource
+                .FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            harness.Installer
+                .InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo => CreateInstallResult(callInfo.ArgAt<DriverUpdate>(0).UpdateId, success: true));
+
+            using var cts = new CancellationTokenSource();
+            using var call = harness.Client.Install(new InstallRequest { UpdateIds = { "update-1", "update-2" } }, cancellationToken: cts.Token);
+
+            cts.Cancel();
+
+            var act = async () =>
+            {
+                await foreach (var _ in call.ResponseStream.ReadAllAsync())
+                {
+                }
+            };
+
+            await act.Should().ThrowAsync<RpcException>();
+
+            var status = await PollUntilAsync(
+                async () => await harness.Client.GetStatusAsync(new StatusRequest()),
+                s => !s.OperationInProgress && s.QueuedOperations == 0,
+                TimeSpan.FromSeconds(10));
+            status.OperationInProgress.Should().BeFalse();
         }
 
         [Fact]

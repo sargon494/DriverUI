@@ -233,15 +233,41 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                     _logger.LogError(ex, "Excepción inesperada al instalar la actualización {UpdateId}.", match.UpdateId);
                 }
 
+                var timestamp = DateTime.UtcNow;
+                var errorMessage = $"Error inesperado al instalar '{match.UpdateId}': {ex.Message}";
+
+                // Regla 8 de AGENTS.md: Registro obligatorio en el historial si el instalador lanzó excepción
+                try
+                {
+                    await _history.RecordAsync(new OperationLogEntry
+                    {
+                        Id = 0,
+                        OperationType = "Install",
+                        UpdateId = match.UpdateId,
+                        DeviceName = match.DeviceName,
+                        HardwareId = match.MatchedHardwareId.Value,
+                        DriverTitle = match.Title,
+                        PreviousVersion = match.CurrentVersion,
+                        NewVersion = match.NewVersion,
+                        Success = false,
+                        ErrorMessage = errorMessage,
+                        Timestamp = timestamp
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception histEx)
+                {
+                    _logger.LogError(histEx, "Fallo al registrar la excepción de instalación en el historial para {UpdateId}.", match.UpdateId);
+                }
+
                 result = new InstallResult
                 {
                     UpdateId = match.UpdateId,
                     Success = false,
-                    ErrorMessage = $"Error inesperado al instalar '{match.UpdateId}': {ex.Message}",
+                    ErrorMessage = errorMessage,
                     RebootRequired = false,
                     PreviousVersion = match.CurrentVersion,
-                    InstalledVersion = match.CurrentVersion,
-                    Timestamp = DateTime.UtcNow
+                    InstalledVersion = string.Empty,
+                    Timestamp = timestamp
                 };
             }
 
@@ -251,15 +277,26 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                 _operationQueue.MarkPendingReboot();
             }
 
-            await WriteFinishedResultAsync(
-                responseStream,
-                match.UpdateId,
-                result.Success,
-                result.ErrorMessage,
-                result.RebootRequired,
-                totalUpdates,
-                completedUpdates,
-                ct).ConfigureAwait(false);
+            try
+            {
+                await WriteFinishedResultAsync(
+                    responseStream,
+                    match.UpdateId,
+                    result.Success,
+                    result.ErrorMessage,
+                    result.RebootRequired,
+                    totalUpdates,
+                    completedUpdates,
+                    ct).ConfigureAwait(false);
+            }
+            catch (Exception writeEx) when (writeEx is RpcException or IOException or OperationCanceledException)
+            {
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning("El cliente se desconectó antes de recibir el resultado de {UpdateId}.", match.UpdateId);
+                }
+                break;
+            }
         }
     }
 
