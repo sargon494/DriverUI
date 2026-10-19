@@ -7,10 +7,11 @@ namespace Agent.Service.Ipc;
 /// <summary>
 /// Construye la ACL del named pipe del servicio (regla de seguridad 4 de
 /// <c>AGENTS.md</c>): el acceso queda restringido a SYSTEM, administradores
-/// y usuarios interactivos locales. Se concede control completo a los
-/// usuarios interactivos porque el transporte exige derechos de administración
-/// del objeto para crear las instancias del pipe; el pipe es local, por lo que
-/// la frontera de seguridad es "solo sesiones interactivas locales".
+/// y usuarios interactivos locales. Se concede control completo a SYSTEM y
+/// Administradores, y permisos de lectura/escritura (ReadWrite) a los usuarios
+/// interactivos, evitando otorgar WRITE_DAC o WRITE_OWNER para que un usuario
+/// sin privilegios no pueda alterar la seguridad del pipe. La frontera de
+/// seguridad es "solo sesiones interactivas locales".
 /// </summary>
 internal static class NamedPipeSecurityFactory
 {
@@ -42,7 +43,7 @@ internal static class NamedPipeSecurityFactory
 
         security.AddAccessRule(new PipeAccessRule(
             new SecurityIdentifier(InteractiveSid),
-            PipeAccessRights.FullControl,
+            PipeAccessRights.ReadWrite,
             AccessControlType.Allow));
 
         return security;

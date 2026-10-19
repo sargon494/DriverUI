@@ -1,4 +1,5 @@
-using System.Collections.Concurrent;
+using System.Globalization;
+using System.Threading.Channels;
 using Agent.Ipc.Grpc;
 using Agent.Service.Operations;
 using Core.Interfaces;
@@ -61,7 +62,10 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         ServerCallContext context)
     {
         // La sesión COM de Windows Update Agent no debe atender búsquedas e
-        // instalaciones simultáneas, por lo que la búsqueda también se serializa.
+        // instalaciones simultáneas, por lo que la búsqueda se serializa en la cola.
+        // Recopilamos las actualizaciones dentro del lock y las enviamos al stream fuera
+        // de él, evitando que un cliente lento retenga la cola y bloquee instalaciones.
+        var updates = new List<DriverUpdate>();
         await _operationQueue.EnqueueAsync(async ct =>
         {
             var installedDrivers = await _inventory.GetInstalledDriversAsync(ct).ConfigureAwait(false);
@@ -69,9 +73,14 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
             await foreach (var update in _updateSource.FindUpdatesAsync(installedDrivers, ct).ConfigureAwait(false))
             {
-                await responseStream.WriteAsync(GrpcMappers.ToGrpc(update), ct).ConfigureAwait(false);
+                updates.Add(update);
             }
         }, context.CancellationToken).ConfigureAwait(false);
+
+        foreach (var update in updates)
+        {
+            await responseStream.WriteAsync(GrpcMappers.ToGrpc(update), context.CancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc/>
@@ -113,7 +122,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
         if (operationId.Length == 0
             || operationId.Length > MaxOperationIdLength
-            || !long.TryParse(operationId, out _))
+            || !ulong.TryParse(operationId, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId)
+            || parsedId == 0)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Identificador de operación no válido."));
         }
@@ -201,27 +211,54 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                     $"No se encontró la actualización '{updateId}' en Windows Update.",
                     rebootRequired: false,
                     totalUpdates,
-                    completedUpdates).ConfigureAwait(false);
+                    completedUpdates,
+                    ct).ConfigureAwait(false);
                 continue;
             }
 
-            var result = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
-                .ConfigureAwait(false);
-
-            completedUpdates++;
-            if (result.RebootRequired)
+            try
             {
-                _operationQueue.MarkPendingReboot();
-            }
+                var result = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
+                    .ConfigureAwait(false);
 
-            await WriteFinishedResultAsync(
-                responseStream,
-                match.UpdateId,
-                result.Success,
-                result.ErrorMessage,
-                result.RebootRequired,
-                totalUpdates,
-                completedUpdates).ConfigureAwait(false);
+                completedUpdates++;
+                if (result.RebootRequired)
+                {
+                    _operationQueue.MarkPendingReboot();
+                }
+
+                await WriteFinishedResultAsync(
+                    responseStream,
+                    match.UpdateId,
+                    result.Success,
+                    result.ErrorMessage,
+                    result.RebootRequired,
+                    totalUpdates,
+                    completedUpdates,
+                    ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                completedUpdates++;
+                if (_logger.IsEnabled(LogLevel.Error))
+                {
+                    _logger.LogError(ex, "Excepción inesperada al instalar la actualización {UpdateId}.", match.UpdateId);
+                }
+
+                await WriteFinishedResultAsync(
+                    responseStream,
+                    match.UpdateId,
+                    success: false,
+                    errorMessage: $"Error inesperado al instalar '{match.UpdateId}': {ex.Message}",
+                    rebootRequired: false,
+                    totalUpdates,
+                    completedUpdates,
+                    ct).ConfigureAwait(false);
+            }
         }
     }
 
@@ -232,17 +269,44 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         int completedUpdates,
         CancellationToken ct)
     {
-        // Los progresos se encolan sin contención y se vuelcan al stream gRPC
-        // desde un único escritor (este método) una vez finalizada la llamada
-        // al instalador, evitando escrituras concurrentes en el stream.
-        var pendingProgress = new ConcurrentQueue<InstallProgress>();
+        // El progreso se transmite en tiempo real al stream gRPC utilizando un Channel
+        // como buffer desacoplado, asegurando que un único lector serializado escribe
+        // concurrentemente al responseStream mientras el instalador ejecuta sus fases.
+        var channel = Channel.CreateUnbounded<InstallProgress>(new UnboundedChannelOptions
+        {
+            SingleWriter = false,
+            SingleReader = true
+        });
+
         var progress = new InlineProgress(p =>
         {
-            pendingProgress.Enqueue(p);
+            channel.Writer.TryWrite(p);
             _operationQueue.UpdateProgress(update.UpdateId, p);
         });
 
-        InstallResult result;
+        var readerTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (await channel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                {
+                    while (channel.Reader.TryRead(out var buffered))
+                    {
+                        await responseStream.WriteAsync(
+                            GrpcMappers.ToProgress(update.UpdateId, buffered, totalUpdates, completedUpdates), ct)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Cancelación esperada si el cliente cancela la llamada RPC.
+            }
+        }, CancellationToken.None);
+
+        Exception? installException = null;
+        InstallResult? result = null;
+
         try
         {
             result = await _installer.InstallAsync(update, progress, ct).ConfigureAwait(false);
@@ -256,15 +320,25 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
             throw;
         }
-
-        while (pendingProgress.TryDequeue(out var buffered))
+        catch (Exception ex)
         {
-            await responseStream.WriteAsync(
-                GrpcMappers.ToProgress(update.UpdateId, buffered, totalUpdates, completedUpdates), ct)
-                .ConfigureAwait(false);
+            installException = ex;
+            throw;
+        }
+        finally
+        {
+            channel.Writer.TryComplete();
+            try
+            {
+                await readerTask.ConfigureAwait(false);
+            }
+            catch when (installException != null)
+            {
+                // Conservar la excepción original producida durante la instalación.
+            }
         }
 
-        return result;
+        return result!;
     }
 
     private async Task WriteFinishedResultAsync(
@@ -274,7 +348,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         string? errorMessage,
         bool rebootRequired,
         int totalUpdates,
-        int completedUpdates)
+        int completedUpdates,
+        CancellationToken ct = default)
     {
         var message = new InstallProgressMsg
         {
@@ -297,7 +372,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             _logger.LogError("Fallo al instalar la actualización {UpdateId}: {Error}", updateId, errorMessage);
         }
 
-        await responseStream.WriteAsync(message).ConfigureAwait(false);
+        await responseStream.WriteAsync(message, ct).ConfigureAwait(false);
     }
 
     /// <summary>

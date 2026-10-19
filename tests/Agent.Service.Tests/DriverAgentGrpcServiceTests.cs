@@ -203,6 +203,28 @@ public class DriverAgentGrpcServiceTests
             streamed.Select(u => u.UpdateId).Should().Equal("update-1", "update-2");
             streamed[0].NewVersion.Should().Be("2.0.0.0");
         }
+
+        [Fact]
+        public async Task Should_Release_Operation_Queue_Before_Streaming_To_Client()
+        {
+            await using var harness = await AgentHarness.StartAsync();
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1") };
+
+            harness.Inventory
+                .GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            harness.UpdateSource
+                .FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            using var call = harness.Client.CheckUpdates(new CheckUpdatesRequest());
+
+            var hasNext = await call.ResponseStream.MoveNext(default);
+            hasNext.Should().BeTrue();
+
+            var status = await harness.Client.GetStatusAsync(new StatusRequest());
+            status.OperationInProgress.Should().BeFalse();
+        }
     }
 
     public class Install
@@ -252,6 +274,56 @@ public class DriverAgentGrpcServiceTests
         }
 
         [Fact]
+        public async Task Should_Stream_Progress_In_Real_Time_While_Installer_Is_Running()
+        {
+            await using var harness = await AgentHarness.StartAsync();
+            var update = CreateUpdate("update-realtime");
+
+            harness.Inventory
+                .GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            harness.UpdateSource
+                .FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(new List<DriverUpdate> { update }));
+
+            var installerBlocker = new TaskCompletionSource<bool>();
+
+            harness.Installer
+                .InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(async callInfo =>
+                {
+                    var progress = callInfo.ArgAt<IProgress<InstallProgress>>(1);
+                    progress?.Report(new InstallProgress
+                    {
+                        PercentComplete = 15,
+                        Phase = InstallPhase.Downloading,
+                        StatusMessage = "Descarga en curso..."
+                    });
+
+                    await installerBlocker.Task;
+
+                    return CreateInstallResult("update-realtime", success: true);
+                });
+
+            using var call = harness.Client.Install(new InstallRequest { UpdateIds = { "update-realtime" } });
+
+            var hasFirstMessage = await call.ResponseStream.MoveNext(default);
+            hasFirstMessage.Should().BeTrue();
+            var firstMessage = call.ResponseStream.Current;
+            firstMessage.Finished.Should().BeFalse();
+            firstMessage.PercentComplete.Should().Be(15);
+            firstMessage.Phase.Should().Be(InstallPhaseProto.InstallPhaseDownloading);
+
+            installerBlocker.SetResult(true);
+
+            var hasSecondMessage = await call.ResponseStream.MoveNext(default);
+            hasSecondMessage.Should().BeTrue();
+            var secondMessage = call.ResponseStream.Current;
+            secondMessage.Finished.Should().BeTrue();
+            secondMessage.Success.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task Should_Install_Several_Updates_Sequentially_And_Continue_After_Failures()
         {
             await using var harness = await AgentHarness.StartAsync();
@@ -281,6 +353,49 @@ public class DriverAgentGrpcServiceTests
                 Arg.Any<DriverUpdate>(),
                 Arg.Any<IProgress<InstallProgress>>(),
                 Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task Should_Continue_Batch_When_An_Update_Throws_Unexpected_Exception()
+        {
+            await using var harness = await AgentHarness.StartAsync();
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
+
+            harness.Inventory
+                .GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            harness.UpdateSource
+                .FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            harness.Installer
+                .InstallAsync(
+                    Arg.Is<DriverUpdate>(u => u.UpdateId == "update-1"),
+                    Arg.Any<IProgress<InstallProgress>>(),
+                    Arg.Any<CancellationToken>())
+                .Returns<Task<InstallResult>>(_ => throw new InvalidOperationException("Fallo catastrofico COM simulado"));
+
+            harness.Installer
+                .InstallAsync(
+                    Arg.Is<DriverUpdate>(u => u.UpdateId == "update-2"),
+                    Arg.Any<IProgress<InstallProgress>>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(_ => CreateInstallResult("update-2", success: true));
+
+            using var call = harness.Client.Install(new InstallRequest { UpdateIds = { "update-1", "update-2" } });
+            var messages = await CollectAllAsync(call.ResponseStream);
+
+            var finished = messages.Where(m => m.Finished).ToList();
+            finished.Should().HaveCount(2);
+
+            finished[0].UpdateId.Should().Be("update-1");
+            finished[0].Success.Should().BeFalse();
+            finished[0].ErrorMessage.Should().Contain("Fallo catastrofico COM simulado");
+            finished[0].CompletedUpdates.Should().Be(1);
+
+            finished[1].UpdateId.Should().Be("update-2");
+            finished[1].Success.Should().BeTrue();
+            finished[1].CompletedUpdates.Should().Be(2);
         }
 
         [Fact]
@@ -475,6 +590,10 @@ public class DriverAgentGrpcServiceTests
         [Theory]
         [InlineData("")]
         [InlineData("abc")]
+        [InlineData("-1")]
+        [InlineData("-42")]
+        [InlineData("+10")]
+        [InlineData("0")]
         public async Task Should_Reject_Invalid_Operation_Ids(string operationId)
         {
             await using var harness = await AgentHarness.StartAsync();

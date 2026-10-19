@@ -33,7 +33,8 @@ public class NamedPipeSecurityFactoryTests
 
         rules.Should().Contain(rule =>
             ((SecurityIdentifier)rule.IdentityReference).Value == NamedPipeSecurityFactory.InteractiveSid
-            && rule.PipeAccessRights == PipeAccessRights.FullControl
+            && (rule.PipeAccessRights & PipeAccessRights.ReadWrite) == PipeAccessRights.ReadWrite
+            && !rule.PipeAccessRights.HasFlag(PipeAccessRights.ChangePermissions)
             && rule.AccessControlType == AccessControlType.Allow);
     }
 }
