@@ -14,7 +14,6 @@
         <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True" />
         <conv:NullToVisibilityConverter x:Key="NotNullToVis" />
         <conv:BytesToHumanConverter x:Key="BytesHuman" />
-        <conv:SuccessToBrushConverter x:Key="SuccessBrush" />
     </UserControl.Resources>
 
     <Grid>

@@ -161,11 +161,8 @@
                                        Command="{Binding NavigateCommand}"
                                        CommandParameter="{x:Static vm:AppPage.Dashboard}">
                             <views:NavItem.IsActive>
-                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}">
-                                    <Binding.ConverterParameter>
-                                        <vm:AppPage>Dashboard</vm:AppPage>
-                                    </Binding.ConverterParameter>
-                                </Binding>
+                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}"
+                                         ConverterParameter="{x:Static vm:AppPage.Dashboard}" />
                             </views:NavItem.IsActive>
                         </views:NavItem>
 
@@ -175,11 +172,8 @@
                                        Command="{Binding NavigateCommand}"
                                        CommandParameter="{x:Static vm:AppPage.Updates}">
                             <views:NavItem.IsActive>
-                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}">
-                                    <Binding.ConverterParameter>
-                                        <vm:AppPage>Updates</vm:AppPage>
-                                    </Binding.ConverterParameter>
-                                </Binding>
+                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}"
+                                         ConverterParameter="{x:Static vm:AppPage.Updates}" />
                             </views:NavItem.IsActive>
                         </views:NavItem>
 
@@ -189,11 +183,8 @@
                                        Command="{Binding NavigateCommand}"
                                        CommandParameter="{x:Static vm:AppPage.History}">
                             <views:NavItem.IsActive>
-                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}">
-                                    <Binding.ConverterParameter>
-                                        <vm:AppPage>History</vm:AppPage>
-                                    </Binding.ConverterParameter>
-                                </Binding>
+                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}"
+                                         ConverterParameter="{x:Static vm:AppPage.History}" />
                             </views:NavItem.IsActive>
                         </views:NavItem>
 
@@ -203,11 +194,8 @@
                                        Command="{Binding NavigateCommand}"
                                        CommandParameter="{x:Static vm:AppPage.Settings}">
                             <views:NavItem.IsActive>
-                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}">
-                                    <Binding.ConverterParameter>
-                                        <vm:AppPage>Settings</vm:AppPage>
-                                    </Binding.ConverterParameter>
-                                </Binding>
+                                <Binding Path="ActivePage" Converter="{StaticResource PageEq}"
+                                         ConverterParameter="{x:Static vm:AppPage.Settings}" />
                             </views:NavItem.IsActive>
                         </views:NavItem>
 

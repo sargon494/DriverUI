@@ -14,7 +14,6 @@
         <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True" />
         <conv:NullToVisibilityConverter x:Key="NotNullToVis" />
         <conv:TimestampToStringConverter x:Key="TsToStr" />
-        <conv:SuccessToBrushConverter x:Key="SuccessBrush" />
     </UserControl.Resources>
 
     <Grid>

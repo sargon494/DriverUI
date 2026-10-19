@@ -37,6 +37,22 @@ public partial class App : Application
                 retainedFileCountLimit: 7)
             .CreateLogger();
 
+        DispatcherUnhandledException += (s, args) =>
+        {
+            Log.Error(args.Exception, "Excepción no controlada en la UI de WPF.");
+            MessageBox.Show($"Error en la interfaz:\n\n{args.Exception.Message}",
+                            "DriverUpdater", MessageBoxButton.OK, MessageBoxImage.Error);
+            args.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+        {
+            if (args.ExceptionObject is Exception ex)
+            {
+                Log.Fatal(ex, "Excepción fatal en AppDomain.");
+            }
+        };
+
         // ── DI container ─────────────────────────────────────────
         var services = new ServiceCollection();
 

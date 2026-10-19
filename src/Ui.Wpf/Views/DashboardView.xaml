@@ -250,15 +250,18 @@
                     </StackPanel>
 
                     <!-- Empty state -->
-                    <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Visibility="{Binding IsScanning, Converter={StaticResource InvertBoolToVis}}">
+                    <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding FilteredDrivers.Count}" Value="0">
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding HasDrivers}" Value="False" />
+                                            <Condition Binding="{Binding IsScanning}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
@@ -275,8 +278,21 @@
                     </StackPanel>
 
                     <!-- Filas -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Visibility="{Binding IsScanning, Converter={StaticResource InvertBoolToVis}}">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding HasDrivers}" Value="True" />
+                                            <Condition Binding="{Binding IsScanning}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
                         <ItemsControl ItemsSource="{Binding FilteredDrivers}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

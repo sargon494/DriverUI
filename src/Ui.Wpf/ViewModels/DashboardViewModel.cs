@@ -28,6 +28,7 @@ public sealed partial class DashboardViewModel : PageViewModelBase
     [ObservableProperty] private int _degradedDrivers;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private bool _hasDrivers;
 
     public ObservableCollection<InstalledDriverMsg> Drivers { get; } = [];
     public ObservableCollection<InstalledDriverMsg> FilteredDrivers { get; } = [];
@@ -102,6 +103,8 @@ public sealed partial class DashboardViewModel : PageViewModelBase
         {
             FilteredDrivers.Add(d);
         }
+
+        HasDrivers = FilteredDrivers.Count > 0;
     }
 
     private void UpdateStats()

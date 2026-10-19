@@ -11,8 +11,23 @@ namespace Ui.Wpf.Converters;
 [ValueConversion(typeof(AppPage), typeof(bool))]
 public sealed class PageEqualityConverter : IValueConverter
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is AppPage page && parameter is AppPage target && page == target;
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is AppPage page)
+        {
+            if (parameter is AppPage target)
+            {
+                return page == target;
+            }
+
+            if (parameter is string str && Enum.TryParse<AppPage>(str, out var parsed))
+            {
+                return page == parsed;
+            }
+        }
+
+        return false;
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         Binding.DoNothing;
