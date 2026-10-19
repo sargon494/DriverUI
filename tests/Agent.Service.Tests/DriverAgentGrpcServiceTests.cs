@@ -593,6 +593,54 @@ public class DriverAgentGrpcServiceTests
         }
 
         [Fact]
+        public async Task Should_Propagate_OperationCanceledException_When_Client_Cancels_During_Progress_Streaming()
+        {
+            var inventory = Substitute.For<IDriverInventory>();
+            var updateSource = Substitute.For<IUpdateSource>();
+            var installer = Substitute.For<IDriverInstaller>();
+            var history = Substitute.For<IOperationHistory>();
+            var queue = new OperationQueue();
+            var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
+
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1") };
+            inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            using var cts = new CancellationTokenSource();
+
+            // Al escribir el progreso en el stream, el cliente cancela la RPC
+            var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
+            streamWriter.WriteAsync(Arg.Is<InstallProgressMsg>(m => !m.Finished), Arg.Any<CancellationToken>())
+                .Returns(callInfo =>
+                {
+                    cts.Cancel();
+                    throw new OperationCanceledException(cts.Token);
+                });
+
+            installer.InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(async callInfo =>
+                {
+                    var prog = callInfo.ArgAt<IProgress<InstallProgress>>(1);
+                    var token = callInfo.ArgAt<CancellationToken>(2);
+                    prog.Report(new InstallProgress { Phase = InstallPhase.Downloading, PercentComplete = 20, StatusMessage = "Descargando..." });
+                    // Esperar a que se propague la cancelación
+                    await Task.Delay(50, token);
+                    return CreateInstallResult("update-1", success: true);
+                });
+
+            var context = new TestServerCallContext(cts.Token);
+
+            var act = () => service.Install(new InstallRequest { UpdateIds = { "update-1" } }, streamWriter, context);
+
+            await act.Should().ThrowAsync<OperationCanceledException>();
+            await history.DidNotReceiveWithAnyArgs().RecordAsync(default!, default);
+        }
+
+        [Fact]
         public async Task Should_Not_Duplicate_History_Recording_When_Installer_Returns_Failed_Result()
         {
             var inventory = Substitute.For<IDriverInventory>();
