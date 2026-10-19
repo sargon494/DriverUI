@@ -332,4 +332,85 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
   1. **Sprint 4B — Servicio de Windows (`Agent.Service`)**: Implementar Worker Service con gRPC sobre Named Pipes para comunicar la UI no privilegiada con el servicio SYSTEM.
   2. **Sprint 5 — Interfaz de usuario WPF (`Ui.Wpf`)**: Desarrollar la interfaz visual en MVVM (con CommunityToolkit.Mvvm) consumiendo el servicio gRPC o la capa de abstracción.
 
+---
+
+## Sprint 4B — Servicio de Windows con gRPC sobre Named Pipes (`Agent.Service` + `Agent.Ipc`)
+
+- **Fecha**: 2026-10-19
+- **Estado**: ✅ Completado
+- **Hito**: Hito 2 (Servicio + UI — parte IPC y servicio)
+
+### Tareas completadas
+- [x] **S4B-T1: Proyecto `Agent.Ipc` — contrato IPC compartido** (`src/Agent.Ipc`):
+  - `Protos/driveragent.proto` con el servicio `DriverAgent`: `Scan`, `CheckUpdates` (streaming), `Install` (streaming de progreso), `Rollback`, `GetHistory` y `GetStatus`. Codegen `GrpcServices="Both"`, namespace C# `Agent.Ipc.Grpc`.
+  - `DriverAgentChannel.CreateChannel()`: fábrica de canal gRPC sobre named pipe usando `SocketsHttpHandler.ConnectCallback` con `NamedPipeClientStream` (cliente para UI y tests).
+  - Constante `DefaultPipeName = "DriverUpdater"` (equivale a `\\.\pipe\DriverUpdater`, según DESIGN.md §5).
+  - Referencia a `Grpc.AspNetCore 2.76.0` + `Grpc.Tools 2.76.0` explícito (los targets de `Grpc.Tools` no se importan como dependencia transitiva en este entorno; ver Decisiones).
+- [x] **S4B-T2: `OperationQueue` — cola de operaciones** (`src/Agent.Service/Operations/`):
+  - `IOperationQueue` / `OperationQueue`: exclusión mutua con `SemaphoreSlim(1,1)`; garantiza **una operación privilegiada a la vez** (instalaciones, rollbacks y búsquedas de WUA; la sesión COM no debe atenderlas en paralelo).
+  - Cancelable: el token de la llamada gRPC interrumpe tanto la espera en cola como la operación en ejecución; la cola siempre queda libre (`finally`).
+  - Estado observable inmutable (`OperationState`: `OperationInProgress`, `CurrentUpdateId`, `PercentComplete`, `Phase`, `PendingReboot`, `LastScanUtc`, `QueuedOperations`) intercambiado de forma thread-safe.
+  - Latch `PendingReboot` que persiste hasta el reinicio del servicio (natural tras reiniciar el equipo).
+  - Contador de operaciones en cola para la UI (`QueuedOperations`).
+- [x] **S4B-T3: `DriverAgentGrpcService` — servidor gRPC** (`src/Agent.Service/Grpc/`):
+  - `Scan`: inventario WMI mapeado a `InstalledDriverMsg`; actualiza `LastScanUtc`.
+  - `CheckUpdates`: serializado por la cola durante la detección en WUA; desacopla la transmisión de actualizaciones de la cola para que clientes lentos no bloqueen operaciones posteriores.
+  - `Install`: recibe **solo `update_ids`**; el servicio re-resuelve cada ID contra Windows Update en el instante de instalar (evita instalar metadatos anticuados o manipulados por el cliente). Instala secuencialmente, transmite las 8 fases de `InstallProgress` en **tiempo real** mediante `Channel<T>` y un mensaje final `Finished` por driver con resultado individual (`Success`, `ErrorMessage`, `RebootRequired`). IDs desconocidos o excepciones inesperadas generan resultado de fallo individual sin abortar el lote.
+  - `Rollback`: valida estrictamente el formato del ID de operación (entero positivo sin signo `ulong`, ≤32 caracteres) y delega en `IDriverInstaller.RollbackAsync` vía la cola.
+  - `GetHistory`: aplica `limit` (entradas más recientes) sobre `IOperationHistory.GetAllAsync`.
+  - `GetStatus`: estado de la cola, `PendingReboot` y `LastScanUtc` para la UI.
+  - Progreso notificado en tiempo real con `InlineProgress` hacia un `Channel<InstallProgress>` con lector en tarea dedicada hacia el stream gRPC; el stream nunca sufre escrituras concurrentes.
+  - Validación de entrada: IDs no vacíos, longitud acotada, deduplicación case-insensitive; peticiones inválidas → `RpcException(InvalidArgument)`.
+- [x] **S4B-T4: Seguridad IPC** (`src/Agent.Service/Ipc/`):
+  - `NamedPipeSecurityFactory`: ACL del pipe con control completo para SYSTEM (`S-1-5-18`) y Administradores (`S-1-5-32-544`), y permisos `ReadWrite` para usuarios interactivos (`S-1-5-4`), impidiendo `WRITE_DAC`/`WRITE_OWNER` a usuarios interactivos no privilegiados (cumpliendo la regla 4 de AGENTS.md, "solo usuarios interactivos locales").
+  - `CurrentUserOnly = false` en `NamedPipeTransportOptions`: la opción por defecto es incompatible con una ACL explícita y además bloquearía a los usuarios interactivos (el servicio corre como SYSTEM).
+  - `NamedPipeStreamFactory`: hook `CreateNamedPipeServerStream` que normaliza `PipeOptions.FirstPipeInstance` (solo en la primera instancia real del pool) y crea cada instancia con la ACL del contexto. Sin él, el creador por defecto marca varias instancias con `FirstPipeInstance` y el bind falla con `Access Denied`.
+  - `Program.cs`: `AddWindowsService("DriverUpdater")`, Serilog con fichero rotatorio en `%ProgramData%\DriverUpdater\logs\service-.log`, Kestrel `ListenNamedPipe` con `HttpProtocols.Http2`, `MapGrpcService<DriverAgentGrpcService>()`. Ejecutable como servicio de Windows o en consola para diagnóstico.
+- [x] **S4B-T5: Proyecto de tests `Agent.Service.Tests`** (`tests/Agent.Service.Tests`):
+  - `OperationQueueTests` (5+5 tests): ejecución y resultado, serialización estricta, cancelación en espera y en ejecución, liberación ante excepciones, estado (progreso, latch de reinicio, último escaneo, argumentos).
+  - `GrpcMappersTests`: mapeo completo de modelos Core ↔ mensajes proto, normalización de fechas a UTC (Kind Utc/Local/Unspecified) y mapeo exhaustivo de enums.
+  - `NamedPipeSecurityFactoryTests`: verificación de las 3 reglas de la ACL (SIDs, derechos y tipo).
+  - `NamedPipeStreamFactoryTests`: normalización de `FirstPipeInstance`.
+  - `DriverAgentGrpcServiceTests`: **integración IPC real** — servidor ASP.NET Core in-process sobre named pipe único por test + cliente real por `DriverAgentChannel`, con dominio simulado (NSubstitute): Scan, CheckUpdates (streaming desacoplado), Install (progreso en tiempo real con Channel, lote secuencial, tolerancia a fallos y excepciones inesperadas, IDs desconocidos, rechazo de peticiones vacías), Rollback (mapeo y validación estricta ulong), GetHistory (con y sin límite), `GetStatus` (estado y reinicio pendiente), **serialización de instalaciones concurrentes**, **liberación de la cola al cancelar el cliente** y **aplicación real de la ACL configurada** (captura vía hook).
+- [x] **S4B-T6: Verificación end-to-end del binario real**:
+  - Arranque en modo consola del binario publicado: servicio en marcha y `\\.\pipe\DriverUpdater` visible en el sistema.
+  - Cliente real (Agente.Ipc) contra el servicio en vivo: `GetStatus` OK, `Scan` OK (266 controladores reales inventariados vía WMI a través del servicio), `GetHistory` OK.
+
+### Decisiones técnicas tomadas
+1. **Nuevo proyecto `Agent.Ipc`**:
+   - El contrato gRPC y la fábrica de canal cliente viven en un proyecto compartido (`GrpcServices="Both"`) para que `Agent.Service` implemente el servidor y la futura UI consuma el cliente sin referenciar el ensamblado del servicio. Actualizada la estructura de `AGENTS.md` y `DESIGN.md` §4.6/§5 en consecuencia. La UI arrastrará dependencias de servidor de `Grpc.AspNetCore` en el publish; si pesa demasiado, se dividirá en contratos cliente/servidor en una fase posterior.
+2. **Transporte de named pipes nativo de Kestrel** (incluido en el framework .NET 10 como `Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes`):
+   - `ListenNamedPipe` + `HttpProtocols.Http2` en claro (gRPC puro; sin HTTP/1.1 en el pipe). No hace falta `UseNamedPipes` explícito: el transporte se registra automáticamente.
+   - Cliente gRPC: `GrpcChannel.ForAddress("http://localhost")` con `SocketsHttpHandler.ConnectCallback` que devuelve un `NamedPipeClientStream` (dirección simbólica; el transporte real es el pipe).
+3. **Peculiaridades del transporte y ACL restringida**:
+   - `NamedPipeTransportOptions.CurrentUserOnly` viene activa por defecto y es **incompatible** con `PipeSecurity` explícita (`ArgumentException` en `NamedPipeServerStreamAcl.Create`); además bloquearía a los usuarios interactivos porque el servicio corre como SYSTEM → se desactiva y la restricción se aplica con la ACL.
+   - El creador por defecto marca varias instancias del pool con `PipeOptions.FirstPipeInstance`; la segunda instancia falla con `Access Denied` ("pipe already in use"). Resuelto con `NamedPipeStreamFactory`, que elimina la flag salvo en la primera instancia real.
+   - Seguridad de la ACL: SYSTEM y Administradores tienen `FullControl`, mientras que las sesiones interactivas (`S-1-5-4`) tienen `ReadWrite`. Se restringe `WRITE_DAC` y `WRITE_OWNER` para prevenir que un usuario interactivo sin privilegios modifique la seguridad del pipe.
+4. **Re-resolución y tolerancia a fallos en `Install`**:
+   - Por seguridad y consistencia con la CLI, la instalación solo acepta IDs; el servidor consulta el inventario y Windows Update, y empareja por `UpdateId`. Un ID que ya no existe o una excepción inesperada durante la instalación produce un resultado individual de fallo (`Finished` con `Success=false`), sin interrumpir el resto de actualizaciones del lote.
+5. **Streaming de progreso en tiempo real con Channel**:
+   - `InlineProgress` escribe a un `Channel<InstallProgress>` desacoplado, leído concurrentemente por una tarea asíncrona hacia `responseStream.WriteAsync`. Esto entrega los eventos de progreso en tiempo real a la UI a medida que se ejecutan las fases, manteniendo la seguridad de escritura concurrente de gRPC y drenando limpiamente al finalizar o fallar.
+6. **Cancelación segura y auditoría obligatoria (Regla 8 de AGENTS.md)**:
+   - Una cancelación en `WuaDriverInstaller` durante las fases previas a la instalación nativa registra de forma obligatoria el fallo en el historial persistente de SQLite utilizando `CancellationToken.None` (para evitar que la cancelación interrumpa el guardado) antes de re-lanzar la excepción. La fase de instalación nativa con WUA no se interrumpe para evitar estados inconsistentes en el sistema operativo.
+6. **`Grpc.Tools` explícito**:
+   - Los targets de `Grpc.Tools` (codegen proto) solo se importan si el paquete se referencia directamente; `Grpc.AspNetCore` no lo propaga en este entorno. Referenciado con `PrivateAssets="All"` en `Agent.Ipc`.
+7. **Supresión de `CA1711`**:
+   - En `.editorconfig`, con justificación, para `IOperationQueue`/`OperationQueue`: la "cola de operaciones" del diseño (MVP.md Hito 2) es genuinamente una cola serializada de una entrada.
+8. **`global.json` ajustado al SDK instalado**:
+   - El entorno pasó de tener el SDK 10.0.401 a 10.0.302; `global.json` actualizado a `10.0.302` (`rollForward: latestFeature`) para restaurar la compilación.
+
+### Pruebas ejecutadas
+- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
+- `dotnet test -c Release`: **133/133 tests pasados** (39 en `Core.Tests`, 53 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
+- E2E del binario real: servicio iniciado en consola, pipe `\\.\pipe\DriverUpdater` publicado, cliente real con `Scan` de 266 controladores reales, `GetStatus` y `GetHistory` verificados.
+
+### Notas para el siguiente sprint (Sprint 5)
+- El canal IPC completo (servicio + contrato + cliente) está operativo y probado. Quedan para completar el Hito 2:
+  1. **Sprint 5 — UI WPF (`Ui.Wpf`)**: MVVM con CommunityToolkit.Mvvm consumiendo `Agent.Ipc` (pantallas: inicio/escaneo, actualizaciones, historial, ajustes). Referenciar `Agent.Ipc` desde `Ui.Wpf`. Contemplar en UX la cancelación diferida de la fase de instalación nativa (*"Cancelando... esperando a que finalice el controlador en curso"*).
+  2. **Ajustes y exclusiones (U7)**: `config.json` en `%ProgramData%\DriverUpdater\`, RPCs `GetSettings`/`UpdateSettings` en el proto y aplicación de exclusiones en `CheckUpdates`/`Install`.
+  3. **Comprobación programada y notificaciones (U8)**: planificador en el servicio (sin polling), notificación toast si hay novedades y aviso de reinicio pendiente.
+  4. **Instalación del servicio de Windows**: registrar el binario como servicio (`sc create` o WiX en el Hito 4). Probar en VM (nunca en el equipo de desarrollo con operaciones reales).
+  5. **Validación E2E de la ACL en VM con cuenta estándar (reserva de auditoría)**: Verificar en VM que un usuario local interactivo sin privilegios administrativos puede conectar y realizar operaciones I/O en el pipe (`ReadWrite`), y certificar que cualquier intento de alterar la ACL/DACL es denegado con `Access Denied`.
+
 

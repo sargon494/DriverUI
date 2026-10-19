@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.Extensions.Logging;
@@ -63,145 +64,173 @@ public sealed class WuaDriverInstaller : IDriverInstaller
             _logger.LogInformation("Iniciando flujo de instalación segura para: {Title} ({NewVersion})", update.Title, update.NewVersion);
         }
 
-        // ─── FASE 1: Descarga del paquete ─────────────────────────────────
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Downloading,
-            PercentComplete = 10,
-            StatusMessage = $"Descargando actualización '{update.Title}'..."
-        });
+        var currentPhase = InstallPhase.Downloading;
 
-        var downloadResult = await _wuaExecutor.DownloadAsync(update.UpdateId, ct).ConfigureAwait(false);
-        if (!downloadResult.Success)
+        try
         {
-            var downloadError = downloadResult.ErrorMessage ?? "Error desconocido durante la descarga del controlador.";
-            return await RecordFailureAsync(update, downloadError, InstallPhase.Downloading, progress, ct).ConfigureAwait(false);
-        }
-
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Downloading,
-            PercentComplete = 25,
-            StatusMessage = "Descarga completada con éxito."
-        });
-
-        // ─── FASE 2: Verificación criptográfica de firma ─────────────────
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Verifying,
-            PercentComplete = 30,
-            StatusMessage = "Verificando firmas digitales de seguridad..."
-        });
-
-        foreach (var filePath in downloadResult.DownloadedFilePaths)
-        {
-            var sigResult = await _signatureVerifier.VerifyAsync(filePath, ct).ConfigureAwait(false);
-            if (!sigResult.IsValid)
+            // ─── FASE 1: Descarga del paquete ─────────────────────────────────
+            currentPhase = InstallPhase.Downloading;
+            progress?.Report(new InstallProgress
             {
-                var sigError = $"Firma no válida en archivo '{filePath}': {sigResult.FailureReason}. Instalación abortada por seguridad.";
-                return await RecordFailureAsync(update, sigError, InstallPhase.Verifying, progress, ct).ConfigureAwait(false);
+                Phase = InstallPhase.Downloading,
+                PercentComplete = 10,
+                StatusMessage = $"Descargando actualización '{update.Title}'..."
+            });
+
+            var downloadResult = await _wuaExecutor.DownloadAsync(update.UpdateId, ct).ConfigureAwait(false);
+            if (!downloadResult.Success)
+            {
+                var downloadError = downloadResult.ErrorMessage ?? "Error desconocido durante la descarga del controlador.";
+                return await RecordFailureAsync(update, downloadError, InstallPhase.Downloading, progress, ct).ConfigureAwait(false);
             }
+
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Downloading,
+                PercentComplete = 25,
+                StatusMessage = "Descarga completada con éxito."
+            });
+
+            // ─── FASE 2: Verificación criptográfica de firma ─────────────────
+            currentPhase = InstallPhase.Verifying;
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Verifying,
+                PercentComplete = 30,
+                StatusMessage = "Verificando firmas digitales de seguridad..."
+            });
+
+            foreach (var filePath in downloadResult.DownloadedFilePaths)
+            {
+                var sigResult = await _signatureVerifier.VerifyAsync(filePath, ct).ConfigureAwait(false);
+                if (!sigResult.IsValid)
+                {
+                    var sigError = $"Firma no válida en archivo '{filePath}': {sigResult.FailureReason}. Instalación abortada por seguridad.";
+                    return await RecordFailureAsync(update, sigError, InstallPhase.Verifying, progress, ct).ConfigureAwait(false);
+                }
+            }
+
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Verifying,
+                PercentComplete = 45,
+                StatusMessage = "Firma digital verificada y de confianza."
+            });
+
+            // ─── FASE 3: Creación de Punto de Restauración del Sistema ───────
+            currentPhase = InstallPhase.CreatingRestorePoint;
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.CreatingRestorePoint,
+                PercentComplete = 50,
+                StatusMessage = "Creando punto de restauración del sistema previo a la instalación..."
+            });
+
+            var restorePointOk = await _restorePointService.CreateRestorePointAsync(
+                $"DriverUpdater: {update.Title} ({update.NewVersion})", ct).ConfigureAwait(false);
+
+            if (!restorePointOk)
+            {
+                var restoreError = "No se pudo crear el punto de restauración del sistema. Instalación abortada por seguridad.";
+                return await RecordFailureAsync(update, restoreError, InstallPhase.CreatingRestorePoint, progress, ct).ConfigureAwait(false);
+            }
+
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.CreatingRestorePoint,
+                PercentComplete = 65,
+                StatusMessage = "Punto de restauración creado satisfactoriamente."
+            });
+
+            // ─── FASE 4: Instalación del controlador ─────────────────────────
+            // Se valida la cancelación justo antes de iniciar la instalación nativa.
+            // Una vez que el instalador nativo (WUA/pnputil) arranca, no se admite cancelación
+            // para evitar dejar el subsistema de controladores de Windows en un estado corrupto o inconsistente.
+            ct.ThrowIfCancellationRequested();
+
+            currentPhase = InstallPhase.Installing;
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Installing,
+                PercentComplete = 70,
+                StatusMessage = $"Instalando controlador '{update.Title}'..."
+            });
+
+            var installResult = await _wuaExecutor.InstallAsync(update.UpdateId, CancellationToken.None).ConfigureAwait(false);
+            if (!installResult.Success)
+            {
+                var installError = installResult.ErrorMessage ?? "Fallo en la instalación del paquete de controlador.";
+                return await RecordFailureAsync(update, installError, InstallPhase.Installing, progress, ct).ConfigureAwait(false);
+            }
+
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Installing,
+                PercentComplete = 85,
+                StatusMessage = "Instalación completada en el subsistema de Windows."
+            });
+
+            // ─── FASE 5: Validación final ─────────────────────────────────────
+            currentPhase = InstallPhase.Validating;
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Validating,
+                PercentComplete = 90,
+                StatusMessage = "Validando estado final del dispositivo..."
+            });
+
+            var timestamp = DateTime.UtcNow;
+            var finalResult = new InstallResult
+            {
+                UpdateId = update.UpdateId,
+                Success = true,
+                ErrorMessage = null,
+                RebootRequired = installResult.RebootRequired,
+                PreviousVersion = update.CurrentVersion,
+                InstalledVersion = update.NewVersion,
+                Timestamp = timestamp
+            };
+
+            // ─── Registro en historial ────────────────────────────────────────
+            await _operationHistory.RecordAsync(new OperationLogEntry
+            {
+                Id = 0,
+                OperationType = "Install",
+                UpdateId = update.UpdateId,
+                DeviceName = update.DeviceName,
+                HardwareId = update.MatchedHardwareId.Value,
+                DriverTitle = update.Title,
+                PreviousVersion = update.CurrentVersion,
+                NewVersion = update.NewVersion,
+                Success = true,
+                ErrorMessage = null,
+                Timestamp = timestamp
+            }, CancellationToken.None).ConfigureAwait(false);
+
+            progress?.Report(new InstallProgress
+            {
+                Phase = InstallPhase.Complete,
+                PercentComplete = 100,
+                StatusMessage = installResult.RebootRequired
+                    ? "Instalación finalizada con éxito. Se requiere reiniciar el equipo."
+                    : "Instalación finalizada con éxito."
+            });
+
+            return finalResult;
         }
-
-        progress?.Report(new InstallProgress
+        catch (OperationCanceledException)
         {
-            Phase = InstallPhase.Verifying,
-            PercentComplete = 45,
-            StatusMessage = "Firma digital verificada y de confianza."
-        });
-
-        // ─── FASE 3: Creación de Punto de Restauración del Sistema ───────
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.CreatingRestorePoint,
-            PercentComplete = 50,
-            StatusMessage = "Creando punto de restauración del sistema previo a la instalación..."
-        });
-
-        var restorePointOk = await _restorePointService.CreateRestorePointAsync(
-            $"DriverUpdater: {update.Title} ({update.NewVersion})", ct).ConfigureAwait(false);
-
-        if (!restorePointOk)
-        {
-            var restoreError = "No se pudo crear el punto de restauración del sistema. Instalación abortada por seguridad.";
-            return await RecordFailureAsync(update, restoreError, InstallPhase.CreatingRestorePoint, progress, ct).ConfigureAwait(false);
+            var cancelMessage = $"Instalación cancelada durante la fase {currentPhase}.";
+            await RecordFailureAsync(update, cancelMessage, currentPhase, progress, CancellationToken.None).ConfigureAwait(false);
+            throw;
         }
-
-        progress?.Report(new InstallProgress
+        catch (Exception ex)
         {
-            Phase = InstallPhase.CreatingRestorePoint,
-            PercentComplete = 65,
-            StatusMessage = "Punto de restauración creado satisfactoriamente."
-        });
-
-        // ─── FASE 4: Instalación del controlador ─────────────────────────
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Installing,
-            PercentComplete = 70,
-            StatusMessage = $"Instalando controlador '{update.Title}'..."
-        });
-
-        var installResult = await _wuaExecutor.InstallAsync(update.UpdateId, ct).ConfigureAwait(false);
-        if (!installResult.Success)
-        {
-            var installError = installResult.ErrorMessage ?? "Fallo en la instalación del paquete de controlador.";
-            return await RecordFailureAsync(update, installError, InstallPhase.Installing, progress, ct).ConfigureAwait(false);
+            var errorMessage = currentPhase is InstallPhase.Installing or InstallPhase.Validating
+                ? $"Excepción inesperada durante la fase {currentPhase} (la instalación nativa ya había iniciado, verifique el estado del dispositivo): {ex.Message}"
+                : $"Excepción inesperada durante la fase {currentPhase}: {ex.Message}";
+            return await RecordFailureAsync(update, errorMessage, currentPhase, progress, CancellationToken.None).ConfigureAwait(false);
         }
-
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Installing,
-            PercentComplete = 85,
-            StatusMessage = "Instalación completada en el subsistema de Windows."
-        });
-
-        // ─── FASE 5: Validación final ─────────────────────────────────────
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Validating,
-            PercentComplete = 90,
-            StatusMessage = "Validando estado final del dispositivo..."
-        });
-
-        var timestamp = DateTime.UtcNow;
-        var finalResult = new InstallResult
-        {
-            UpdateId = update.UpdateId,
-            Success = true,
-            ErrorMessage = null,
-            RebootRequired = installResult.RebootRequired,
-            PreviousVersion = update.CurrentVersion,
-            InstalledVersion = update.NewVersion,
-            Timestamp = timestamp
-        };
-
-        // ─── Registro en historial ────────────────────────────────────────
-        await _operationHistory.RecordAsync(new OperationLogEntry
-        {
-            Id = 0,
-            OperationType = "Install",
-            UpdateId = update.UpdateId,
-            DeviceName = update.DeviceName,
-            HardwareId = update.MatchedHardwareId.Value,
-            DriverTitle = update.Title,
-            PreviousVersion = update.CurrentVersion,
-            NewVersion = update.NewVersion,
-            Success = true,
-            ErrorMessage = null,
-            Timestamp = timestamp
-        }, ct).ConfigureAwait(false);
-
-        progress?.Report(new InstallProgress
-        {
-            Phase = InstallPhase.Complete,
-            PercentComplete = 100,
-            StatusMessage = installResult.RebootRequired
-                ? "Instalación finalizada con éxito. Se requiere reiniciar el equipo."
-                : "Instalación finalizada con éxito."
-        });
-
-        return finalResult;
     }
 
     /// <inheritdoc/>
@@ -211,7 +240,9 @@ public sealed class WuaDriverInstaller : IDriverInstaller
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
 
-        if (!long.TryParse(operationId, out var id))
+        if (!ulong.TryParse(operationId, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId)
+            || parsedId == 0
+            || parsedId > (ulong)long.MaxValue)
         {
             return new InstallResult
             {
@@ -224,6 +255,8 @@ public sealed class WuaDriverInstaller : IDriverInstaller
                 Timestamp = DateTime.UtcNow
             };
         }
+
+        var id = (long)parsedId;
 
         var entry = await _operationHistory.GetByIdAsync(id, ct).ConfigureAwait(false);
         if (entry == null)
@@ -337,6 +370,9 @@ public sealed class WuaDriverInstaller : IDriverInstaller
 
         var timestamp = DateTime.UtcNow;
 
+        // Regla 8 de AGENTS.md: Cada instalación deja registro en el log de operaciones.
+        // Se utiliza CancellationToken.None para asegurar la persistencia en el historial
+        // incluso ante cancelaciones del llamador.
         await _operationHistory.RecordAsync(new OperationLogEntry
         {
             Id = 0,
@@ -350,7 +386,7 @@ public sealed class WuaDriverInstaller : IDriverInstaller
             Success = false,
             ErrorMessage = errorMessage,
             Timestamp = timestamp
-        }, ct).ConfigureAwait(false);
+        }, CancellationToken.None).ConfigureAwait(false);
 
         return new InstallResult
         {
@@ -359,7 +395,7 @@ public sealed class WuaDriverInstaller : IDriverInstaller
             ErrorMessage = errorMessage,
             RebootRequired = false,
             PreviousVersion = update.CurrentVersion,
-            InstalledVersion = update.CurrentVersion,
+            InstalledVersion = string.Empty,
             Timestamp = timestamp
         };
     }

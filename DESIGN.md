@@ -81,6 +81,9 @@ Implementaciones Windows de las interfaces de `Core`:
 ### 4.5 `Cli`
 Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `rollback <opId>`, `log`. Reutiliza `Agent.Drivers` directamente.
 
+### 4.6 `Agent.Ipc`
+Proyecto compartido con el **contrato gRPC** (`Protos/driveragent.proto`, generado con `Grpc.Services=Both`) y la **fábrica de canal cliente** (`DriverAgentChannel.CreateChannel`) que conecta por named pipe mediante `SocketsHttpHandler.ConnectCallback`. Lo consumen el servicio (base del servidor), la UI (cliente) y los tests de integración IPC.
+
 ### 4.6 `Backend.Api` (fase posterior)
 - ASP.NET Core minimal API + EF Core + PostgreSQL.
 - Catálogo de drivers por hardware ID, versiones, compatibilidad, listas de bloqueo (drivers conocidos como problemáticos).
@@ -89,19 +92,39 @@ Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `ro
 
 ## 5. Contrato IPC (gRPC)
 
+Contrato en `src/Agent.Ipc/Protos/driveragent.proto` (namespace C# `Agent.Ipc.Grpc`):
+
 ```proto
 service DriverAgent {
   rpc Scan (ScanRequest) returns (ScanResponse);
-  rpc CheckUpdates (CheckUpdatesRequest) returns (stream UpdateFound);
-  rpc Install (InstallRequest) returns (stream InstallProgress);
-  rpc Rollback (RollbackRequest) returns (RollbackResult);
+  rpc CheckUpdates (CheckUpdatesRequest) returns (stream DriverUpdateMsg);
+  rpc Install (InstallRequest) returns (stream InstallProgressMsg);
+  rpc Rollback (RollbackRequest) returns (RollbackResultMsg);
   rpc GetHistory (HistoryRequest) returns (HistoryResponse);
-  rpc GetSettings (Empty) returns (Settings);
-  rpc UpdateSettings (Settings) returns (Settings);
+  rpc GetStatus (StatusRequest) returns (StatusResponse);
 }
 ```
 
 El streaming permite mostrar progreso en la UI en tiempo real.
+
+Implementación:
+- **Transporte**: transporte nativo de named pipes de Kestrel (`ListenNamedPipe`), HTTP/2 en claro (sin TLS: el pipe es local y su ACL restringe el acceso).
+- **ACL del pipe**: SYSTEM y Administradores con control completo; usuarios interactivos (SID `S-1-5-4`) con permisos de lectura y escritura (`ReadWrite`). Esto evita conceder `WRITE_DAC` o `WRITE_OWNER` a usuarios interactivos sin privilegios para que no puedan modificar la ACL del objeto. Sin `CurrentUserOnly` (incompatible con ACL explícita y bloquearía a los usuarios de sesiones interactivas, ya que el servicio corre como SYSTEM). *Nota de verificación*: La prueba de extremo a extremo con una cuenta interactiva estándar (no administradora) en VM para certificar la conexión, lectura/escritura y denegación de modificación de ACL queda agendada para el entorno VM.
+- **Frontera de seguridad de identidad**: toda la frontera de autorización descansa en la ACL del pipe (`S-1-5-4` local); el servicio no comprueba la identidad individual del usuario en cada RPC porque cualquier sesión interactiva local está autorizada para solicitar comprobaciones e instalaciones (conforme a la regla 4 de `AGENTS.md`).
+- **Instalación segura**: `Install` recibe solo identificadores de actualización; el servicio **re-resuelve** cada ID contra Windows Update en el momento de instalar, de modo que el cliente no puede inyectar metadatos de driver manipulados.
+- **Progreso en tiempo real desacoplado**: la transmisión de eventos de progreso se realiza en tiempo real a través de un `Channel<T>` con lector concurrente hacia el stream gRPC.
+- **Transmisión de `CheckUpdates`**: La búsqueda WUA es una operación COM bloqueante; se ejecuta dentro de la cola serializada y, una vez finalizada la consulta, las actualizaciones encontradas se transmiten al stream gRPC fuera del semáforo para que clientes lentos no retengan la cola.
+- **Cancelación y experiencia de usuario (UI)**: Si el usuario cancela una instalación durante las fases de descarga, verificación o creación de punto de restauración, la operación se cancela de inmediato y se audita el fallo. Si la cancelación se solicita cuando el driver ya ha iniciado la fase de instalación nativa (`WUA`/`pnputil`), por seguridad e integridad del subsistema de controladores no se interrumpe y se espera a que dicho driver finalice, cancelando las actualizaciones restantes del lote. La UI (`Ui.Wpf`) debe mostrar en este caso el estado *"Cancelando... esperando a que finalice el controlador en curso"* sin asumir aborto inmediato ni permitir reintentos hasta que el RPC concluya.
+- **Política de desconexión del cliente (fallo de transporte)**: Si el cliente gRPC se desconecta de forma abrupta (cierre de la UI, caída del proceso o rotura del pipe durante la transmisión de progreso o resultados):
+  - Cualquier pérdida de conexión con el cliente interrumpe de inmediato el trabajo previo a la fase nativa (descarga, verificación o punto de restauración) mediante un token de cancelación enlazado.
+  - Si el controlador ya había iniciado la fase nativa de instalación (`WUA`/`pnputil`), esta no se interrumpe y continúa hasta finalizar su ciclo para garantizar la estabilidad del sistema operativo.
+  - En ambos casos, el instalador asienta el resultado correspondiente en el historial (`history.db`).
+  - El lote se interrumpe de inmediato: las actualizaciones posteriores de la petición no se inician.
+  - Los errores de transporte gRPC/I/O no generan registros espurios ni fallos duplicados en el historial.
+  - La UI, al reconectar, puede consultar `GetStatus` (para saber si el servicio sigue ocupado completando el driver) y `GetHistory` (para conocer el resultado final).
+- **Cola de operaciones**: `OperationQueue` serializa instalaciones, rollbacks y búsquedas (una a la vez, la sesión COM de WUA no debe atenderlas en paralelo). Al completarse la llamada gRPC o al concluir el proceso de cancelación (respetando la finalización de la fase nativa si ya se inició), la cola queda liberada para la siguiente operación.
+- **Creación de instancias del pipe**: hook `CreateNamedPipeServerStream` con `NamedPipeStreamFactory`, que normaliza `FirstPipeInstance` (solo la primera instancia real) y aplica la ACL del contexto.
+- **Ajustes** (`GetSettings`/`UpdateSettings`): se añadirán al contrato junto con la gestión de ajustes y exclusiones (Hito 2).
 
 ## 6. Flujo de actualización
 

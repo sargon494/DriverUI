@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Agent.Service.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.76.0" />
@@ -16,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Agent.Drivers\Agent.Drivers.csproj" />
+    <ProjectReference Include="..\Agent.Ipc\Agent.Ipc.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 

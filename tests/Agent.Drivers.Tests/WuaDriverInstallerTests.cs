@@ -221,4 +221,107 @@ public sealed class WuaDriverInstallerTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("no válido");
     }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("-999")]
+    [InlineData("+42")]
+    [InlineData(" 123 ")]
+    [InlineData("0")]
+    public async Task RollbackAsync_Should_Fail_When_OperationId_Is_Negative_Signed_Or_Zero(string invalidId)
+    {
+        var result = await _installer.RollbackAsync(invalidId);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("no válido");
+    }
+
+    [Fact]
+    public async Task InstallAsync_Should_Record_Failure_And_Throw_When_Cancelled_During_Download()
+    {
+        var update = CreateSampleUpdate();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns<Task<WuaDownloadResult>>(_ => Task.FromCanceled<WuaDownloadResult>(cts.Token));
+
+        var act = () => _installer.InstallAsync(update, ct: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        // Regla 8 de AGENTS.md: Registro obligatorio en el historial ante cancelación
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                e.UpdateId == update.UpdateId &&
+                !e.Success &&
+                e.ErrorMessage != null &&
+                e.ErrorMessage.Contains("cancelada")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task InstallAsync_Should_Record_Failure_And_Throw_When_Cancelled_Before_Native_Install()
+    {
+        var update = CreateSampleUpdate();
+        using var cts = new CancellationTokenSource();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns(new WuaDownloadResult
+            {
+                Success = true,
+                ErrorMessage = null,
+                DownloadedFilePaths = []
+            });
+
+        _restorePointService.CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel(); // Cancelar tras el punto de restauración
+                return Task.FromResult(true);
+            });
+
+        var act = () => _installer.InstallAsync(update, ct: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        // La instalación nativa de WUA NO debe haberse llamado
+        await _wuaExecutor.DidNotReceive().InstallAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        // El fallo debe haberse registrado en el historial de operaciones
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                e.UpdateId == update.UpdateId &&
+                !e.Success &&
+                e.ErrorMessage != null &&
+                e.ErrorMessage.Contains("cancelada")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task InstallAsync_Should_Record_Failure_And_Return_Failure_When_Unexpected_Exception_Occurs()
+    {
+        var update = CreateSampleUpdate();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns<Task<WuaDownloadResult>>(_ => throw new InvalidOperationException("Fallo COM inesperado"));
+
+        var result = await _installer.InstallAsync(update);
+
+        result.Success.Should().BeFalse();
+        result.InstalledVersion.Should().BeEmpty();
+        result.ErrorMessage.Should().Contain("Fallo COM inesperado");
+
+        // Regla 8 de AGENTS.md: Cada instalación deja registro en el log de operaciones
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                e.UpdateId == update.UpdateId &&
+                !e.Success &&
+                e.ErrorMessage != null &&
+                e.ErrorMessage.Contains("Fallo COM inesperado")),
+            Arg.Any<CancellationToken>());
+    }
 }
