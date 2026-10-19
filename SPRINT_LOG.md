@@ -458,8 +458,11 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - [x] **S5-T8: Calidad, Icono y Eliminación de Código Obsoleto**:
   - Reemplazo y eliminación definitiva de `MainWindow.xaml` y `MainWindow.xaml.cs` obsoletos.
   - Creación de icono nativo de aplicación `src/Ui.Wpf/Resources/icon.ico`.
-  - Corrección de analizadores de código: especificación de `IFormatProvider` (CA1305), protección contra evaluación de logs en debug (CA1873) e implementación de `IDisposable` en `ShellViewModel` (CA1001).
-  - Verificación `dotnet format --verify-no-changes` y compilación en Release sin advertencias.
+- [x] **S5-T9: Corrección de renderizado de `ProgressBarSlim` e interactividad inmediata**:
+  - Corrección del contrato de plantilla de WPF en `Styles.xaml`: incorporación de `PART_Track` junto a `PART_Indicator` para que WPF pueda calcular el ancho efectivo (`indicatorLength = percent * trackLength`). Sin `PART_Track`, WPF bails out en `SetProgressBarIndicatorLength()` dejando el ancho del indicador en 0.
+  - Implementación de `IndeterminateBar` con animación de opacidad continua (`0.25` a `1.0`) para estados indeterminados (`IsIndeterminate="True"` en búsquedas y escaneos), evitando colisiones de precedencia entre el valor de ancho local de WPF y los triggers de alineación.
+  - Inicialización inmediata de `IsInstalling = true`, `Percent = 0` y `PhaseLabel = "Iniciando instalación..."` en `UpdatesViewModel.cs` al pulsar "Instalar seleccionadas", eliminando el retraso visual hasta el primer paquete gRPC.
+  - Añadido de insignia visual de éxito (`BadgeSuccess`) al finalizar la instalación.
 
 ### Decisiones técnicas tomadas
 1. **Consumo no privilegiado sobre gRPC (Reglas 3 y 4 de AGENTS.md)**:

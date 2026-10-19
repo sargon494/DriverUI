@@ -188,19 +188,26 @@
                                                        Margin="0 3 0 0" />
 
                                             <!-- Progress bar (durante instalación) -->
-                                            <Grid Margin="0 8 0 0"
+                                            <Grid Margin="0 10 0 0"
                                                   Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVis}}">
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition />
-                                                    <RowDefinition />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
                                                 </Grid.RowDefinitions>
                                                 <ProgressBar Style="{StaticResource ProgressBarSlim}"
+                                                             Height="6"
                                                              Value="{Binding Percent}"
                                                              Maximum="100" />
-                                                <TextBlock Grid.Row="1" Margin="0 4 0 0"
-                                                           Text="{Binding PhaseLabel}"
-                                                           Style="{StaticResource TextCaption}"
-                                                           Foreground="{StaticResource AccentBrush}" />
+                                                <Grid Grid.Row="1" Margin="0 6 0 0">
+                                                    <TextBlock Text="{Binding PhaseLabel}"
+                                                               Style="{StaticResource TextCaption}"
+                                                               Foreground="{StaticResource AccentBrush}" />
+                                                    <TextBlock HorizontalAlignment="Right"
+                                                               Text="{Binding Percent, StringFormat='{}{0}%'}"
+                                                               Style="{StaticResource TextCaption}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource AccentBrush}" />
+                                                </Grid>
                                             </Grid>
 
                                             <!-- Error message (tras fallo) -->
@@ -213,6 +220,28 @@
                                                              Converter="{StaticResource NotNullToVis}" />
                                                 </TextBlock.Visibility>
                                             </TextBlock>
+
+                                            <!-- Éxito al finalizar -->
+                                            <Border Margin="0 6 0 0"
+                                                    HorizontalAlignment="Left">
+                                                <Border.Style>
+                                                    <Style TargetType="Border" BasedOn="{StaticResource BadgeSuccess}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsFinished}" Value="True" />
+                                                                    <Condition Binding="{Binding Success}" Value="True" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="Actualizado correctamente"
+                                                           Foreground="{StaticResource SuccessBrush}"
+                                                           FontSize="10" FontWeight="SemiBold" />
+                                            </Border>
 
                                             <!-- Reboot required -->
                                             <Border Margin="0 6 0 0"

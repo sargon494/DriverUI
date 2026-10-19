@@ -287,19 +287,49 @@
          ═══════════════════════════════════════════════════════ -->
 
     <Style x:Key="ProgressBarSlim" TargetType="ProgressBar">
-        <Setter Property="Height" Value="4" />
+        <Setter Property="Height" Value="6" />
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
-                    <Border CornerRadius="2" Background="{TemplateBinding Background}">
+                    <Grid x:Name="Root" ClipToBounds="True">
+                        <!-- Fondo con esquinas redondeadas -->
+                        <Border CornerRadius="3" Background="{TemplateBinding Background}" />
+                        <!-- Pista para cálculo de ancho por WPF -->
+                        <Border x:Name="PART_Track" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                        <!-- Indicador determinado con ancho calculado por WPF -->
                         <Border x:Name="PART_Indicator"
                                 HorizontalAlignment="Left"
-                                CornerRadius="2"
+                                CornerRadius="3"
                                 Background="{StaticResource AccentGradientBrush}" />
-                    </Border>
+                        <!-- Indicador para estado indeterminado con pulso animado continuo -->
+                        <Border x:Name="IndeterminateBar"
+                                HorizontalAlignment="Stretch"
+                                CornerRadius="3"
+                                Background="{StaticResource AccentGradientBrush}"
+                                Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="IndeterminateBar" Property="Visibility" Value="Visible" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard Name="IndetAnim">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="IndeterminateBar"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.25" To="1.0" Duration="0:0:0.75"
+                                                         AutoReverse="True" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="IndetAnim" />
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

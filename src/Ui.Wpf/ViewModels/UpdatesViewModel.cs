@@ -134,6 +134,15 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
         CompletedInstalls = 0;
         GlobalStatus = $"Instalando 0 de {TotalToInstall}...";
 
+        // Marcar inmediatamente los elementos seleccionados como en proceso para que la barra de progreso aparezca sin retraso
+        foreach (var item in selected)
+        {
+            item.IsInstalling = true;
+            item.Percent = 0;
+            item.PhaseLabel = "Iniciando instalación...";
+            item.ErrorMessage = "";
+        }
+
         _installCts?.Dispose();
         _installCts = CancellationTokenSource.CreateLinkedTokenSource(PageToken);
 
@@ -148,7 +157,6 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
                     continue;
                 }
 
-                item.IsInstalling = !msg.Finished;
                 item.Percent = msg.PercentComplete;
                 item.PhaseLabel = FormatPhase(msg.Phase, msg.StatusMessage);
 
@@ -164,6 +172,10 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
                         ? "Cancelando... esperando a que finalice el controlador en curso"
                         : $"Instalando {CompletedInstalls} de {TotalToInstall}...";
                 }
+                else
+                {
+                    item.IsInstalling = true;
+                }
             }
 
             GlobalStatus = CompletedInstalls == TotalToInstall
@@ -173,11 +185,21 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
         catch (OperationCanceledException)
         {
             GlobalStatus = "Instalación cancelada por el usuario.";
+            foreach (var item in selected.Where(u => !u.IsFinished))
+            {
+                item.IsInstalling = false;
+                item.PhaseLabel = "Cancelado";
+            }
         }
         catch (Exception ex)
         {
             GlobalStatus = $"Error inesperado: {ex.Message}";
             _logger.LogError(ex, "Error en Install");
+            foreach (var item in selected.Where(u => !u.IsFinished))
+            {
+                item.IsInstalling = false;
+                item.PhaseLabel = "Error";
+            }
         }
         finally
         {
