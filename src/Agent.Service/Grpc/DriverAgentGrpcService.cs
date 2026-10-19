@@ -204,7 +204,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             if (match is null)
             {
                 completedUpdates++;
-                await WriteFinishedResultAsync(
+                var written = await TryWriteFinishedResultAsync(
                     responseStream,
                     updateId,
                     success: false,
@@ -213,18 +213,33 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                     totalUpdates,
                     completedUpdates,
                     ct).ConfigureAwait(false);
+
+                if (!written)
+                {
+                    break;
+                }
+
                 continue;
             }
 
             InstallResult result;
+            bool transportError;
             try
             {
-                result = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
+                (result, transportError) = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (Exception ex) when (ex is RpcException or IOException)
+            {
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(ex, "Fallo de transporte con el cliente durante la instalación de {UpdateId}.", match.UpdateId);
+                }
+                break;
             }
             catch (Exception ex)
             {
@@ -269,6 +284,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                     InstalledVersion = string.Empty,
                     Timestamp = timestamp
                 };
+                transportError = false;
             }
 
             completedUpdates++;
@@ -277,30 +293,31 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                 _operationQueue.MarkPendingReboot();
             }
 
-            try
-            {
-                await WriteFinishedResultAsync(
-                    responseStream,
-                    match.UpdateId,
-                    result.Success,
-                    result.ErrorMessage,
-                    result.RebootRequired,
-                    totalUpdates,
-                    completedUpdates,
-                    ct).ConfigureAwait(false);
-            }
-            catch (Exception writeEx) when (writeEx is RpcException or IOException or OperationCanceledException)
+            if (transportError)
             {
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
-                    _logger.LogWarning("El cliente se desconectó antes de recibir el resultado de {UpdateId}.", match.UpdateId);
+                    _logger.LogWarning("El cliente se desconectó durante la transmisión de progreso de {UpdateId}. Interrumpiendo el lote.", match.UpdateId);
                 }
+                break;
+            }
+
+            if (!await TryWriteFinishedResultAsync(
+                responseStream,
+                match.UpdateId,
+                result.Success,
+                result.ErrorMessage,
+                result.RebootRequired,
+                totalUpdates,
+                completedUpdates,
+                ct).ConfigureAwait(false))
+            {
                 break;
             }
         }
     }
 
-    private async Task<InstallResult> InstallSingleUpdateAsync(
+    private async Task<(InstallResult Result, bool TransportError)> InstallSingleUpdateAsync(
         DriverUpdate update,
         IServerStreamWriter<InstallProgressMsg> responseStream,
         int totalUpdates,
@@ -322,6 +339,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             _operationQueue.UpdateProgress(update.UpdateId, p);
         });
 
+        Exception? transportException = null;
+
         var readerTask = Task.Run(async () =>
         {
             try
@@ -339,6 +358,16 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 // Cancelación esperada si el cliente cancela la llamada RPC.
+            }
+            catch (Exception ex)
+            {
+                // Fallo de transporte (desconexión del cliente, pipe roto o error de gRPC).
+                // Lo capturamos para que no escape hacia el catch general del servicio ni manche el historial.
+                transportException = ex;
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning("Fallo de transporte al transmitir progreso de {UpdateId} al cliente: {Message}", update.UpdateId, ex.Message);
+                }
             }
         }, CancellationToken.None);
 
@@ -370,16 +399,16 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             {
                 await readerTask.ConfigureAwait(false);
             }
-            catch when (installException != null)
+            catch
             {
-                // Conservar la excepción original producida durante la instalación.
+                // readerTask captura internamente sus excepciones en transportException.
             }
         }
 
-        return result!;
+        return (result!, transportException != null);
     }
 
-    private async Task WriteFinishedResultAsync(
+    private async Task<bool> TryWriteFinishedResultAsync(
         IServerStreamWriter<InstallProgressMsg> responseStream,
         string updateId,
         bool success,
@@ -410,7 +439,19 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             _logger.LogError("Fallo al instalar la actualización {UpdateId}: {Error}", updateId, errorMessage);
         }
 
-        await responseStream.WriteAsync(message, ct).ConfigureAwait(false);
+        try
+        {
+            await responseStream.WriteAsync(message, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex) when (ex is RpcException or IOException or OperationCanceledException)
+        {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning("El cliente se desconectó antes de recibir el resultado de {UpdateId}.", updateId);
+            }
+            return false;
+        }
     }
 
     /// <summary>
