@@ -481,13 +481,16 @@ public class DriverAgentGrpcServiceTests
             updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
                 .Returns(ToAsyncEnumerable(updates));
 
-            // El instalador reporta progreso y finaliza con éxito
+            // El instalador está en fase previa (descarga) y espera deterministamente sobre el token enlazado
             installer.InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
-                .Returns(callInfo =>
+                .Returns(async callInfo =>
                 {
                     var prog = callInfo.ArgAt<IProgress<InstallProgress>>(1);
+                    var token = callInfo.ArgAt<CancellationToken>(2);
                     prog.Report(new InstallProgress { Phase = InstallPhase.Downloading, PercentComplete = 50, StatusMessage = "Descargando..." });
-                    return Task.FromResult(CreateInstallResult(callInfo.ArgAt<DriverUpdate>(0).UpdateId, success: true));
+                    // Espera determinista sobre el token enlazado hasta que el lector lo cancele por error de transporte
+                    await Task.Delay(Timeout.Infinite, token);
+                    return CreateInstallResult(callInfo.ArgAt<DriverUpdate>(0).UpdateId, success: true);
                 });
 
             var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
@@ -495,11 +498,12 @@ public class DriverAgentGrpcServiceTests
             streamWriter.WriteAsync(Arg.Is<InstallProgressMsg>(m => !m.Finished), Arg.Any<CancellationToken>())
                 .Returns<Task>(_ => throw new IOException("Named pipe roto durante progreso"));
 
-            var context = new TestServerCallContext();
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var context = new TestServerCallContext(timeoutCts.Token);
 
             await service.Install(new InstallRequest { UpdateIds = { "update-1", "update-2" } }, streamWriter, context);
 
-            // El lote se interrumpe: update-1 se instaló pero update-2 no se llega a iniciar
+            // El lote se interrumpe: update-1 se canceló en fase previa y update-2 no se llega a iniciar
             await installer.Received(1).InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>());
             await installer.DidNotReceive().InstallAsync(
                 Arg.Is<DriverUpdate>(u => u.UpdateId == "update-2"),
@@ -507,7 +511,53 @@ public class DriverAgentGrpcServiceTests
                 Arg.Any<CancellationToken>());
 
             // Aserción estricta: el servicio no debe llamar a RecordAsync bajo ningún argumento,
-            // evitando duplicar o registrar falsos fallos en el historial si el instalador tuvo éxito
+            // evitando duplicar o registrar falsos fallos en el historial
+            await history.DidNotReceiveWithAnyArgs().RecordAsync(default!, default);
+        }
+
+        [Fact]
+        public async Task Should_Allow_Native_Phase_To_Complete_When_Transport_Fails_During_Progress()
+        {
+            var inventory = Substitute.For<IDriverInventory>();
+            var updateSource = Substitute.For<IUpdateSource>();
+            var installer = Substitute.For<IDriverInstaller>();
+            var history = Substitute.For<IOperationHistory>();
+            var queue = new OperationQueue();
+            var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
+
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+
+            var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
+            inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(updates));
+
+            // Simula que el instalador ya pasó a la fase nativa (no sensible a cancelación) y concluye con éxito
+            installer.InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo =>
+                {
+                    var prog = callInfo.ArgAt<IProgress<InstallProgress>>(1);
+                    prog.Report(new InstallProgress { Phase = InstallPhase.Installing, PercentComplete = 80, StatusMessage = "Instalando nativamente..." });
+                    return Task.FromResult(CreateInstallResult(callInfo.ArgAt<DriverUpdate>(0).UpdateId, success: true));
+                });
+
+            var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
+            streamWriter.WriteAsync(Arg.Is<InstallProgressMsg>(m => !m.Finished), Arg.Any<CancellationToken>())
+                .Returns<Task>(_ => throw new IOException("Named pipe roto durante progreso"));
+
+            var context = new TestServerCallContext();
+
+            await service.Install(new InstallRequest { UpdateIds = { "update-1", "update-2" } }, streamWriter, context);
+
+            // update-1 completó la fase nativa, pero el lote se interrumpe y update-2 no se inicia
+            await installer.Received(1).InstallAsync(Arg.Any<DriverUpdate>(), Arg.Any<IProgress<InstallProgress>>(), Arg.Any<CancellationToken>());
+            await installer.DidNotReceive().InstallAsync(
+                Arg.Is<DriverUpdate>(u => u.UpdateId == "update-2"),
+                Arg.Any<IProgress<InstallProgress>>(),
+                Arg.Any<CancellationToken>());
+
+            // El servicio no debe llamar a RecordAsync (el instalador ya asentó su propio resultado)
             await history.DidNotReceiveWithAnyArgs().RecordAsync(default!, default);
         }
 
@@ -610,7 +660,8 @@ public class DriverAgentGrpcServiceTests
             updateSource.FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
                 .Returns(ToAsyncEnumerable(updates));
 
-            using var cts = new CancellationTokenSource();
+            // Timeout de 5 segundos para fail-fast en caso de bloqueo inesperado
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             // Al escribir el progreso en el stream, el cliente cancela la RPC
             var streamWriter = Substitute.For<IServerStreamWriter<InstallProgressMsg>>();
@@ -627,8 +678,8 @@ public class DriverAgentGrpcServiceTests
                     var prog = callInfo.ArgAt<IProgress<InstallProgress>>(1);
                     var token = callInfo.ArgAt<CancellationToken>(2);
                     prog.Report(new InstallProgress { Phase = InstallPhase.Downloading, PercentComplete = 20, StatusMessage = "Descargando..." });
-                    // Esperar a que se propague la cancelación
-                    await Task.Delay(50, token);
+                    // Espera determinista sobre el token hasta que el cliente cancele (sin tiempos fijos)
+                    await Task.Delay(Timeout.Infinite, token);
                     return CreateInstallResult("update-1", success: true);
                 });
 

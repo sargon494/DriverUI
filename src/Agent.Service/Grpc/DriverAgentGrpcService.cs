@@ -324,6 +324,10 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         int completedUpdates,
         CancellationToken ct)
     {
+        // Enlazamos un CancellationTokenSource que cancela la instalación si el lector de progreso
+        // detecta un fallo de transporte con el cliente.
+        using var installCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
         // El progreso se transmite en tiempo real al stream gRPC utilizando un Channel
         // como buffer desacoplado, asegurando que un único lector serializado escribe
         // concurrentemente al responseStream mientras el instalador ejecuta sus fases.
@@ -368,6 +372,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
                 {
                     _logger.LogWarning("Fallo de transporte al transmitir progreso de {UpdateId} al cliente: {Message}", update.UpdateId, ex.Message);
                 }
+                // Si el transporte falla antes de la fase nativa, abortamos el instalador para evitar trabajo innecesario
+                installCts.Cancel();
             }
         }, CancellationToken.None);
 
@@ -376,7 +382,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
         try
         {
-            result = await _installer.InstallAsync(update, progress, ct).ConfigureAwait(false);
+            result = await _installer.InstallAsync(update, progress, installCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -386,6 +392,26 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             }
 
             throw;
+        }
+        catch (OperationCanceledException) when (transportException != null)
+        {
+            // La cancelación fue inducida por el fallo de transporte (installCts fue cancelado por el lector, no por ct).
+            // El instalador ya registró el fallo en el historial por cancelación.
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning("Instalación de {Title} interrumpida en fase previa por fallo de transporte con el cliente.", update.Title);
+            }
+
+            result = new InstallResult
+            {
+                UpdateId = update.UpdateId,
+                Success = false,
+                ErrorMessage = $"Instalación interrumpida por desconexión del cliente ({transportException.Message}).",
+                RebootRequired = false,
+                PreviousVersion = update.CurrentVersion,
+                InstalledVersion = string.Empty,
+                Timestamp = DateTime.UtcNow
+            };
         }
         catch (Exception ex)
         {
