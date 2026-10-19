@@ -74,9 +74,16 @@ Implementaciones Windows de las interfaces de `Core`:
 - Manejo de reinicios pendientes (`RebootRequired`).
 
 ### 4.4 `Ui.Wpf`
-- MVVM. Pantallas: Inicio/escaneo, Lista de actualizaciones, Detalle, Historial, Configuración.
-- Se comunica solo con el servicio; no llama a APIs privilegiadas.
-- Si el servicio no está activo, ofrece iniciarlo o reparar la instalación.
+- **Patrón**: MVVM con `CommunityToolkit.Mvvm` (`ObservableObject`, `[ObservableProperty]`, `[RelayCommand]`).
+- **Arquitectura de ventanas**: Ventana principal `ShellWindow` sin bordes estándar (*frameless chrome*), controles de ventana integrados, barra de navegación lateral con contadores (*badges*) reactivos y área de contenido dinámica mapeada mediante `DataTemplate` a los ViewModels correspondientes.
+- **Pantallas**:
+  - *Dashboard (Inicio)*: Métricas globales de hardware, buscador reactivo, pill de salud del sistema y tabla de controladores instalados.
+  - *Actualizaciones*: Lista con selección múltiple/individual, comparación de versiones actual vs. nueva, barra de progreso global y por controlador en tiempo real vía streaming gRPC, indicador de necesidad de reinicio y botón de cancelación.
+  - *Historial*: Auditoría persistente de instalaciones y rollbacks con filtrado y reversión directa del controlador seleccionado.
+  - *Ajustes*: Configuración de intervalo de comprobación periódica, política de controladores firmados (WHQL) y lista de exclusiones por identificador.
+- **Seguridad**: Ejecución obligatoria en contexto de usuario estándar (no elevado); no invoca APIs de Windows privilegiadas y toda interacción pasa por `Agent.Ipc` hacia el servicio Windows.
+- **Resiliencia gRPC**: `DriverAgentService` maneja reconexión automática ante caídas del servicio y sincronización reactiva de estado (`GetStatus`).
+- **Experiencia de cancelación**: Si se cancela una instalación durante la fase nativa, la UI entra en estado diferido (*"Cancelando... esperando a que finalice el controlador en curso"*) hasta que el servicio confirma la liberación segura de la cola.
 
 ### 4.5 `Cli`
 Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `rollback <opId>`, `log`. Reutiliza `Agent.Drivers` directamente.
@@ -84,7 +91,7 @@ Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `ro
 ### 4.6 `Agent.Ipc`
 Proyecto compartido con el **contrato gRPC** (`Protos/driveragent.proto`, generado con `Grpc.Services=Both`) y la **fábrica de canal cliente** (`DriverAgentChannel.CreateChannel`) que conecta por named pipe mediante `SocketsHttpHandler.ConnectCallback`. Lo consumen el servicio (base del servidor), la UI (cliente) y los tests de integración IPC.
 
-### 4.6 `Backend.Api` (fase posterior)
+### 4.7 `Backend.Api` (fase posterior)
 - ASP.NET Core minimal API + EF Core + PostgreSQL.
 - Catálogo de drivers por hardware ID, versiones, compatibilidad, listas de bloqueo (drivers conocidos como problemáticos).
 - Cuentas, licencias y telemetría opcional.

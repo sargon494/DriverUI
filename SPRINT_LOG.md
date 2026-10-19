@@ -413,4 +413,76 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
   4. **Instalación del servicio de Windows**: registrar el binario como servicio (`sc create` o WiX en el Hito 4). Probar en VM (nunca en el equipo de desarrollo con operaciones reales).
   5. **Validación E2E de la ACL en VM con cuenta estándar (reserva de auditoría)**: Verificar en VM que un usuario local interactivo sin privilegios administrativos puede conectar y realizar operaciones I/O en el pipe (`ReadWrite`), y certificar que cualquier intento de alterar la ACL/DACL es denegado con `Access Denied`.
 
+---
+
+## Sprint 5 — Interfaz de Usuario Moderna WPF (`Ui.Wpf`)
+
+- **Fecha**: 2026-10-19
+- **Estado**: ✅ Completado
+- **Hito**: Hito 2 (Servicio + UI — parte UI WPF)
+
+### Tareas completadas
+- [x] **S5-T1: Sistema de diseño y tokens visuales premium** (`src/Ui.Wpf/Resources/`):
+  - `Colors.xaml`: paleta oscura profesional (*dark theme* de alto contraste y legibilidad), gradientes sutiles con estética *glassmorphism* (`CardGlowGradient`), jerarquía tipográfica con Segoe UI Variable y colores semánticos (`AccentCyan #0ea5e9`, `SuccessGreen #10b981`, `WarningAmber #f59e0b`, `ErrorRose #f43f5e`).
+  - `Styles.xaml`: estilos base para `Button` (primario con acento, secundario con borde sutil, peligro para cancelación/rollback), `TextBox` con foco acentuado, `CheckBox` estilizado, `DataGrid` y tarjetas con `DropShadowEffect`.
+  - `Icons.xaml`: librería de geometrías vectoriales limpias (Dashboard, Updates, History, Settings, Check, Cross, Shield, Warning, Refresh, Arrow, etc.).
+  - `Converters/Converters.cs`: conversores de datos para XAML (visibilidad booleana y negada, formateo de bytes legibles, duraciones, estado de operaciones a colores/iconos, e insignias numéricas de contador).
+- [x] **S5-T2: Componentes y ventana contenedora (Shell)** (`src/Ui.Wpf/Views/` y `ViewModels/`):
+  - `NavItem`: UserControl reutilizable para los botones de navegación de la barra lateral, con soporte declarativo para `Geometry` de icono, etiqueta, estado activo y contador de insignias (*badge count*).
+  - `ShellWindow.xaml` / `.xaml.cs`: ventana *frameless* con controles integrados (minimizar, maximizar/restaurar, cerrar), soporte para arrastre mediante `DragMove`, indicador en vivo del estado de conexión IPC hacia el servicio Windows, y *breadcrumb* contextual.
+  - Enrutamiento dinámico de vistas mediante `DataTemplate` que mapea cada `PageViewModelBase` (`DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel`, `SettingsViewModel`) a su vista correspondiente sin acoplamiento estricto.
+- [x] **S5-T3: Pantalla de Inicio / Dashboard** (`src/Ui.Wpf/Views/DashboardView.xaml` y `DashboardViewModel.cs`):
+  - 4 tarjetas estadísticas (Total controladores, Operativos, Con advertencia/error, y Estado global).
+  - Indicador de estado de salud general del equipo con pill dinámico.
+  - Buscador reactivo en tiempo real que filtra por nombre de dispositivo, fabricante, identificador o clase.
+  - Tabla de controladores con versiones monoespaciadas, clase de dispositivo y badges de estado.
+  - Botón de refresco manual que invoca el RPC `Scan` y actualiza la fecha del último escaneo.
+- [x] **S5-T4: Pantalla de Actualizaciones disponibles** (`src/Ui.Wpf/Views/UpdatesView.xaml` y `UpdatesViewModel.cs`):
+  - Listado de actualizaciones encontradas con selector individual o por lotes (*Seleccionar todo* / *Deseleccionar todo*).
+  - Comparativa de versión actual instalada frente a la versión nueva recomendada.
+  - Tamaño de descarga formateado y badge de "Requiere reinicio" cuando procede.
+  - Barra de progreso global y reporte de fase en tiempo real por cada controlador (`Downloading`, `Verifying`, `CreatingRestorePoint`, `Installing`, etc.) consumiendo el stream gRPC de `Install`.
+  - **Experiencia de cancelación diferida (DESIGN.md §5)**: al pulsar "Cancelar", la UI activa el estado *"Cancelando... esperando a que finalice el controlador en curso"* para respetar la fase nativa de WUA en ejecución y asegurar la estabilidad del sistema operativo.
+- [x] **S5-T5: Pantalla de Historial y Rollback** (`src/Ui.Wpf/Views/HistoryView.xaml` y `HistoryViewModel.cs`):
+  - Tabla de auditoría con fecha ISO formateada, dispositivo, versiones previa y aplicada, tipo de operación y resultado.
+  - Buscador para filtrar eventos por nombre de dispositivo o ID.
+  - Selección de entrada y ejecución de `Rollback` directo mediante el RPC correspondiente, con feedback visual de progreso y resultado.
+- [x] **S5-T6: Pantalla de Ajustes** (`src/Ui.Wpf/Views/SettingsView.xaml` y `SettingsViewModel.cs`):
+  - Selector de frecuencia de comprobación automática con stepper de días.
+  - Conmutador de directiva de seguridad WHQL (solo controladores firmados por Microsoft/WHQL) con aviso de seguridad cuando se desactiva.
+  - Gestión interactiva de lista de exclusiones de hardware (añadir y eliminar identificadores).
+- [x] **S5-T7: Servicio cliente IPC y arranque con Inyección de Dependencias** (`src/Ui.Wpf/Services/DriverAgentService.cs` y `App.xaml.cs`):
+  - `DriverAgentService`: cliente gRPC tipado que consume `DriverAgentChannel` de `Agent.Ipc`, expone métodos asíncronos y streams `IAsyncEnumerable`, y gestiona reconexiones transparentes.
+  - `App.xaml.cs`: configuración de Serilog con archivo rotativo en `%ProgramData%\DriverUpdater\logs\ui-.log`, registro de dependencias (`DriverAgentService`, ViewModels y ShellWindow), y arranque no bloqueante que conecta al servicio en segundo plano.
+  - Cumplimiento de la **Regla 3 de AGENTS.md**: la UI se ejecuta íntegramente como usuario interactivo estándar sin requerir elevación de privilegios (`requestedExecutionLevel asInvoker`).
+- [x] **S5-T8: Calidad, Icono y Eliminación de Código Obsoleto**:
+  - Reemplazo y eliminación definitiva de `MainWindow.xaml` y `MainWindow.xaml.cs` obsoletos.
+  - Creación de icono nativo de aplicación `src/Ui.Wpf/Resources/icon.ico`.
+  - Corrección de analizadores de código: especificación de `IFormatProvider` (CA1305), protección contra evaluación de logs en debug (CA1873) e implementación de `IDisposable` en `ShellViewModel` (CA1001).
+  - Verificación `dotnet format --verify-no-changes` y compilación en Release sin advertencias.
+
+### Decisiones técnicas tomadas
+1. **Consumo no privilegiado sobre gRPC (Reglas 3 y 4 de AGENTS.md)**:
+   - La aplicación `Ui.Wpf` no utiliza elevación de privilegios administrativa. Toda operación privilegiada (escaneo de hardware, descarga, punto de restauración, instalación y rollback) se delega a través del cliente gRPC sobre el named pipe `\\.\pipe\DriverUpdater`.
+2. **Experiencia de cancelación diferida (DESIGN.md §5)**:
+   - Siguiendo las directrices de diseño para evitar corrupciones en el subsistema de controladores durante la fase nativa de WUA o PnPUtil, la UI refleja de forma explícita el estado *"Cancelando... esperando a que finalice el controlador en curso"* y desactiva nuevos intentos hasta que el RPC de instalación completa su ciclo seguro.
+3. **Navegación declarativa por ViewModel**:
+   - En lugar de usar `Frame` y `Page` de WPF clásico, se empleó un `ContentControl` en `ShellWindow` con `DataTemplate` implícitos vinculados a `DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel` y `SettingsViewModel`.
+4. **Ciclo de vida y reconexión**:
+   - `ShellViewModel` sondea el estado del servicio cada 5 segundos mediante un temporizador ligero que ejecuta `GetStatusAsync`. Si el servicio se detiene o reinicia, la UI actualiza inmediatamente el indicador a "Desconectado" con opción de reintento, volviendo a habilitar las acciones automáticamente al restablecerse la conexión.
+5. **Icono de aplicación embebido**:
+   - Se generó el recurso `Resources/icon.ico` configurado en `Ui.Wpf.csproj` para asegurar la apariencia nativa en la barra de tareas y el explorador de Windows.
+
+### Pruebas ejecutadas
+- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
+- `dotnet test`: **133/133 tests superados** (39 en `Core.Tests`, 53 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 discrepancias de formato en todo el repositorio.
+
+### Notas para el siguiente sprint
+- El Hito 2 (Servicio + UI) tiene la UI WPF y el servicio IPC implementados. Quedan las tareas complementarias del Hito 2:
+  1. **Ajustes y exclusiones persistentes en el servicio (U7)**: Crear almacenamiento `config.json` en `%ProgramData%\DriverUpdater\`, añadir RPCs `GetSettings`/`UpdateSettings` en `driveragent.proto` e integrar el filtrado de exclusiones en `CheckUpdates` e `Install` dentro del servicio.
+  2. **Comprobación programada y notificaciones de escritorio (U8)**: Planificador en segundo plano en `Agent.Service` para escaneos periódicos sin polling activo, con notificaciones tipo Toast y aviso de reinicio pendiente.
+  3. **Pruebas en máquina virtual (VM)**: Verificación de la UI y el servicio en Windows 10 y 11 con cuenta de usuario estándar.
+
+
 
