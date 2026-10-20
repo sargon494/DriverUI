@@ -47,7 +47,7 @@
 
     <Style x:Key="TextLabel" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI Variable Small, Segoe UI" />
-        <Setter Property="FontSize" Value="{StaticResource FontSizeXS}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSM}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
     </Style>
@@ -57,16 +57,11 @@
          ═══════════════════════════════════════════════════════ -->
 
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource CardGlowGradient}" />
+        <Setter Property="Background" Value="{StaticResource BgSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="20" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="4" Opacity="0.4" />
-            </Setter.Value>
-        </Setter>
     </Style>
 
     <Style x:Key="CardCompact" TargetType="Border" BasedOn="{StaticResource Card}">
@@ -92,11 +87,7 @@
                     <Border x:Name="Root"
                             CornerRadius="8"
                             Padding="{TemplateBinding Padding}"
-                            Background="{StaticResource AccentGradientBrush}">
-                        <Border.Effect>
-                            <DropShadowEffect Color="{StaticResource AccentColor}"
-                                              BlurRadius="12" ShadowDepth="0" Opacity="0.5" />
-                        </Border.Effect>
+                            Background="{StaticResource AccentBrush}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -303,12 +294,12 @@
                         <Border x:Name="PART_Indicator"
                                 HorizontalAlignment="Left"
                                 CornerRadius="3"
-                                Background="{StaticResource AccentGradientBrush}" />
+                                Background="{StaticResource AccentBrush}" />
                         <!-- Indicador para estado indeterminado con pulso animado continuo -->
                         <Border x:Name="IndeterminateBar"
                                 HorizontalAlignment="Stretch"
                                 CornerRadius="3"
-                                Background="{StaticResource AccentGradientBrush}"
+                                Background="{StaticResource AccentBrush}"
                                 Visibility="Collapsed" />
                     </Grid>
                     <ControlTemplate.Triggers>

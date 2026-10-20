@@ -256,9 +256,9 @@
 
                                         <!-- Versiones -->
                                         <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="0 2 0 0">
-                                            <TextBlock Style="{StaticResource TextLabel}" Text="VERSIÓN ACTUAL" />
+                                            <TextBlock Style="{StaticResource TextLabel}" Text="Versión actual" />
                                             <TextBlock Text="{Binding OldVersion}"
-                                                       FontFamily="Consolas, Courier New" FontSize="11"
+                                                       FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                        Foreground="{StaticResource TextSecondaryBrush}"
                                                        Margin="0 2 0 0" />
                                             <Path Data="{StaticResource IconChevronDown}"
@@ -266,17 +266,17 @@
                                                   StrokeThickness="1.5" Width="12" Height="10"
                                                   Stretch="Uniform" HorizontalAlignment="Left"
                                                   Margin="0 2 0 2" />
-                                            <TextBlock Style="{StaticResource TextLabel}" Text="NUEVA VERSIÓN"
+                                            <TextBlock Style="{StaticResource TextLabel}" Text="Nueva versión"
                                                        Foreground="{StaticResource AccentBrush}" />
                                             <TextBlock Text="{Binding NewVersion}"
-                                                       FontFamily="Consolas, Courier New" FontSize="11"
+                                                       FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                        Foreground="{StaticResource AccentBrush}"
                                                        FontWeight="SemiBold" Margin="0 2 0 0" />
                                         </StackPanel>
 
                                         <!-- Tamaño -->
                                         <StackPanel Grid.Column="3" VerticalAlignment="Top" Margin="0 2 0 0">
-                                            <TextBlock Style="{StaticResource TextLabel}" Text="TAMAÑO" />
+                                            <TextBlock Style="{StaticResource TextLabel}" Text="Tamaño" />
                                             <TextBlock Text="{Binding SizeBytes, Converter={StaticResource BytesHuman}}"
                                                        FontSize="13" FontWeight="Medium"
                                                        Foreground="{StaticResource TextSecondaryBrush}"

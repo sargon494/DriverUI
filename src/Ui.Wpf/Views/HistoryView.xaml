@@ -148,12 +148,12 @@
                                 <ColumnDefinition Width="90" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource TextLabel}" Text="FECHA" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource TextLabel}" Text="DISPOSITIVO" />
-                            <TextBlock Grid.Column="2" Style="{StaticResource TextLabel}" Text="VERSIÓN ANTERIOR" />
-                            <TextBlock Grid.Column="3" Style="{StaticResource TextLabel}" Text="VERSIÓN NUEVA" />
-                            <TextBlock Grid.Column="4" Style="{StaticResource TextLabel}" Text="OPERACIÓN" />
-                            <TextBlock Grid.Column="5" Style="{StaticResource TextLabel}" Text="RESULTADO"
+                            <TextBlock Grid.Column="0" Style="{StaticResource TextLabel}" Text="Fecha" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource TextLabel}" Text="Dispositivo" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource TextLabel}" Text="Versión anterior" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource TextLabel}" Text="Versión nueva" />
+                            <TextBlock Grid.Column="4" Style="{StaticResource TextLabel}" Text="Operación" />
+                            <TextBlock Grid.Column="5" Style="{StaticResource TextLabel}" Text="Resultado"
                                        HorizontalAlignment="Center" />
                         </Grid>
                     </Border>
@@ -201,7 +201,7 @@
                                         <!-- Fecha -->
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding Timestamp, Converter={StaticResource TsToStr}}"
-                                                   FontFamily="Consolas, Courier New" FontSize="11"
+                                                   FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                    Foreground="{StaticResource TextTertiaryBrush}"
                                                    VerticalAlignment="Center" />
 
@@ -220,14 +220,14 @@
                                         <!-- Versión anterior -->
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding PreviousVersion}"
-                                                   FontFamily="Consolas, Courier New" FontSize="11"
+                                                   FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center" />
 
                                         <!-- Versión nueva -->
                                         <TextBlock Grid.Column="3"
                                                    Text="{Binding NewVersion}"
-                                                   FontFamily="Consolas, Courier New" FontSize="11"
+                                                   FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                    Foreground="{StaticResource AccentBrush}"
                                                    FontWeight="SemiBold"
                                                    VerticalAlignment="Center" />

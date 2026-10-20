@@ -73,7 +73,7 @@
                 <!-- Total -->
                 <Border Style="{StaticResource CardCompact}" Margin="0 0 8 0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource TextLabel}" Text="TOTAL" />
+                        <TextBlock Style="{StaticResource TextLabel}" Text="Total" />
                         <TextBlock Style="{StaticResource TextDisplay}" Margin="0 4 0 0"
                                    Text="{Binding TotalDrivers}"
                                    Foreground="{StaticResource TextPrimaryBrush}" />
@@ -84,7 +84,7 @@
                 <!-- OK -->
                 <Border Style="{StaticResource CardCompact}" Margin="4 0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource TextLabel}" Text="EN ORDEN"
+                        <TextBlock Style="{StaticResource TextLabel}" Text="En orden"
                                    Foreground="{StaticResource SuccessBrush}" />
                         <TextBlock Style="{StaticResource TextDisplay}" Margin="0 4 0 0"
                                    Text="{Binding OkDrivers}"
@@ -97,7 +97,7 @@
                 <!-- Error -->
                 <Border Style="{StaticResource CardCompact}" Margin="4 0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource TextLabel}" Text="CON ERRORES"
+                        <TextBlock Style="{StaticResource TextLabel}" Text="Con errores"
                                    Foreground="{StaticResource ErrorBrush}" />
                         <TextBlock Style="{StaticResource TextDisplay}" Margin="0 4 0 0"
                                    Text="{Binding ErrorDrivers}"
@@ -110,7 +110,7 @@
                 <!-- Degradado -->
                 <Border Style="{StaticResource CardCompact}" Margin="8 0 0 0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource TextLabel}" Text="DEGRADADOS"
+                        <TextBlock Style="{StaticResource TextLabel}" Text="Degradados"
                                    Foreground="{StaticResource WarningBrush}" />
                         <TextBlock Style="{StaticResource TextDisplay}" Margin="0 4 0 0"
                                    Text="{Binding DegradedDrivers}"
@@ -230,11 +230,11 @@
                                 <ColumnDefinition Width="90" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource TextLabel}" Text="DISPOSITIVO" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource TextLabel}" Text="FABRICANTE" />
-                            <TextBlock Grid.Column="2" Style="{StaticResource TextLabel}" Text="VERSIÓN" />
-                            <TextBlock Grid.Column="3" Style="{StaticResource TextLabel}" Text="CLASE" />
-                            <TextBlock Grid.Column="4" Style="{StaticResource TextLabel}" Text="ESTADO"
+                            <TextBlock Grid.Column="0" Style="{StaticResource TextLabel}" Text="Dispositivo" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource TextLabel}" Text="Fabricante" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource TextLabel}" Text="Versión" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource TextLabel}" Text="Clase" />
+                            <TextBlock Grid.Column="4" Style="{StaticResource TextLabel}" Text="Estado"
                                        HorizontalAlignment="Center" />
                         </Grid>
                     </Border>
@@ -335,7 +335,7 @@
                                                        Text="{Binding DriverVersion}"
                                                        Style="{StaticResource TextBody}"
                                                        VerticalAlignment="Center"
-                                                       FontFamily="Consolas, Courier New"
+                                                       FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular"
                                                        FontSize="11" />
                                             <TextBlock Grid.Column="3"
                                                        Text="{Binding DeviceClass}"

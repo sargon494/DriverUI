@@ -170,7 +170,7 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding}"
-                                                   FontFamily="Consolas, Courier New" FontSize="11"
+                                                   FontFamily="Segoe UI Variable Text, Segoe UI" Typography.NumeralAlignment="Tabular" FontSize="11"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center" />
                                         <Button Grid.Column="1"
