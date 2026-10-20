@@ -24,16 +24,16 @@
 
         <!-- Routing automático de ViewModel a Vista -->
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
-            <views:DashboardView />
+            <views:DashboardView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:UpdatesViewModel}">
-            <views:UpdatesView />
+            <views:UpdatesView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
-            <views:HistoryView />
+            <views:HistoryView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-            <views:SettingsView />
+            <views:SettingsView Style="{StaticResource PageEnter}" />
         </DataTemplate>
     </Window.Resources>
 
