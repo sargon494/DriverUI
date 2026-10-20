@@ -53,6 +53,34 @@ public sealed class DriverAgentService : IAsyncDisposable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Inicia el servicio DriverUpdater si está detenido. El servicio está configurado
+    /// como arranque bajo demanda; el instalador concede a usuarios interactivos el
+    /// permiso de iniciarlo y detenerlo (no de configurarlo). Devuelve true si queda en ejecución.
+    /// </summary>
+    public async Task<bool> TryStartServiceAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var controller = new System.ServiceProcess.ServiceController("DriverUpdater");
+            if (controller.Status == System.ServiceProcess.ServiceControllerStatus.Running)
+            {
+                return true;
+            }
+
+            controller.Start();
+            await Task.Run(() => controller.WaitForStatus(
+                System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(15)), ct);
+            _logger.LogInformation("Servicio DriverUpdater iniciado desde la UI.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo iniciar el servicio DriverUpdater.");
+            return false;
+        }
+    }
+
     public void Disconnect()
     {
         _channel?.Dispose();

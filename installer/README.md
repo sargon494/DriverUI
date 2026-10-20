@@ -7,7 +7,7 @@ Hay que compilarlas y probarlas en una VM Windows 10/11 antes de usarlas.
 
 | Componente | Dónde | Cómo |
 |---|---|---|
-| Servicio `Agent.Service` | `Program Files\DriverUpdater\Agent.Service.exe` | Servicio de Windows `DriverUpdater`, cuenta `LocalSystem`, inicio automático |
+| Servicio `Agent.Service` | `Program Files\DriverUpdater\Agent.Service.exe` | Servicio de Windows `DriverUpdater`, cuenta `LocalSystem`, **arranque bajo demanda** (no se ejecuta al encender el equipo). La UI lo inicia al abrirse; el instalador concede a usuarios interactivos el permiso de iniciar y detener el servicio, pero no de configurarlo |
 | UI `Ui.Wpf` | `Program Files\DriverUpdater\Ui.Wpf.exe` | Acceso directo en el menú Inicio; se ejecuta sin elevación |
 
 Al desinstalar, el servicio se detiene y se elimina antes de borrar los ficheros.
@@ -30,6 +30,7 @@ desinstalador (`msiexec /x`) deja el sistema sin restos en Program Files ni serv
 
 ## Pendiente
 
+- Revisar la decisión de permiso `RPWP` para `IU` (iniciar/detener el servicio sin elevación) con el equipo de seguridad.
 - Asistente gráfico: añadir la extensión `WixToolset.UI` (ahora la instalación es silenciosa por defecto).
 - Firma de código del MSI y de los `.exe` (`signtool`), requisito del Hito 4.
 - `%ProgramData%\DriverUpdater` (logs y configuración) no se borra al desinstalar; decidir si debe borrarse.

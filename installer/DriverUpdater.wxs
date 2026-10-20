@@ -24,6 +24,17 @@
       <ComponentRef Id="StartMenuShortcutComponent" />
     </Feature>
 
+    <!-- Permiso para que los usuarios interactivos INICIEN y DETENGAN el servicio (RP/WP),
+         sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
+    <CustomAction Id="GrantInteractiveStartStop"
+                  ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;RPWP;;;IU)"'
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="GrantInteractiveStartStop" After="InstallServices">NOT REMOVE</Custom>
+    </InstallExecuteSequence>
+
     <!-- Carpeta de instalación: Program Files\DriverUpdater -->
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="DriverUpdater">
@@ -40,7 +51,7 @@
                           DisplayName="DriverUpdater Agent"
                           Description="Detecta e instala actualizaciones de controladores firmadas, con punto de restauración y rollback."
                           Type="ownProcess"
-                          Start="auto"
+                          Start="demand"
                           ErrorControl="normal"
                           Account="LocalSystem"
                           Vital="yes" />
@@ -48,7 +59,7 @@
           <!-- Arranca tras instalar; se detiene y elimina antes de borrar los ficheros al desinstalar -->
           <ServiceControl Id="DriverUpdaterServiceControl"
                           Name="DriverUpdater"
-                          Start="install"
+                          Start="none"
                           Stop="both"
                           Remove="uninstall"
                           Wait="yes" />
