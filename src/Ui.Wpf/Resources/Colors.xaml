@@ -6,40 +6,43 @@
          ═══════════════════════════════════════════════════════ -->
 
     <!-- Fondos -->
-    <Color x:Key="BgDeepColor">#0A0D14</Color>
-    <Color x:Key="BgBaseColor">#0F1219</Color>
-    <Color x:Key="BgSurfaceColor">#161B27</Color>
-    <Color x:Key="BgElevatedColor">#1C2333</Color>
-    <Color x:Key="BgCardColor">#202840</Color>
-    <Color x:Key="BgHoverColor">#2A3352</Color>
+    <Color x:Key="BgDeepColor">#111113</Color>
+    <Color x:Key="BgBaseColor">#18181B</Color>
+    <Color x:Key="BgSurfaceColor">#1F1F23</Color>
+    <Color x:Key="BgElevatedColor">#27272D</Color>
+    <Color x:Key="BgCardColor">#1F1F23</Color>
+    <Color x:Key="BgHoverColor">#303038</Color>
 
     <!-- Acento principal: Indigo vibrante -->
-    <Color x:Key="AccentColor">#6366F1</Color>
-    <Color x:Key="AccentHoverColor">#818CF8</Color>
-    <Color x:Key="AccentPressedColor">#4F46E5</Color>
-    <Color x:Key="AccentGlowColor">#3730A3</Color>
-    <Color x:Key="AccentDimColor">#312E81</Color>
+    <Color x:Key="AccentColor">#2DD4BF</Color>
+    <Color x:Key="AccentHoverColor">#5EEAD4</Color>
+    <Color x:Key="AccentPressedColor">#14B8A6</Color>
+    <Color x:Key="AccentGlowColor">#0F766E</Color>
+    <Color x:Key="AccentDimColor">#123B37</Color>
+
+    <!-- Texto sobre acento (contraste con el fondo teal claro) -->
+    <Color x:Key="OnAccentColor">#04201C</Color>
 
     <!-- Estados semánticos -->
-    <Color x:Key="SuccessColor">#10B981</Color>
-    <Color x:Key="SuccessDimColor">#064E3B</Color>
-    <Color x:Key="WarningColor">#F59E0B</Color>
-    <Color x:Key="WarningDimColor">#451A03</Color>
-    <Color x:Key="ErrorColor">#EF4444</Color>
-    <Color x:Key="ErrorDimColor">#450A0A</Color>
-    <Color x:Key="InfoColor">#3B82F6</Color>
-    <Color x:Key="InfoDimColor">#1E3A5F</Color>
+    <Color x:Key="SuccessColor">#34D399</Color>
+    <Color x:Key="SuccessDimColor">#0F2E24</Color>
+    <Color x:Key="WarningColor">#FBBF24</Color>
+    <Color x:Key="WarningDimColor">#3A2E0E</Color>
+    <Color x:Key="ErrorColor">#F87171</Color>
+    <Color x:Key="ErrorDimColor">#3B1616</Color>
+    <Color x:Key="InfoColor">#60A5FA</Color>
+    <Color x:Key="InfoDimColor">#172A45</Color>
 
     <!-- Texto -->
-    <Color x:Key="TextPrimaryColor">#F1F5F9</Color>
-    <Color x:Key="TextSecondaryColor">#94A3B8</Color>
-    <Color x:Key="TextTertiaryColor">#64748B</Color>
-    <Color x:Key="TextDisabledColor">#334155</Color>
+    <Color x:Key="TextPrimaryColor">#F4F4F5</Color>
+    <Color x:Key="TextSecondaryColor">#A1A1AA</Color>
+    <Color x:Key="TextTertiaryColor">#71717A</Color>
+    <Color x:Key="TextDisabledColor">#3F3F46</Color>
 
     <!-- Bordes -->
-    <Color x:Key="BorderSubtleColor">#1E2D4A</Color>
-    <Color x:Key="BorderDefaultColor">#2D3F5E</Color>
-    <Color x:Key="BorderAccentColor">#4338CA</Color>
+    <Color x:Key="BorderSubtleColor">#27272D</Color>
+    <Color x:Key="BorderDefaultColor">#3A3A42</Color>
+    <Color x:Key="BorderAccentColor">#0F766E</Color>
 
     <!-- SolidColorBrushes -->
     <SolidColorBrush x:Key="BgDeepBrush"     Color="{StaticResource BgDeepColor}" />
@@ -53,6 +56,7 @@
     <SolidColorBrush x:Key="AccentHoverBrush"   Color="{StaticResource AccentHoverColor}" />
     <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
     <SolidColorBrush x:Key="AccentDimBrush"     Color="{StaticResource AccentDimColor}" />
+    <SolidColorBrush x:Key="OnAccentBrush"     Color="{StaticResource OnAccentColor}" />
 
     <SolidColorBrush x:Key="SuccessBrush"    Color="{StaticResource SuccessColor}" />
     <SolidColorBrush x:Key="SuccessDimBrush" Color="{StaticResource SuccessDimColor}" />
@@ -74,32 +78,32 @@
 
     <!-- Gradients -->
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#6366F1" Offset="0" />
-        <GradientStop Color="#8B5CF6" Offset="1" />
+        <GradientStop Color="#2DD4BF" Offset="0" />
+        <GradientStop Color="#14B8A6" Offset="1" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="SuccessGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#10B981" Offset="0" />
-        <GradientStop Color="#059669" Offset="1" />
+        <GradientStop Color="#34D399" Offset="0" />
+        <GradientStop Color="#0F766E" Offset="1" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="NavSidebarGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#0D1220" Offset="0" />
-        <GradientStop Color="#0A0F1A" Offset="1" />
+        <GradientStop Color="#111113" Offset="0" />
+        <GradientStop Color="#111113" Offset="1" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="CardGlowGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#1E2A45" Offset="0" />
-        <GradientStop Color="#141C30" Offset="1" />
+        <GradientStop Color="#1F1F23" Offset="0" />
+        <GradientStop Color="#1F1F23" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Typography Sizes (used as Double resources) -->
-    <system:Double x:Key="FontSizeXS"   xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
+    <system:Double x:Key="FontSizeXS"   xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
     <system:Double x:Key="FontSizeSM"   xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
     <system:Double x:Key="FontSizeMD"   xmlns:system="clr-namespace:System;assembly=mscorlib">13</system:Double>
     <system:Double x:Key="FontSizeLG"   xmlns:system="clr-namespace:System;assembly=mscorlib">15</system:Double>
     <system:Double x:Key="FontSizeXL"   xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
-    <system:Double x:Key="FontSize2XL"  xmlns:system="clr-namespace:System;assembly=mscorlib">22</system:Double>
-    <system:Double x:Key="FontSize3XL"  xmlns:system="clr-namespace:System;assembly=mscorlib">28</system:Double>
+    <system:Double x:Key="FontSize2XL"  xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+    <system:Double x:Key="FontSize3XL"  xmlns:system="clr-namespace:System;assembly=mscorlib">32</system:Double>
 
 </ResourceDictionary>

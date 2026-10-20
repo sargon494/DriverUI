@@ -83,7 +83,7 @@
                             IsEnabled="{Binding HasSelection}">
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconDownload}"
-                                  Stroke="White" StrokeThickness="1.5"
+                                  Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.5"
                                   Width="14" Height="14" Stretch="Uniform" Margin="0 0 7 0" />
                             <TextBlock Text="Instalar seleccionadas" />
                         </StackPanel>

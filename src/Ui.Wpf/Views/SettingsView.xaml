@@ -219,7 +219,7 @@
                         Command="{Binding SaveCommand}">
                     <StackPanel Orientation="Horizontal">
                         <Path Data="{StaticResource IconCheck}"
-                              Stroke="White" StrokeThickness="1.5"
+                              Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.5"
                               Width="13" Height="13" Stretch="Uniform" Margin="0 0 7 0" />
                         <TextBlock Text="Guardar ajustes" />
                     </StackPanel>

@@ -65,7 +65,7 @@
                             <Border Width="36" Height="36" CornerRadius="10"
                                     Background="{StaticResource AccentBrush}">
                                 <Path Data="{StaticResource IconDriver}"
-                                      Stroke="White" StrokeThickness="1.5"
+                                      Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.5"
                                       Width="18" Height="18"
                                       Stretch="Uniform" />
                             </Border>
@@ -335,7 +335,7 @@
                                     Command="{Binding RetryConnectionCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="{StaticResource IconRefresh}"
-                                          Stroke="White" StrokeThickness="1.5"
+                                          Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.5"
                                           Width="14" Height="14" Stretch="Uniform"
                                           Margin="0 0 8 0" />
                                     <TextBlock Text="Reintentar conexión" />

@@ -59,14 +59,14 @@
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource BgSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="20" />
     </Style>
 
     <Style x:Key="CardCompact" TargetType="Border" BasedOn="{StaticResource Card}">
         <Setter Property="Padding" Value="16 12" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════
@@ -77,7 +77,7 @@
         <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
         <Setter Property="FontSize" Value="{StaticResource FontSizeMD}" />
         <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
         <Setter Property="Padding" Value="20 10" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="BorderThickness" Value="0" />

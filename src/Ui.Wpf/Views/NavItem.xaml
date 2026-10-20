@@ -58,7 +58,7 @@
                             <TextBlock x:Name="BadgeText"
                                        Text="{Binding ElementName=Self, Path=BadgeCount}"
                                        FontSize="10" FontWeight="Bold"
-                                       Foreground="White"
+                                       Foreground="{StaticResource OnAccentBrush}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center" />
                         </Border>
