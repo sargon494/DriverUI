@@ -11,7 +11,7 @@ namespace Ui.Wpf.Services;
 /// Gestiona el ciclo de vida del canal y re-conecta cuando el servicio
 /// no está disponible.
 /// </summary>
-public sealed class DriverAgentService : IAsyncDisposable
+public sealed class DriverAgentService : IAsyncDisposable, IDisposable
 {
     private readonly ILogger<DriverAgentService> _logger;
     private GrpcChannel? _channel;
@@ -127,6 +127,17 @@ public sealed class DriverAgentService : IAsyncDisposable
     public async Task<StatusResponse> GetStatusAsync(CancellationToken ct = default)
     {
         return await Client.GetStatusAsync(new StatusRequest(), cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// Cierre síncrono: lo usa el contenedor de DI al salir de la aplicación (OnExit).
+    /// No hace falta apagar el canal de forma asíncrona aquí.
+    /// </summary>
+    public void Dispose()
+    {
+        _channel?.Dispose();
+        _channel = null;
+        _client = null;
     }
 
     public async ValueTask DisposeAsync()
