@@ -9,7 +9,7 @@
 
   <Package Name="DriverUpdater"
            Manufacturer="sargon494"
-           Version="$(Version)"
+           Version="$(var.Version)"
            UpgradeCode="5E96540A-DE12-4F4E-8161-47A478F4CF7C"
            Scope="perMachine"
            InstallerVersion="500"
@@ -27,12 +27,13 @@
     <!-- Permiso para que los usuarios interactivos INICIEN y DETENGAN el servicio (RP/WP),
          sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
     <CustomAction Id="GrantInteractiveStartStop"
+                  Directory="INSTALLFOLDER"
                   ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;RPWP;;;IU)"'
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
     <InstallExecuteSequence>
-      <Custom Action="GrantInteractiveStartStop" After="InstallServices">NOT REMOVE</Custom>
+      <Custom Action="GrantInteractiveStartStop" After="InstallServices" Condition="NOT REMOVE" />
     </InstallExecuteSequence>
 
     <!-- Carpeta de instalación: Program Files\DriverUpdater -->
@@ -42,7 +43,7 @@
         <!-- Servicio de Windows: el propio binario de Agent.Service -->
         <Component Id="AgentServiceComponent" Guid="80E3759C-18F3-417F-B16C-DDCB5BD035EB" Bitness="always64">
           <File Id="AgentServiceExe"
-                Source="$(AgentServiceDir)\Agent.Service.exe"
+                Source="$(var.AgentServiceDir)\Agent.Service.exe"
                 KeyPath="yes" />
 
           <!-- Cuenta SYSTEM: necesaria para WMI, WUA y pnputil. La ACL del pipe la aplica el propio servicio. -->
@@ -68,7 +69,7 @@
         <!-- UI WPF: se ejecuta como usuario normal (asInvoker), nunca elevada -->
         <Component Id="UiComponent" Guid="3A32F528-A2CF-48B4-9949-5DDA1446176F" Bitness="always64">
           <File Id="UiExe"
-                Source="$(UiDir)\Ui.Wpf.exe"
+                Source="$(var.UiDir)\Ui.Wpf.exe"
                 KeyPath="yes" />
         </Component>
 
