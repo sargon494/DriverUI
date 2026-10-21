@@ -21,6 +21,11 @@
                         Padding="12 10"
                         Background="Transparent">
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <!-- Capa de hover: se anima en opacidad (no compite con el estado activo) -->
                         <Border x:Name="Hover" Grid.ColumnSpan="3" CornerRadius="8" Opacity="0"
                                 Background="{StaticResource BgElevatedBrush}" />
@@ -29,11 +34,6 @@
                                 VerticalAlignment="Stretch" Width="3" CornerRadius="2"
                                 Margin="-12 8 0 8" Opacity="0"
                                 Background="{StaticResource AccentBrush}" />
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
 
                         <!-- Icono -->
                         <Path Grid.Column="0"
