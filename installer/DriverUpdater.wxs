@@ -27,12 +27,13 @@
     <!-- Permiso para que los usuarios interactivos INICIEN y DETENGAN el servicio (RP/WP),
          sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
     <CustomAction Id="GrantInteractiveStartStop"
+                  Directory="INSTALLFOLDER"
                   ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;RPWP;;;IU)"'
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
     <InstallExecuteSequence>
-      <Custom Action="GrantInteractiveStartStop" After="InstallServices">NOT REMOVE</Custom>
+      <Custom Action="GrantInteractiveStartStop" After="InstallServices" Condition="NOT REMOVE" />
     </InstallExecuteSequence>
 
     <!-- Carpeta de instalación: Program Files\DriverUpdater -->
