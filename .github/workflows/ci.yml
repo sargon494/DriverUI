@@ -50,9 +50,7 @@ jobs:
         run: |
           dotnet tool install --global wix
           wix --version
-          # WiX v4 pide aceptar su EULA antes de compilar; si el comando no existe en esta versión, se ignora.
-          wix eula accept wix7 2>$null
-          exit 0
+          # La EULA se acepta dentro de build.ps1, con la salida visible.
 
       - name: Build MSI
         shell: pwsh
