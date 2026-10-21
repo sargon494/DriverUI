@@ -3,6 +3,7 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Colors.xaml" />
+        <ResourceDictionary Source="Icons.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Duración de animaciones de movimiento (escala, giro). App.xaml.cs la pone a 0 si Windows tiene desactivadas las animaciones. -->
