@@ -101,19 +101,20 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Trigger.EnterActions>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource AccentHoverColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource AccentHoverColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                             </Trigger.EnterActions>
                             <Trigger.ExitActions>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource AccentColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource AccentColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                             </Trigger.ExitActions>
                         </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
                         <Trigger.EnterActions>
                         <BeginStoryboard><Storyboard>
                             <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.12">
@@ -134,6 +135,7 @@
                             </DoubleAnimation>
                         </Storyboard></BeginStoryboard>
                     </Trigger.ExitActions>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.4" />
                         </Trigger>
@@ -174,29 +176,30 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Trigger.EnterActions>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource BgHoverColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource BgHoverColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource AccentColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource AccentColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                             </Trigger.EnterActions>
                             <Trigger.ExitActions>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource BgElevatedColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource BgElevatedColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                                 <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource BorderDefaultColor}" Duration="0:0:0:0:0.15">
+                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource BorderDefaultColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
                             </Trigger.ExitActions>
                         </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
                         <Trigger.EnterActions>
                         <BeginStoryboard><Storyboard>
                             <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.12">
@@ -217,6 +220,7 @@
                             </DoubleAnimation>
                         </Storyboard></BeginStoryboard>
                     </Trigger.ExitActions>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.4" />
                         </Trigger>
