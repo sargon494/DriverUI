@@ -26,6 +26,14 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+                        <!-- Capa de hover: se anima en opacidad (no compite con el estado activo) -->
+                        <Border x:Name="Hover" Grid.ColumnSpan="3" CornerRadius="8" Opacity="0"
+                                Background="{StaticResource BgElevatedBrush}" />
+                        <!-- Indicador de sección activa: barra fina en el borde izquierdo -->
+                        <Border x:Name="Indicator" HorizontalAlignment="Left"
+                                VerticalAlignment="Stretch" Width="3" CornerRadius="2"
+                                Margin="-12 8 0 8" Opacity="0"
+                                Background="{StaticResource AccentBrush}" />
 
                         <!-- Icono -->
                         <Path Grid.Column="0"
@@ -69,13 +77,29 @@
                     <!-- Activo -->
                     <DataTrigger Binding="{Binding ElementName=Self, Path=IsActive}" Value="True">
                         <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentDimBrush}" />
+                        <Setter TargetName="Indicator" Property="Opacity" Value="1" />
                         <Setter TargetName="Icon" Property="Stroke" Value="{StaticResource AccentBrush}" />
                         <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                         <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
                     </DataTrigger>
                     <!-- Hover -->
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="Root" Property="Background" Value="{StaticResource BgElevatedBrush}" />
+                        <Trigger.EnterActions>
+                            <BeginStoryboard><Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity"
+                                                 To="1" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard></BeginStoryboard>
+                        </Trigger.EnterActions>
+                        <Trigger.ExitActions>
+                            <BeginStoryboard><Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity"
+                                                 To="0" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard></BeginStoryboard>
+                        </Trigger.ExitActions>
                         <Setter TargetName="Icon" Property="Stroke" Value="{StaticResource AccentHoverBrush}" />
                         <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                     </Trigger>
