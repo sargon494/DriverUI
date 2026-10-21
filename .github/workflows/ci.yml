@@ -57,7 +57,16 @@ jobs:
       - name: Build MSI
         shell: pwsh
         # MSI exige versión numérica a.b.c.d; el número de ejecución hace cada build única.
-        run: ./installer/build.ps1 -Version "1.0.${{ github.run_number }}"
+        # Si falla, publica las últimas líneas como anotación de error para poder leer la causa sin el log completo.
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $out = (& ./installer/build.ps1 -Version "1.0.${{ github.run_number }}" 2>&1 | ForEach-Object { "$_" }) -join "`n"
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = ($out -split "`n" | Select-Object -Last 60) -join '%0A'
+            Write-Output "::error title=Build MSI failed::$tail"
+            exit 1
+          }
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
