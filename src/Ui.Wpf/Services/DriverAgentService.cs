@@ -11,7 +11,7 @@ namespace Ui.Wpf.Services;
 /// Gestiona el ciclo de vida del canal y re-conecta cuando el servicio
 /// no está disponible.
 /// </summary>
-public sealed class DriverAgentService : IAsyncDisposable
+public sealed class DriverAgentService : IAsyncDisposable, IDisposable
 {
     private readonly ILogger<DriverAgentService> _logger;
     private GrpcChannel? _channel;
@@ -49,6 +49,34 @@ public sealed class DriverAgentService : IAsyncDisposable
         {
             IsConnected = false;
             _logger.LogWarning(ex, "No se pudo conectar al servicio DriverUpdater.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Inicia el servicio DriverUpdater si está detenido. El servicio está configurado
+    /// como arranque bajo demanda; el instalador concede a usuarios interactivos el
+    /// permiso de iniciarlo y detenerlo (no de configurarlo). Devuelve true si queda en ejecución.
+    /// </summary>
+    public async Task<bool> TryStartServiceAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var controller = new System.ServiceProcess.ServiceController("DriverUpdater");
+            if (controller.Status == System.ServiceProcess.ServiceControllerStatus.Running)
+            {
+                return true;
+            }
+
+            controller.Start();
+            await Task.Run(() => controller.WaitForStatus(
+                System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(15)), ct);
+            _logger.LogInformation("Servicio DriverUpdater iniciado desde la UI.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo iniciar el servicio DriverUpdater.");
             return false;
         }
     }
@@ -127,6 +155,17 @@ public sealed class DriverAgentService : IAsyncDisposable
     public async Task<StatusResponse> GetStatusAsync(CancellationToken ct = default)
     {
         return await Client.GetStatusAsync(new StatusRequest(), cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// Cierre síncrono: lo usa el contenedor de DI al salir de la aplicación (OnExit).
+    /// No hace falta apagar el canal de forma asíncrona aquí.
+    /// </summary>
+    public void Dispose()
+    {
+        _channel?.Dispose();
+        _channel = null;
+        _client = null;
     }
 
     public async ValueTask DisposeAsync()

@@ -49,6 +49,15 @@ jobs:
           dotnet publish src/Ui.Wpf/Ui.Wpf.csproj -c Release -r win-x64 --no-self-contained -o dist/ui
           Compress-Archive -Path dist/ui/* -DestinationPath dist/DriverUpdater-UI-win-x64.zip
 
+      - name: Build MSI installer (WiX v4)
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
+          # Versión del MSI derivada del tag (v0.1.0 -> 0.1.0); en ejecuciones manuales, 0.0.0.
+          $version = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}'.TrimStart('v') } else { '0.0.0' }
+          ./installer/build.ps1 -Version $version
+          if ($LASTEXITCODE -ne 0) { throw "build MSI falló" }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -56,5 +65,6 @@ jobs:
             dist/DriverUpdater-CLI-win-x64.zip
             dist/DriverUpdater-Service-win-x64.zip
             dist/DriverUpdater-UI-win-x64.zip
+            installer/artifacts/*.msi
           prerelease: ${{ inputs.prerelease || contains(github.ref, '-alpha') || contains(github.ref, '-beta') }}
           generate_release_notes: true

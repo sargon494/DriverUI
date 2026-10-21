@@ -24,16 +24,16 @@
 
         <!-- Routing automático de ViewModel a Vista -->
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
-            <views:DashboardView />
+            <views:DashboardView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:UpdatesViewModel}">
-            <views:UpdatesView />
+            <views:UpdatesView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
-            <views:HistoryView />
+            <views:HistoryView Style="{StaticResource PageEnter}" />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-            <views:SettingsView />
+            <views:SettingsView Style="{StaticResource PageEnter}" />
         </DataTemplate>
     </Window.Resources>
 
@@ -325,9 +325,8 @@
                                        HorizontalAlignment="Center" />
                             <TextBlock Margin="0 10 0 0" TextAlignment="Center" TextWrapping="Wrap"
                                        Style="{StaticResource TextBody}" LineHeight="22">
-                                El servicio de Windows DriverUpdater no está en ejecución.
-                                Asegúrate de que está instalado y activo, o inicia sesión
-                                como administrador para arrancarlo.
+                                El servicio de DriverUpdater está detenido. Se intenta iniciar
+                                al abrir la app; si no arranca, pulsa Reintentar.
                             </TextBlock>
                             <Button Margin="0 28 0 0"
                                     Style="{StaticResource ButtonPrimary}"

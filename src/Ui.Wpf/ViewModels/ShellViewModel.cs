@@ -66,7 +66,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public async Task InitializeAsync()
     {
         IsConnecting = true;
-        IsConnected = await _agent.TryConnectAsync();
+        IsConnected = await ConnectOrStartAsync();
         IsConnecting = false;
 
         if (IsConnected)
@@ -80,7 +80,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private async Task RetryConnectionAsync()
     {
         IsConnecting = true;
-        IsConnected = await _agent.TryConnectAsync();
+        IsConnected = await ConnectOrStartAsync();
         IsConnecting = false;
 
         if (IsConnected)
@@ -114,6 +114,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             await CurrentPage.OnNavigatedToAsync();
         }
+    }
+
+    /// <summary>
+    /// Conecta al servicio; si está detenido, lo inicia (arranque bajo demanda) y vuelve a conectar.
+    /// </summary>
+    private async Task<bool> ConnectOrStartAsync()
+    {
+        if (await _agent.TryConnectAsync())
+        {
+            return true;
+        }
+
+        return await _agent.TryStartServiceAsync() && await _agent.TryConnectAsync();
     }
 
     private void StartStatusPolling()

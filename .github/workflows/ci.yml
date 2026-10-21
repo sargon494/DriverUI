@@ -31,3 +31,44 @@ jobs:
 
       - name: Run automated tests
         run: dotnet test -c Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+  build-installer:
+    runs-on: windows-latest
+    name: Build MSI installer (WiX v4)
+    needs: build-and-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install WiX v4
+        run: |
+          dotnet tool install --global wix
+          wix --version
+          # La EULA se acepta dentro de build.ps1, con la salida visible.
+
+      - name: Build MSI
+        shell: pwsh
+        # MSI exige versión numérica a.b.c.d; el número de ejecución hace cada build única.
+        # Si falla, publica las últimas líneas como anotación de error para poder leer la causa sin el log completo.
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $out = (& ./installer/build.ps1 -Version "1.0.${{ github.run_number }}" 2>&1 | ForEach-Object { "$_" }) -join "`n"
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = ($out -split "`n" | Select-Object -Last 60) -join '%0A'
+            Write-Output "::error title=Build MSI failed::$tail"
+            exit 1
+          }
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriverUpdater-installer
+          path: installer/artifacts/*.msi
+          if-no-files-found: error

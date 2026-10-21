@@ -293,9 +293,24 @@
                                 </Style.Triggers>
                             </Style>
                         </ScrollViewer.Style>
-                        <ItemsControl ItemsSource="{Binding FilteredDrivers}">
+                        <ItemsControl ItemsSource="{Binding Groups}" Margin="8 8 8 4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
+                                    <Expander Style="{StaticResource DriverGroupExpander}" IsExpanded="True" Margin="0 0 0 8">
+                                        <Expander.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                                <Border Margin="10 0 0 0" Padding="7 1" CornerRadius="9"
+                                                        Background="{StaticResource BgElevatedBrush}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Items.Count}" FontSize="11"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Expander.Header>
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
                                     <Border Padding="16 10"
                                             BorderBrush="{StaticResource BorderSubtleBrush}"
                                             BorderThickness="0 0 0 1">
@@ -362,6 +377,10 @@
                                             </Border>
                                         </Grid>
                                     </Border>
+                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

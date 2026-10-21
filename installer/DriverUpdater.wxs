@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instalador MSI de DriverUpdater (WiX v4).
+  Registra el servicio de Windows (Agent.Service, cuenta LocalSystem, inicio automático)
+  e instala la UI (Ui.Wpf, sin elevación) con acceso desde el menú Inicio.
+  Compilar con installer/build.ps1. Variables: Version, AgentServiceDir, UiDir.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package Name="DriverUpdater"
+           Manufacturer="sargon494"
+           Version="$(var.Version)"
+           UpgradeCode="5E96540A-DE12-4F4E-8161-47A478F4CF7C"
+           Scope="perMachine"
+           InstallerVersion="500"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="Ya hay una versión más reciente de DriverUpdater instalada." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="Main" Title="DriverUpdater" Level="1">
+      <ComponentRef Id="AgentServiceComponent" />
+      <ComponentRef Id="UiComponent" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+
+    <!-- Permiso para que los usuarios interactivos INICIEN y DETENGAN el servicio (RP/WP),
+         sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
+    <CustomAction Id="GrantInteractiveStartStop"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;IU)"'
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="GrantInteractiveStartStop" After="InstallServices" Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+
+    <!-- Carpeta de instalación: Program Files\DriverUpdater -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="DriverUpdater">
+
+        <!-- Servicio de Windows: el propio binario de Agent.Service -->
+        <Component Id="AgentServiceComponent" Guid="80E3759C-18F3-417F-B16C-DDCB5BD035EB" Bitness="always64">
+          <File Id="AgentServiceExe"
+                Source="$(var.AgentServiceDir)\Agent.Service.exe"
+                KeyPath="yes" />
+
+          <!-- Cuenta SYSTEM: necesaria para WMI, WUA y pnputil. La ACL del pipe la aplica el propio servicio. -->
+          <ServiceInstall Id="DriverUpdaterServiceInstall"
+                          Name="DriverUpdater"
+                          DisplayName="DriverUpdater Agent"
+                          Description="Detecta e instala actualizaciones de controladores firmadas, con punto de restauración y rollback."
+                          Type="ownProcess"
+                          Start="demand"
+                          ErrorControl="normal"
+                          Account="LocalSystem"
+                          Vital="yes" />
+
+          <!-- Arranca tras instalar; se detiene y elimina antes de borrar los ficheros al desinstalar -->
+          <ServiceControl Id="DriverUpdaterServiceControl"
+                          Name="DriverUpdater"
+                          Start="none"
+                          Stop="both"
+                          Remove="uninstall"
+                          Wait="yes" />
+        </Component>
+
+        <!-- UI WPF: se ejecuta como usuario normal (asInvoker), nunca elevada -->
+        <Component Id="UiComponent" Guid="3A32F528-A2CF-48B4-9949-5DDA1446176F" Bitness="always64">
+          <File Id="UiExe"
+                Source="$(var.UiDir)\Ui.Wpf.exe"
+                KeyPath="yes" />
+        </Component>
+
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Acceso directo en el menú Inicio -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppProgramMenuFolder" Name="DriverUpdater">
+        <Component Id="StartMenuShortcutComponent" Guid="E1E13C38-E322-4149-88FE-31D7DB7741D4">
+          <Shortcut Id="UiStartMenuShortcut"
+                    Name="DriverUpdater"
+                    Description="Abrir DriverUpdater"
+                    Target="[INSTALLFOLDER]Ui.Wpf.exe"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="RemoveAppProgramMenuFolder" On="uninstall" />
+          <RegistryValue Root="HKCU"
+                         Key="Software\DriverUpdater"
+                         Name="StartMenuShortcut"
+                         Type="integer"
+                         Value="1"
+                         KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Acceso directo en el escritorio del usuario que instala -->
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="C4C5512C-1D24-4E5B-952B-3C33E5529E92">
+        <Shortcut Id="UiDesktopShortcut"
+                  Name="DriverUpdater"
+                  Description="Abrir DriverUpdater"
+                  Target="[INSTALLFOLDER]Ui.Wpf.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\DriverUpdater"
+                       Name="DesktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+  </Package>
+</Wix>
