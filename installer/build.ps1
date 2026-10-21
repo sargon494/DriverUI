@@ -19,7 +19,7 @@ Remove-Item $art -Recurse -Force -ErrorAction SilentlyContinue
 
 # Un solo .exe autocontenido por aplicación (no hace falta instalar .NET en el equipo)
 dotnet publish (Join-Path $root 'src\Agent.Service\Agent.Service.csproj') -c Release -r $Runtime `
-    --self-contained true -p:PublishSingleFile=true -o $svcDir
+    --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $svcDir
 if ($LASTEXITCODE -ne 0) { throw "publish Agent.Service falló" }
 
 dotnet publish (Join-Path $root 'src\Ui.Wpf\Ui.Wpf.csproj') -c Release -r $Runtime `

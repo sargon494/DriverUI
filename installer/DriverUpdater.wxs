@@ -29,7 +29,7 @@
          sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
     <CustomAction Id="GrantInteractiveStartStop"
                   Directory="INSTALLFOLDER"
-                  ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;RPWP;;;IU)"'
+                  ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;IU)"'
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
