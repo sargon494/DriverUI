@@ -33,6 +33,9 @@ public sealed partial class DashboardViewModel : PageViewModelBase
     public ObservableCollection<InstalledDriverMsg> Drivers { get; } = [];
     public ObservableCollection<InstalledDriverMsg> FilteredDrivers { get; } = [];
 
+    /// <summary>Controladores agrupados por clase de dispositivo, para los desplegables de la vista.</summary>
+    public ObservableCollection<DriverGroup> Groups { get; } = [];
+
     // ── Resumen visual ────────────────────────────────────────────
     public string HealthSummary => ErrorDrivers + DegradedDrivers == 0
         ? "Todo en orden"
@@ -105,6 +108,14 @@ public sealed partial class DashboardViewModel : PageViewModelBase
         }
 
         HasDrivers = FilteredDrivers.Count > 0;
+
+        Groups.Clear();
+        foreach (var group in FilteredDrivers
+                     .GroupBy(d => string.IsNullOrWhiteSpace(d.DeviceClass) ? "Sin clase" : d.DeviceClass)
+                     .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
+        {
+            Groups.Add(new DriverGroup(group.Key, group.ToList()));
+        }
     }
 
     private void UpdateStats()
@@ -137,3 +148,6 @@ public sealed partial class DashboardViewModel : PageViewModelBase
         }
     }
 }
+
+/// <summary>Un grupo de controladores de la misma clase, para un desplegable.</summary>
+public sealed record DriverGroup(string Name, IReadOnlyList<InstalledDriverMsg> Items);
