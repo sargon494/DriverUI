@@ -22,13 +22,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Respetar "Mostrar animaciones en Windows" (Configuración > Accesibilidad > Efectos visuales):
-        // las animaciones de movimiento se desactivan; las de opacidad y color se mantienen.
-        if (!SystemParameters.ClientAreaAnimation)
-        {
-            Resources["MotionTransform"] = new Duration(TimeSpan.Zero);
-        }
-
         // ── Serilog ──────────────────────────────────────────────
         var logDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
