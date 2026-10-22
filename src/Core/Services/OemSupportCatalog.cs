@@ -10,7 +10,7 @@ public sealed record OemSupportEntry(string Vendor, Uri SupportUrl);
 
 public static class OemSupportCatalog
 {
-    private static readonly IReadOnlyDictionary<string, OemSupportEntry> _entries =
+    private static readonly Dictionary<string, OemSupportEntry> _entries =
         new Dictionary<string, OemSupportEntry>(StringComparer.OrdinalIgnoreCase)
         {
             ["Gigabyte"] = new("Gigabyte", new Uri("https://www.gigabyte.com/Support")),
