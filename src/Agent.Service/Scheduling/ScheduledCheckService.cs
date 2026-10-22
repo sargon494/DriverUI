@@ -102,6 +102,9 @@ public sealed class ScheduledCheckService : BackgroundService
         }, ct).ConfigureAwait(false);
 
         _state.Record(DateTimeOffset.UtcNow, pending);
-        _logger.LogInformation("Comprobación programada completada: {Pending} actualización(es) pendiente(s).", pending);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Comprobación programada completada: {Pending} actualización(es) pendiente(s).", pending);
+        }
     }
 }
