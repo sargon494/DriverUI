@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Threading.Channels;
 using Agent.Ipc.Grpc;
 using Agent.Service.Operations;
+using Agent.Service.Scheduling;
 using Core.Interfaces;
 using Core.Models;
 using Google.Protobuf.WellKnownTypes;
@@ -26,6 +27,9 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
     private readonly IDriverInstaller _installer;
     private readonly IOperationHistory _history;
     private readonly IOperationQueue _operationQueue;
+    private readonly ISettingsStore _settings;
+    private readonly IMotherboardInfoProvider _motherboard;
+    private readonly ScheduledCheckState _scheduledCheck;
     private readonly ILogger<DriverAgentGrpcService> _logger;
 
     public DriverAgentGrpcService(
@@ -34,6 +38,9 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         IDriverInstaller installer,
         IOperationHistory history,
         IOperationQueue operationQueue,
+        ISettingsStore settings,
+        IMotherboardInfoProvider motherboard,
+        ScheduledCheckState scheduledCheck,
         ILogger<DriverAgentGrpcService> logger)
     {
         _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
@@ -41,6 +48,9 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         _installer = installer ?? throw new ArgumentNullException(nameof(installer));
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _operationQueue = operationQueue ?? throw new ArgumentNullException(nameof(operationQueue));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _motherboard = motherboard ?? throw new ArgumentNullException(nameof(motherboard));
+        _scheduledCheck = scheduledCheck ?? throw new ArgumentNullException(nameof(scheduledCheck));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,12 +78,17 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         var updates = new List<DriverUpdate>();
         await _operationQueue.EnqueueAsync(async ct =>
         {
+            var excluded = (await _settings.GetAsync(ct).ConfigureAwait(false)).ExcludedHardwareIds;
             var installedDrivers = await _inventory.GetInstalledDriversAsync(ct).ConfigureAwait(false);
             _operationQueue.MarkScanCompleted();
 
             await foreach (var update in _updateSource.FindUpdatesAsync(installedDrivers, ct).ConfigureAwait(false))
             {
-                updates.Add(update);
+                // Las actualizaciones de dispositivos excluidos por el usuario no se muestran.
+                if (!IsExcluded(update, excluded))
+                {
+                    updates.Add(update);
+                }
             }
         }, context.CancellationToken).ConfigureAwait(false);
 
@@ -159,6 +174,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
     public override Task<StatusResponse> GetStatus(StatusRequest request, ServerCallContext context)
     {
         var state = _operationQueue.State;
+        var (lastScheduledCheck, pendingUpdates) = _scheduledCheck.Snapshot;
 
         return Task.FromResult(new StatusResponse
         {
@@ -170,8 +186,66 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             LastScan = state.LastScanUtc.HasValue
                 ? Timestamp.FromDateTime(state.LastScanUtc.Value.UtcDateTime)
                 : null,
-            QueuedOperations = state.QueuedOperations
+            QueuedOperations = state.QueuedOperations,
+            LastScheduledCheck = lastScheduledCheck.HasValue
+                ? Timestamp.FromDateTime(lastScheduledCheck.Value.UtcDateTime)
+                : null,
+            PendingUpdates = pendingUpdates
         });
+    }
+
+    /// <inheritdoc/>
+    public override async Task<SettingsMsg> GetSettings(SettingsRequest request, ServerCallContext context)
+    {
+        var settings = await _settings.GetAsync(context.CancellationToken).ConfigureAwait(false);
+        return ToMessage(settings);
+    }
+
+    /// <inheritdoc/>
+    public override async Task<SettingsMsg> UpdateSettings(SettingsMsg request, ServerCallContext context)
+    {
+        var requested = new AppSettings
+        {
+            ExcludedHardwareIds = request.ExcludedHardwareIds.ToList(),
+            CheckIntervalHours = request.CheckIntervalHours,
+            NotificationsEnabled = request.NotificationsEnabled
+        }.Normalize();
+
+        await _settings.SaveAsync(requested, context.CancellationToken).ConfigureAwait(false);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Ajustes actualizados: {Excluded} exclusión(es), comprobación cada {Hours} h.",
+                requested.ExcludedHardwareIds.Count,
+                requested.CheckIntervalHours);
+        }
+
+        return ToMessage(requested);
+    }
+
+    /// <inheritdoc/>
+    public override async Task<MotherboardMsg> GetMotherboard(MotherboardRequest request, ServerCallContext context)
+    {
+        var board = await _motherboard.GetAsync(context.CancellationToken).ConfigureAwait(false);
+
+        return board is null
+            ? new MotherboardMsg { Detected = false }
+            : new MotherboardMsg { Detected = true, Manufacturer = board.Manufacturer, Product = board.Product };
+    }
+
+    private static bool IsExcluded(DriverUpdate update, IReadOnlyList<string> excluded) =>
+        excluded.Contains(update.MatchedHardwareId.Value, StringComparer.OrdinalIgnoreCase);
+
+    private static SettingsMsg ToMessage(AppSettings settings)
+    {
+        var message = new SettingsMsg
+        {
+            CheckIntervalHours = settings.CheckIntervalHours,
+            NotificationsEnabled = settings.NotificationsEnabled
+        };
+        message.ExcludedHardwareIds.AddRange(settings.ExcludedHardwareIds);
+        return message;
     }
 
     private async Task InstallCoreAsync(
@@ -182,6 +256,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         // Re-resolver las actualizaciones contra Windows Update evita instalar
         // datos anticuados o manipulados que envíe el cliente: solo se aceptan
         // actualizaciones presentes en la fuente en este instante.
+        var excluded = (await _settings.GetAsync(ct).ConfigureAwait(false)).ExcludedHardwareIds;
         var installedDrivers = await _inventory.GetInstalledDriversAsync(ct).ConfigureAwait(false);
         _operationQueue.MarkScanCompleted();
 
@@ -201,14 +276,18 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             var match = availableUpdates.FirstOrDefault(
                 update => string.Equals(update.UpdateId, updateId, StringComparison.OrdinalIgnoreCase));
 
-            if (match is null)
+            if (match is null || IsExcluded(match, excluded))
             {
                 completedUpdates++;
+                var message = match is null
+                    ? $"No se encontró la actualización '{updateId}' en Windows Update."
+                    : $"El dispositivo '{match.DeviceName}' está excluido de las actualizaciones.";
+
                 var written = await TryWriteFinishedResultAsync(
                     responseStream,
                     updateId,
                     success: false,
-                    $"No se encontró la actualización '{updateId}' en Windows Update.",
+                    message,
                     rebootRequired: false,
                     totalUpdates,
                     completedUpdates,

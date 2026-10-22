@@ -27,6 +27,14 @@ service DriverAgent {
 
   // Estado actual del servicio: operacion en curso, reinicio pendiente, ultimo escaneo.
   rpc GetStatus (StatusRequest) returns (StatusResponse);
+
+  // Ajustes persistentes: exclusiones y comprobación programada.
+  rpc GetSettings (SettingsRequest) returns (SettingsMsg);
+  // Guarda los ajustes (se normalizan en el servicio) y devuelve los valores finales.
+  rpc UpdateSettings (SettingsMsg) returns (SettingsMsg);
+
+  // Fabricante y modelo de la placa base, para enlazar su soporte oficial.
+  rpc GetMotherboard (MotherboardRequest) returns (MotherboardMsg);
 }
 
 message ScanRequest {
@@ -149,4 +157,27 @@ message StatusResponse {
   bool pending_reboot = 5;
   google.protobuf.Timestamp last_scan = 6;
   int32 queued_operations = 7;
+  // Último escaneo programado completado (UTC) y actualizaciones pendientes encontradas en él.
+  google.protobuf.Timestamp last_scheduled_check = 8;
+  int32 pending_updates = 9;
+}
+
+message SettingsRequest {
+}
+
+message SettingsMsg {
+  // Hardware IDs excluidos: sus actualizaciones no se muestran ni se instalan.
+  repeated string excluded_hardware_ids = 1;
+  // 0 = comprobación programada desactivada; 24 o 168 horas.
+  int32 check_interval_hours = 2;
+  bool notifications_enabled = 3;
+}
+
+message MotherboardRequest {
+}
+
+message MotherboardMsg {
+  bool detected = 1;
+  string manufacturer = 2;
+  string product = 3;
 }
