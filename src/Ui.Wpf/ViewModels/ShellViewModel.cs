@@ -126,7 +126,24 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             return true;
         }
 
-        return await _agent.TryStartServiceAsync() && await _agent.TryConnectAsync();
+        if (!await _agent.TryStartServiceAsync())
+        {
+            return false;
+        }
+
+        // El servicio figura como "Running" antes de que el pipe esté escuchando:
+        // reintentamos unos segundos en lugar de fallar en el primer intento.
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            if (await _agent.TryConnectAsync())
+            {
+                return true;
+            }
+
+            await Task.Delay(250);
+        }
+
+        return false;
     }
 
     private void StartStatusPolling()

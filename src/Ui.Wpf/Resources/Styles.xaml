@@ -181,20 +181,10 @@
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>
-                                <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource AccentColor}" Duration="0:0:0.15">
-                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                            </ColorAnimation>
-                        </Storyboard></BeginStoryboard>
                             </Trigger.EnterActions>
                             <Trigger.ExitActions>
                                 <BeginStoryboard><Storyboard>
                             <ColorAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Color" To="{StaticResource BgElevatedColor}" Duration="0:0:0.15">
-                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                            </ColorAnimation>
-                        </Storyboard></BeginStoryboard>
-                                <BeginStoryboard><Storyboard>
-                            <ColorAnimation Storyboard.TargetName="Edge" Storyboard.TargetProperty="Color" To="{StaticResource BorderDefaultColor}" Duration="0:0:0.15">
                                 <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                             </ColorAnimation>
                         </Storyboard></BeginStoryboard>

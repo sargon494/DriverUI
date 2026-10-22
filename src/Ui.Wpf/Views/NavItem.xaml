@@ -100,7 +100,7 @@
                                 </DoubleAnimation>
                             </Storyboard></BeginStoryboard>
                         </Trigger.ExitActions>
-                        <Setter TargetName="Icon" Property="Stroke" Value="{StaticResource AccentHoverBrush}" />
+                        <Setter TargetName="Icon" Property="Stroke" Value="{StaticResource TextPrimaryBrush}" />
                         <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                     </Trigger>
                 </ControlTemplate.Triggers>

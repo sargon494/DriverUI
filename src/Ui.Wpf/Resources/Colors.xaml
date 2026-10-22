@@ -11,7 +11,7 @@
     <Color x:Key="BgSurfaceColor">#1F1F23</Color>
     <Color x:Key="BgElevatedColor">#27272D</Color>
     <Color x:Key="BgCardColor">#1F1F23</Color>
-    <Color x:Key="BgHoverColor">#303038</Color>
+    <Color x:Key="BgHoverColor">#25252C</Color>
 
     <!-- Acento principal: Indigo vibrante -->
     <Color x:Key="AccentColor">#2DD4BF</Color>
