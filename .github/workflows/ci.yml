@@ -30,7 +30,7 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Run automated tests
-        run: dotnet test -c Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        run: dotnet test -c Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --logger "GitHubActions;report-warnings=false" --logger "trx;LogFileName=test-results.trx"
 
   build-installer:
     runs-on: windows-latest
