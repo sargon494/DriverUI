@@ -162,6 +162,16 @@ public sealed class DriverAgentService : IAsyncDisposable, IDisposable
         return await Client.GetMotherboardAsync(new MotherboardRequest(), cancellationToken: ct);
     }
 
+    public async Task<SettingsMsg> GetSettingsAsync(CancellationToken ct = default)
+    {
+        return await Client.GetSettingsAsync(new SettingsRequest(), cancellationToken: ct);
+    }
+
+    public async Task<SettingsMsg> UpdateSettingsAsync(SettingsMsg settings, CancellationToken ct = default)
+    {
+        return await Client.UpdateSettingsAsync(settings, cancellationToken: ct);
+    }
+
     /// <summary>
     /// Cierre síncrono: lo usa el contenedor de DI al salir de la aplicación (OnExit).
     /// No hace falta apagar el canal de forma asíncrona aquí.

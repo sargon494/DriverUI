@@ -262,8 +262,8 @@
                           Width="14" Height="14" Stretch="Uniform" Margin="0 0 8 0" />
                     <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextTertiaryBrush}"
                                FontSize="11">
-                        Los ajustes se persistirán en %ProgramData%\DriverUpdater\config.json
-                        mediante los RPCs GetSettings/UpdateSettings (Sprint 6).
+                        Los ajustes se guardan en el servicio y se aplican a las
+                        comprobaciones programadas y a las instalaciones.
                     </TextBlock>
                 </StackPanel>
             </Border>

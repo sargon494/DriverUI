@@ -155,6 +155,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _statusTimer.Start();
     }
 
+    // Marca de la última comprobación programada ya mostrada (segundos UTC).
+    private long _seenScheduledCheck;
+
     private async Task PollStatusAsync()
     {
         try
@@ -164,6 +167,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             {
                 PendingReboot = status.PendingReboot;
                 IsConnected = true;
+
+                // Aviso dentro de la UI (U8): solo cuando hay una comprobación programada nueva
+                // con actualizaciones pendientes, para no mostrar un contador ya revisado.
+                var stamp = status.LastScheduledCheck?.Seconds ?? 0;
+                if (stamp > 0 && stamp != _seenScheduledCheck)
+                {
+                    _seenScheduledCheck = stamp;
+                    if (status.PendingUpdates > 0)
+                    {
+                        UpdatesBadge = status.PendingUpdates;
+                    }
+                }
             });
         }
         catch
