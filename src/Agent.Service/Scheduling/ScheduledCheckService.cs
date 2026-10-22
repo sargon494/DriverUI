@@ -13,8 +13,8 @@ namespace Agent.Service.Scheduling;
 /// </summary>
 public sealed class ScheduledCheckService : BackgroundService
 {
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan _initialDelay = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan _tickInterval = TimeSpan.FromMinutes(15);
 
     private readonly ISettingsStore _settings;
     private readonly IDriverInventory _inventory;
@@ -43,14 +43,14 @@ public sealed class ScheduledCheckService : BackgroundService
     {
         try
         {
-            await Task.Delay(InitialDelay, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(_initialDelay, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        using var timer = new PeriodicTimer(TickInterval);
+        using var timer = new PeriodicTimer(_tickInterval);
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
             try

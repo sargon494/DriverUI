@@ -12,7 +12,7 @@ namespace Agent.Service.Settings;
 /// </summary>
 public sealed class JsonSettingsStore : ISettingsStore, IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
@@ -57,7 +57,7 @@ public sealed class JsonSettingsStore : ISettingsStore, IDisposable
             var temporary = _path + ".tmp";
             await using (var stream = File.Create(temporary))
             {
-                await JsonSerializer.SerializeAsync(stream, normalized, JsonOptions, ct).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(stream, normalized, _jsonOptions, ct).ConfigureAwait(false);
             }
 
             File.Move(temporary, _path, overwrite: true);
@@ -78,7 +78,7 @@ public sealed class JsonSettingsStore : ISettingsStore, IDisposable
         try
         {
             await using var stream = File.OpenRead(_path);
-            var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, ct).ConfigureAwait(false);
+            var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(stream, _jsonOptions, ct).ConfigureAwait(false);
             return (loaded ?? new AppSettings()).Normalize();
         }
         catch (Exception ex) when (ex is JsonException or IOException)

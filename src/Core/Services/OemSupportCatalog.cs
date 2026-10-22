@@ -10,7 +10,7 @@ public sealed record OemSupportEntry(string Vendor, Uri SupportUrl);
 
 public static class OemSupportCatalog
 {
-    private static readonly IReadOnlyDictionary<string, OemSupportEntry> Entries =
+    private static readonly IReadOnlyDictionary<string, OemSupportEntry> _entries =
         new Dictionary<string, OemSupportEntry>(StringComparer.OrdinalIgnoreCase)
         {
             ["Gigabyte"] = new("Gigabyte", new Uri("https://www.gigabyte.com/Support")),
@@ -32,6 +32,6 @@ public static class OemSupportCatalog
             return null;
         }
 
-        return Entries.TryGetValue(board.Manufacturer.Trim(), out var entry) ? entry : null;
+        return _entries.TryGetValue(board.Manufacturer.Trim(), out var entry) ? entry : null;
     }
 }
