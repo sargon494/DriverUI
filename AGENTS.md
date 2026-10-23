@@ -7,7 +7,8 @@ Guía para agentes de IA (y personas) que trabajen en este repositorio.
 **DriverUpdater**: aplicación para Windows 10/11 que detecta e instala automáticamente actualizaciones de drivers de forma segura (solo drivers firmados, con punto de restauración previo y rollback).
 
 Documentos relacionados:
-- `DESIGN.md`: arquitectura y decisiones técnicas.
+- `ARCHITECTURE.md`: mapa del proyecto, cómo se conectan los componentes y cómo extenderlo. Leer primero.
+- `DESIGN.md`: decisiones técnicas y detalle de cada sprint.
 - `MVP.md`: alcance, tareas y criterios de aceptación de la primera versión.
 
 ## Stack
