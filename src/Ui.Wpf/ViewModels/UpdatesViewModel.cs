@@ -13,6 +13,7 @@ namespace Ui.Wpf.ViewModels;
 public sealed partial class DriverInstallItem : ObservableObject
 {
     public string UpdateId { get; init; } = "";
+    public string HardwareId { get; init; } = "";
     public string DeviceName { get; init; } = "";
     public string Title { get; init; } = "";
     public string OldVersion { get; init; } = "";
@@ -93,6 +94,7 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
                 var item = new DriverInstallItem
                 {
                     UpdateId = msg.UpdateId,
+                    HardwareId = msg.HardwareId,
                     DeviceName = msg.DeviceName,
                     Title = msg.Title,
                     OldVersion = msg.CurrentVersion,
@@ -228,6 +230,41 @@ public sealed partial class UpdatesViewModel : PageViewModelBase
 
     [RelayCommand]
     private void SelectNone() => AllSelected = false;
+
+    /// <summary>
+    /// Excluye el dispositivo de la actualización: su hardware ID se guarda en los ajustes
+    /// del servicio y la actualización desaparece de la lista.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExcludeAsync(DriverInstallItem? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.HardwareId))
+        {
+            return;
+        }
+
+        try
+        {
+            var settings = await _agent.GetSettingsAsync(PageToken);
+            if (!settings.ExcludedHardwareIds.Contains(item.HardwareId, StringComparer.OrdinalIgnoreCase))
+            {
+                var request = settings.Clone();
+                request.ExcludedHardwareIds.Add(item.HardwareId);
+                await _agent.UpdateSettingsAsync(request, PageToken);
+            }
+
+            Updates.Remove(item);
+            UpdateCount = Updates.Count;
+            OnPropertyChanged(nameof(HasUpdates));
+            OnPropertyChanged(nameof(HasSelection));
+            OnPropertyChanged(nameof(AllSelected));
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"No se pudo excluir la actualización: {ex.Message}";
+            _logger.LogError(ex, "Error al excluir {HardwareId}", item.HardwareId);
+        }
+    }
 
     private static string FormatPhase(InstallPhaseProto phase, string statusMsg) =>
         !string.IsNullOrWhiteSpace(statusMsg)
