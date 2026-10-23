@@ -152,6 +152,9 @@ public class DriverAgentGrpcServiceTests
             builder.Services.AddSingleton(Substitute.For<IDriverInstaller>());
             builder.Services.AddSingleton(Substitute.For<IOperationHistory>());
             builder.Services.AddSingleton<IOperationQueue, OperationQueue>();
+            builder.Services.AddSingleton(SettingsStubs.Empty());
+            builder.Services.AddSingleton(SettingsStubs.NoMotherboard());
+            builder.Services.AddSingleton(new Agent.Service.Scheduling.ScheduledCheckState());
             extraSetup?.Invoke(builder.Services);
 
             var app = builder.Build();
@@ -473,7 +476,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
@@ -525,7 +528,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
@@ -571,7 +574,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             var updates = new List<DriverUpdate> { CreateUpdate("update-1"), CreateUpdate("update-2") };
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
@@ -612,7 +615,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
                 .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
@@ -652,7 +655,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             var updates = new List<DriverUpdate> { CreateUpdate("update-1") };
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
@@ -701,7 +704,7 @@ public class DriverAgentGrpcServiceTests
             var queue = new OperationQueue();
             var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DriverAgentGrpcService>.Instance;
 
-            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, logger);
+            var service = new DriverAgentGrpcService(inventory, updateSource, installer, history, queue, SettingsStubs.Empty(), SettingsStubs.NoMotherboard(), new Agent.Service.Scheduling.ScheduledCheckState(), logger);
 
             var updates = new List<DriverUpdate> { CreateUpdate("update-1") };
             inventory.GetInstalledDriversAsync(Arg.Any<CancellationToken>())
@@ -999,6 +1002,9 @@ public class DriverAgentGrpcServiceTests
             builder.Services.AddSingleton(Substitute.For<IDriverInstaller>());
             builder.Services.AddSingleton(Substitute.For<IOperationHistory>());
             builder.Services.AddSingleton<IOperationQueue, OperationQueue>();
+            builder.Services.AddSingleton(SettingsStubs.Empty());
+            builder.Services.AddSingleton(SettingsStubs.NoMotherboard());
+            builder.Services.AddSingleton(new Agent.Service.Scheduling.ScheduledCheckState());
             var pipeStreamFactory = new NamedPipeStreamFactory();
             builder.Services.Configure<NamedPipeTransportOptions>(options =>
             {
@@ -1068,5 +1074,23 @@ public class DriverAgentGrpcServiceTests
         }
 
         return last;
+    }
+}
+
+/// <summary>Dobles de ajustes y placa base para los tests del servicio (sin tocar disco).</summary>
+internal static class SettingsStubs
+{
+    public static Core.Interfaces.ISettingsStore Empty()
+    {
+        var store = NSubstitute.Substitute.For<Core.Interfaces.ISettingsStore>();
+        store.GetAsync(Arg.Any<CancellationToken>()).Returns(new AppSettings());
+        return store;
+    }
+
+    public static Core.Interfaces.IMotherboardInfoProvider NoMotherboard()
+    {
+        var provider = NSubstitute.Substitute.For<Core.Interfaces.IMotherboardInfoProvider>();
+        provider.GetAsync(Arg.Any<CancellationToken>()).Returns((MotherboardInfo?)null);
+        return provider;
     }
 }

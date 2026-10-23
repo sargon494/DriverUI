@@ -1,16 +1,22 @@
+using Agent.Ipc.Grpc;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Ui.Wpf.Services;
 
 namespace Ui.Wpf.ViewModels;
 
 public sealed partial class SettingsViewModel : PageViewModelBase
 {
     private readonly ILogger<SettingsViewModel> _logger;
+    private readonly DriverAgentService _agent;
 
     // ── Ajustes de comprobación ─────────────────────────────────
     [ObservableProperty] private bool _autoCheckEnabled = true;
     [ObservableProperty] private int _checkIntervalDays = 1;
+
+    // ── Notificaciones (el servicio las guarda; la UI aún no tiene control) ──
+    [ObservableProperty] private bool _notificationsEnabled = true;
 
     // ── Seguridad ───────────────────────────────────────────────
     [ObservableProperty] private bool _onlyWhql = true;
@@ -23,10 +29,35 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     [ObservableProperty] private bool _isSaved;
     [ObservableProperty] private string? _saveError;
 
-    public SettingsViewModel(ILogger<SettingsViewModel> logger)
+    public SettingsViewModel(ILogger<SettingsViewModel> logger, DriverAgentService agent)
     {
         _logger = logger;
-        // TODO: cargar desde config.json en %ProgramData%\DriverUpdater\
+        _agent = agent;
+    }
+
+    public override async Task OnNavigatedToAsync()
+    {
+        await base.OnNavigatedToAsync();
+        try
+        {
+            var settings = await _agent.GetSettingsAsync(PageToken);
+            AutoCheckEnabled = settings.CheckIntervalHours > 0;
+            CheckIntervalDays = settings.CheckIntervalHours >= 168 ? 7 : 1;
+            NotificationsEnabled = settings.NotificationsEnabled;
+
+            Exclusions.Clear();
+            foreach (var id in settings.ExcludedHardwareIds)
+            {
+                Exclusions.Add(id);
+            }
+
+            SaveError = null;
+        }
+        catch (Exception ex)
+        {
+            SaveError = "No se pudieron cargar los ajustes del servicio.";
+            _logger.LogWarning(ex, "Error al leer los ajustes del servicio.");
+        }
     }
 
     [RelayCommand]
@@ -54,10 +85,17 @@ public sealed partial class SettingsViewModel : PageViewModelBase
 
         try
         {
-            // TODO: enviar GetSettings/UpdateSettings al servicio vía gRPC (Sprint futuro)
-            await Task.Delay(200); // placeholder
+            var request = new SettingsMsg
+            {
+                // El servicio solo admite 0 (desactivado), 24 o 168 horas.
+                CheckIntervalHours = AutoCheckEnabled ? (CheckIntervalDays >= 7 ? 168 : 24) : 0,
+                NotificationsEnabled = NotificationsEnabled,
+            };
+            request.ExcludedHardwareIds.AddRange(Exclusions);
+
+            await _agent.UpdateSettingsAsync(request);
             IsSaved = true;
-            _logger.LogInformation("Ajustes guardados (placeholder).");
+            _logger.LogInformation("Ajustes guardados en el servicio.");
 
             // Reset indicador
             await Task.Delay(2000);

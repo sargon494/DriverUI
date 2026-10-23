@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Agent.Ipc.Grpc;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Core.Models;
+using Core.Services;
 using Microsoft.Extensions.Logging;
 using Ui.Wpf.Services;
 
@@ -29,6 +32,9 @@ public sealed partial class DashboardViewModel : PageViewModelBase
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private bool _hasDrivers;
+    [ObservableProperty] private string? _motherboardName;
+    [ObservableProperty] private string? _oemVendor;
+    [ObservableProperty] private Uri? _oemSupportUrl;
 
     public ObservableCollection<InstalledDriverMsg> Drivers { get; } = [];
     public ObservableCollection<InstalledDriverMsg> FilteredDrivers { get; } = [];
@@ -54,10 +60,55 @@ public sealed partial class DashboardViewModel : PageViewModelBase
         await base.OnNavigatedToAsync();
         await RefreshStatusAsync();
 
+        if (MotherboardName is null)
+        {
+            await LoadMotherboardAsync();
+        }
+
         // Auto-scan si no hay datos
         if (Drivers.Count == 0)
         {
             await ScanAsync();
+        }
+    }
+
+    /// <summary>
+    /// Muestra la placa base y el soporte oficial de su fabricante. No descarga nada:
+    /// solo abre la página oficial en el navegador.
+    /// </summary>
+    [RelayCommand]
+    private void OpenOemSupport()
+    {
+        if (OemSupportUrl is not { IsAbsoluteUri: true, Scheme: "https" } url)
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true });
+    }
+
+    private async Task LoadMotherboardAsync()
+    {
+        try
+        {
+            var board = await _agent.GetMotherboardAsync(PageToken);
+            if (!board.Detected)
+            {
+                return;
+            }
+
+            MotherboardName = $"{board.Manufacturer} {board.Product}";
+            var entry = OemSupportCatalog.Find(new MotherboardInfo
+            {
+                Manufacturer = board.Manufacturer,
+                Product = board.Product
+            });
+            OemVendor = entry?.Vendor;
+            OemSupportUrl = entry?.SupportUrl;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "No se pudo obtener la placa base del servicio.");
         }
     }
 

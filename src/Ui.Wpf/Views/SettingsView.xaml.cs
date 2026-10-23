@@ -8,7 +8,7 @@ public partial class SettingsView : UserControl
 
     private void IncrementInterval_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (DataContext is ViewModels.SettingsViewModel vm && vm.CheckIntervalDays < 30)
+        if (DataContext is ViewModels.SettingsViewModel vm && vm.CheckIntervalDays < 7)
         {
             vm.CheckIntervalDays++;
         }

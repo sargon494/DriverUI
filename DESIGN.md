@@ -190,3 +190,30 @@ Implementación:
 3. **Modelo de negocio**: gratuito, de pago o freemium.
 4. **WPF vs WinUI 3**: WPF por madurez; la UI es intercambiable al estar aislada tras gRPC.
 5. **Certificado de firma de código**: elegir proveedor y presupuestar.
+
+## 13. Sprint 6: ajustes, comprobación programada y soporte OEM (fase A)
+
+### 13.1 Ajustes persistentes (U7)
+- Fichero `%ProgramData%\DriverUpdater\config.json`, escrito por el servicio (cuenta SYSTEM) con escritura atómica (fichero temporal + reemplazo). Si está dañado se usan los valores por defecto.
+- Contenido: `excluded_hardware_ids` (dispositivos excluidos), `check_interval_hours` (0, 24 o 168) y `notifications_enabled`.
+- La UI no escribe el fichero: lo cambia con los RPC `GetSettings` / `UpdateSettings`, y el servicio normaliza y valida los valores antes de guardarlos.
+- Las exclusiones se aplican en el servicio, tanto en `CheckUpdates` como en `Install`. Una actualización excluida no se muestra y, si llega a pedirse, se rechaza con un mensaje claro.
+- La pantalla de Ajustes carga y guarda con `GetSettings`/`UpdateSettings`.
+- **Pendiente:** hoy las exclusiones se escriben a mano como hardware ID. Falta el botón "Excluir" en la lista de actualizaciones, que es lo que pide U7.
+
+### 13.2 Comprobación programada (U8)
+- `ScheduledCheckService` (BackgroundService) revisa cada 15 minutos si toca comprobar. La búsqueda pasa por la misma cola que la UI, así que nunca se solapa con una instalación.
+- El resultado (última comprobación y número de actualizaciones pendientes) se expone en `GetStatus`. Vive en memoria; tras reiniciar el servicio, la primera comprobación se hace al vencer el intervalo.
+- **Limitación conocida:** el servicio arranca bajo demanda y no se detiene al cerrar la UI, así que la comprobación solo ocurre mientras el servicio esté en marcha. No se arranca con Windows, en línea con el requisito del producto.
+- **Pendiente de decidir:** las notificaciones de escritorio (Toast). Un servicio SYSTEM no puede mostrar avisos en la sesión del usuario. Opciones: (a) un aviso dentro de la UI cuando esté abierta; (b) una tarea programada por usuario que lance la UI en modo silencioso. La opción (a) está incluida en esta fase; la (b) requiere decisión explícita porque añade una tarea nueva al sistema.
+- Aviso en la UI (opción a): el contador de la pestaña Actualizaciones muestra las pendientes de una comprobación programada nueva, una sola vez por comprobación.
+
+### 13.3 Soporte oficial de la placa base (fase A)
+- La app detecta la placa con `Win32_BaseBoard` (fabricante y modelo) y muestra el enlace a la página oficial de soporte de drivers de ese fabricante.
+- **Fase A no descarga nada**: solo abre la página oficial en el navegador del usuario. Solo se aceptan URLs HTTPS de la lista `OemSupportCatalog` (Gigabyte, ASUS, MSI, ASRock).
+- Se muestra la versión instalada de cada dispositivo, pero no se compara con la "última versión publicada": eso requeriría scraping de cada fabricante, que se deja para la fase B.
+- **Fase B (no iniciada):** descarga, verificación de SHA-256 y firma, e instalación con el mismo flujo de punto de restauración. Requiere cerrar antes la revisión de licencias (§12) y definir un manifiesto propio con URL, versión y hash por modelo.
+- Los drivers de chipset de Intel, AMD y Realtek se publican también en sus propias webs; se pueden añadir a la lista de fuentes directas en la fase B.
+
+### 13.4 Llamadas de red
+- Ninguna en esta fase: la app solo abre el navegador cuando el usuario pulsa el enlace de soporte.

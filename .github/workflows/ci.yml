@@ -30,7 +30,25 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Run automated tests
-        run: dotnet test -c Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        run: dotnet test -c Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+
+      - name: Annotate failed tests
+        if: always()
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Recurse -Filter *.trx -ErrorAction SilentlyContinue
+          if (-not $files) { Write-Host "::warning::No se generó ningún .trx"; exit 0 }
+          foreach ($f in $files) {
+            [xml]$x = Get-Content -Raw $f.FullName
+            $results = @($x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq 'Failed' })
+            foreach ($r in $results) {
+              $msg = ""
+              if ($r.Output -and $r.Output.ErrorInfo) { $msg = [string]$r.Output.ErrorInfo.Message }
+              $msg = ($msg -replace "`r?`n", " ")
+              Write-Host "::error title=Test fallido::$($r.testName) - $msg"
+            }
+            Write-Host "$($f.Name): $($results.Count) test(s) fallido(s)"
+          }
 
   build-installer:
     runs-on: windows-latest

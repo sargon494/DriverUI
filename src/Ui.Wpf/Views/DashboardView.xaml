@@ -41,6 +41,24 @@
                                    Text="{Binding LastScan, StringFormat='Último escaneo: {0}'}"
                                    Foreground="{StaticResource TextTertiaryBrush}" />
                     </StackPanel>
+
+                    <!-- Placa base y soporte oficial del fabricante (solo enlace, sin descargas) -->
+                    <StackPanel Orientation="Horizontal" Margin="0 6 0 0"
+                                Visibility="{Binding MotherboardName, Converter={StaticResource NotNullToVis}}">
+                        <TextBlock Style="{StaticResource TextCaption}" Text="Placa base:" />
+                        <TextBlock Style="{StaticResource TextCaption}" Margin="6 0 0 0"
+                                   Text="{Binding MotherboardName}"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock Style="{StaticResource TextCaption}" Margin="12 0 0 0"
+                                   Visibility="{Binding OemSupportUrl, Converter={StaticResource NotNullToVis}}">
+                            <Hyperlink Command="{Binding OpenOemSupportCommand}"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       TextDecorations="{x:Null}">
+                                <Run Text="Drivers oficiales en" />
+                                <Run Text="{Binding OemVendor}" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
 
                 <Button Grid.Column="1"

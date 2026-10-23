@@ -5,6 +5,9 @@ using Agent.Ipc;
 using Agent.Service.Grpc;
 using Agent.Service.Ipc;
 using Agent.Service.Operations;
+using Agent.Service.Scheduling;
+using Agent.Service.Settings;
+using Core.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -63,6 +66,9 @@ try
     builder.Services.AddGrpc();
     builder.Services.AddDriverServices();
     builder.Services.AddSingleton<IOperationQueue, OperationQueue>();
+    builder.Services.AddSingleton<ISettingsStore, JsonSettingsStore>();
+    builder.Services.AddSingleton<ScheduledCheckState>();
+    builder.Services.AddHostedService<ScheduledCheckService>();
 
     var app = builder.Build();
     app.MapGrpcService<DriverAgentGrpcService>();

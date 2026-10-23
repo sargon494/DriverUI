@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<IDriverInventory, WmiDriverInventory>();
+        services.AddSingleton<IMotherboardInfoProvider, WmiMotherboardInfoProvider>();
         services.AddSingleton<IUpdateSource, WuaUpdateSource>();
         services.AddSingleton<ISignatureVerifier, WinTrustSignatureVerifier>();
         services.AddSingleton<IRestorePointService, WmiRestorePointService>();
