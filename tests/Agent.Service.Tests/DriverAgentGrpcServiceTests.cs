@@ -152,6 +152,9 @@ public class DriverAgentGrpcServiceTests
             builder.Services.AddSingleton(Substitute.For<IDriverInstaller>());
             builder.Services.AddSingleton(Substitute.For<IOperationHistory>());
             builder.Services.AddSingleton<IOperationQueue, OperationQueue>();
+            builder.Services.AddSingleton(SettingsStubs.Empty());
+            builder.Services.AddSingleton(SettingsStubs.NoMotherboard());
+            builder.Services.AddSingleton(new Agent.Service.Scheduling.ScheduledCheckState());
             extraSetup?.Invoke(builder.Services);
 
             var app = builder.Build();
@@ -999,6 +1002,9 @@ public class DriverAgentGrpcServiceTests
             builder.Services.AddSingleton(Substitute.For<IDriverInstaller>());
             builder.Services.AddSingleton(Substitute.For<IOperationHistory>());
             builder.Services.AddSingleton<IOperationQueue, OperationQueue>();
+            builder.Services.AddSingleton(SettingsStubs.Empty());
+            builder.Services.AddSingleton(SettingsStubs.NoMotherboard());
+            builder.Services.AddSingleton(new Agent.Service.Scheduling.ScheduledCheckState());
             var pipeStreamFactory = new NamedPipeStreamFactory();
             builder.Services.Configure<NamedPipeTransportOptions>(options =>
             {
