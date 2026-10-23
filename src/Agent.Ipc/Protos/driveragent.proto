@@ -170,7 +170,9 @@ message SettingsMsg {
   repeated string excluded_hardware_ids = 1;
   // 0 = comprobación programada desactivada; 24 o 168 horas.
   int32 check_interval_hours = 2;
-  bool notifications_enabled = 3;
+  // Campo 3 retirado (sin notificaciones de escritorio). No reutilizar.
+  reserved 3;
+  reserved "notifications_enabled";
 }
 
 message MotherboardRequest {

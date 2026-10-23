@@ -195,7 +195,7 @@ Implementación:
 
 ### 13.1 Ajustes persistentes (U7)
 - Fichero `%ProgramData%\DriverUpdater\config.json`, escrito por el servicio (cuenta SYSTEM) con escritura atómica (fichero temporal + reemplazo). Si está dañado se usan los valores por defecto.
-- Contenido: `excluded_hardware_ids` (dispositivos excluidos), `check_interval_hours` (0, 24 o 168) y `notifications_enabled`.
+- Contenido: `excluded_hardware_ids` (dispositivos excluidos), `check_interval_hours` (0, 24 o 168).
 - La UI no escribe el fichero: lo cambia con los RPC `GetSettings` / `UpdateSettings`, y el servicio normaliza y valida los valores antes de guardarlos.
 - Las exclusiones se aplican en el servicio, tanto en `CheckUpdates` como en `Install`. Una actualización excluida no se muestra y, si llega a pedirse, se rechaza con un mensaje claro.
 - La pantalla de Ajustes carga y guarda con `GetSettings`/`UpdateSettings`.
@@ -207,7 +207,7 @@ Implementación:
 - **Limitación conocida:** el servicio arranca bajo demanda y no se detiene al cerrar la UI, así que la comprobación solo ocurre mientras el servicio esté en marcha. No se arranca con Windows, en línea con el requisito del producto.
 - **Decisión: sin notificaciones de escritorio (Toast) ni tarea programada por usuario.** El usuario prefiere consultar las actualizaciones cuando quiera, y un aviso emergente se considera invasivo. La comprobación programada solo alimenta un indicador pasivo.
 - Indicador en la UI: el contador de la pestaña Actualizaciones muestra las pendientes de una comprobación programada nueva, una sola vez por comprobación. No hay avisos fuera de la app.
-- `notifications_enabled` se conserva en `config.json` y en el contrato por compatibilidad, pero no tiene efecto: no hay notificaciones que activar o desactivar.
+- El campo `notifications_enabled` se retiró del contrato (`reserved 3`) y de `AppSettings`. Los `config.json` antiguos que lo contengan siguen cargando: el campo desconocido se ignora.
 
 ### 13.3 Soporte oficial de la placa base (fase A)
 - La app detecta la placa con `Win32_BaseBoard` (fabricante y modelo) y muestra el enlace a la página oficial de soporte de drivers de ese fabricante.

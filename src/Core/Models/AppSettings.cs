@@ -17,9 +17,6 @@ public sealed record AppSettings
     /// <summary>Periodicidad de la comprobación programada en horas (0 = desactivada).</summary>
     public int CheckIntervalHours { get; init; }
 
-    /// <summary>Si el usuario quiere avisos cuando haya actualizaciones pendientes.</summary>
-    public bool NotificationsEnabled { get; init; } = true;
-
     /// <summary>
     /// Devuelve una copia saneada: elimina entradas vacías o no válidas, deduplica
     /// hardware IDs sin distinguir mayúsculas, limita su número y admite solo intervalos conocidos.
