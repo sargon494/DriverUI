@@ -78,7 +78,7 @@ La comunicación es **gRPC sobre un named pipe local** (`\\.\pipe\DriverUpdater`
 | `Install` | Stream de progreso de instalación. Rechaza las excluidas. Crea punto de restauración antes. |
 | `Rollback` | Revierte una operación registrada en el historial. |
 | `GetHistory` | Registro de operaciones (SQLite). |
-| `GetStatus` | Estado de la cola, último escaneo, reinicio pendiente y resultado de la última comprobación programada. |
+| `GetStatus` | Estado de la cola, último escaneo, reinicio pendiente (memoria del servicio o marca de Windows en el registro) y resultado de la última comprobación programada. |
 | `GetSettings` / `UpdateSettings` | Lee y guarda los ajustes persistentes. |
 | `GetMotherboard` | Fabricante y modelo de la placa (`Win32_BaseBoard`). |
 

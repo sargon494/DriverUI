@@ -79,7 +79,7 @@ El MVP **no necesita backend**.
 - [ ] Cola de operaciones (una instalación a la vez) y cancelación.
 - [ ] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
 - [ ] Exclusiones y comprobación programada.
-- [ ] Aviso de reinicio pendiente (sin notificaciones de escritorio).
+- [x] Aviso de reinicio pendiente dentro de la app (sin notificaciones de escritorio); sobrevive a reinicios del servicio.
 
 ### Hito 3: Seguridad y robustez (2-3 semanas)
 - [ ] Solo drivers firmados por defecto; opción documentada para el resto.
