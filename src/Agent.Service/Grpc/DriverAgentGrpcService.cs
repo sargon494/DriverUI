@@ -208,7 +208,6 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         {
             ExcludedHardwareIds = request.ExcludedHardwareIds.ToList(),
             CheckIntervalHours = request.CheckIntervalHours,
-            NotificationsEnabled = request.NotificationsEnabled
         }.Normalize();
 
         await _settings.SaveAsync(requested, context.CancellationToken).ConfigureAwait(false);
@@ -242,7 +241,6 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         var message = new SettingsMsg
         {
             CheckIntervalHours = settings.CheckIntervalHours,
-            NotificationsEnabled = settings.NotificationsEnabled
         };
         message.ExcludedHardwareIds.AddRange(settings.ExcludedHardwareIds);
         return message;

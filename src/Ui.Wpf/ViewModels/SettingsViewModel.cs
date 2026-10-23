@@ -15,9 +15,6 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     [ObservableProperty] private bool _autoCheckEnabled = true;
     [ObservableProperty] private int _checkIntervalDays = 1;
 
-    // ── Notificaciones (el servicio las guarda; la UI aún no tiene control) ──
-    [ObservableProperty] private bool _notificationsEnabled = true;
-
     // ── Seguridad ───────────────────────────────────────────────
     [ObservableProperty] private bool _onlyWhql = true;
 
@@ -43,7 +40,6 @@ public sealed partial class SettingsViewModel : PageViewModelBase
             var settings = await _agent.GetSettingsAsync(PageToken);
             AutoCheckEnabled = settings.CheckIntervalHours > 0;
             CheckIntervalDays = settings.CheckIntervalHours >= 168 ? 7 : 1;
-            NotificationsEnabled = settings.NotificationsEnabled;
 
             Exclusions.Clear();
             foreach (var id in settings.ExcludedHardwareIds)
@@ -89,7 +85,6 @@ public sealed partial class SettingsViewModel : PageViewModelBase
             {
                 // El servicio solo admite 0 (desactivado), 24 o 168 horas.
                 CheckIntervalHours = AutoCheckEnabled ? (CheckIntervalDays >= 7 ? 168 : 24) : 0,
-                NotificationsEnabled = NotificationsEnabled,
             };
             request.ExcludedHardwareIds.AddRange(Exclusions);
 

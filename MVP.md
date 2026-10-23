@@ -51,7 +51,7 @@ El MVP **no necesita backend**.
 - **U5**: tras el rollback, la versión del driver vuelve a la anterior y queda registrado.
 - **U6**: el historial persiste tras reiniciar el equipo.
 - **U7**: un driver excluido no aparece en actualizaciones ni se instala en lote.
-- **U8**: la comprobación programada se ejecuta sin abrir la UI y deja el resultado disponible: el número de actualizaciones pendientes aparece en la app. No se muestran notificaciones de escritorio (decisión en `DESIGN.md` §13.2).
+- **U8**: no aplica. Decisión: sin notificaciones de escritorio ni tarea programada por usuario (`DESIGN.md` §13.2). La comprobación programada deja su resultado en el indicador de la app.
 - **Seguridad**: un paquete con firma inválida o sin firma es rechazado y registrado.
 - **Rendimiento**: servicio en reposo por debajo de 50 MB de RAM.
 
@@ -79,7 +79,7 @@ El MVP **no necesita backend**.
 - [ ] Cola de operaciones (una instalación a la vez) y cancelación.
 - [ ] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
 - [ ] Exclusiones y comprobación programada.
-- [ ] Notificaciones y aviso de reinicio pendiente.
+- [ ] Aviso de reinicio pendiente (sin notificaciones de escritorio).
 
 ### Hito 3: Seguridad y robustez (2-3 semanas)
 - [ ] Solo drivers firmados por defecto; opción documentada para el resto.
