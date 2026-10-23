@@ -51,7 +51,7 @@ El MVP **no necesita backend**.
 - **U5**: tras el rollback, la versión del driver vuelve a la anterior y queda registrado.
 - **U6**: el historial persiste tras reiniciar el equipo.
 - **U7**: un driver excluido no aparece en actualizaciones ni se instala en lote.
-- **U8**: la comprobación programada se ejecuta sin abrir la UI y muestra una notificación si hay novedades.
+- **U8**: la comprobación programada se ejecuta sin abrir la UI y deja el resultado disponible: el número de actualizaciones pendientes aparece en la app. No se muestran notificaciones de escritorio (decisión en `DESIGN.md` §13.2).
 - **Seguridad**: un paquete con firma inválida o sin firma es rechazado y registrado.
 - **Rendimiento**: servicio en reposo por debajo de 50 MB de RAM.
 
