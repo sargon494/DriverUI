@@ -3,6 +3,7 @@ using Agent.Drivers.Install;
 using Agent.Drivers.Inventory;
 using Agent.Drivers.Restore;
 using Agent.Drivers.Security;
+using Agent.Drivers.Status;
 using Agent.Drivers.Updates;
 using Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IDriverInventory, WmiDriverInventory>();
         services.AddSingleton<IMotherboardInfoProvider, WmiMotherboardInfoProvider>();
+        services.AddSingleton<IRebootStatusProvider, RegistryRebootStatusProvider>();
         services.AddSingleton<IUpdateSource, WuaUpdateSource>();
         services.AddSingleton<ISignatureVerifier, WinTrustSignatureVerifier>();
         services.AddSingleton<IRestorePointService, WmiRestorePointService>();

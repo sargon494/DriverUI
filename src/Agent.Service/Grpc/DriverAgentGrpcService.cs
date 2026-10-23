@@ -30,6 +30,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
     private readonly ISettingsStore _settings;
     private readonly IMotherboardInfoProvider _motherboard;
     private readonly ScheduledCheckState _scheduledCheck;
+    private readonly IRebootStatusProvider _rebootStatus;
     private readonly ILogger<DriverAgentGrpcService> _logger;
 
     public DriverAgentGrpcService(
@@ -41,6 +42,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         ISettingsStore settings,
         IMotherboardInfoProvider motherboard,
         ScheduledCheckState scheduledCheck,
+        IRebootStatusProvider rebootStatus,
         ILogger<DriverAgentGrpcService> logger)
     {
         _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
@@ -51,6 +53,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _motherboard = motherboard ?? throw new ArgumentNullException(nameof(motherboard));
         _scheduledCheck = scheduledCheck ?? throw new ArgumentNullException(nameof(scheduledCheck));
+        _rebootStatus = rebootStatus ?? throw new ArgumentNullException(nameof(rebootStatus));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -182,7 +185,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             CurrentUpdateId = state.CurrentUpdateId ?? string.Empty,
             PercentComplete = state.PercentComplete,
             Phase = state.Phase.HasValue ? GrpcMappers.ToGrpc(state.Phase.Value) : InstallPhaseProto.InstallPhaseUnspecified,
-            PendingReboot = state.PendingReboot,
+            // Memoria del servicio (instalación reciente) o marca real de Windows (sobrevive a reinicios del servicio).
+            PendingReboot = state.PendingReboot || _rebootStatus.IsRebootRequired(),
             LastScan = state.LastScanUtc.HasValue
                 ? Timestamp.FromDateTime(state.LastScanUtc.Value.UtcDateTime)
                 : null,
