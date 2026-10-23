@@ -205,8 +205,9 @@ Implementación:
 - `ScheduledCheckService` (BackgroundService) revisa cada 15 minutos si toca comprobar. La búsqueda pasa por la misma cola que la UI, así que nunca se solapa con una instalación.
 - El resultado (última comprobación y número de actualizaciones pendientes) se expone en `GetStatus`. Vive en memoria; tras reiniciar el servicio, la primera comprobación se hace al vencer el intervalo.
 - **Limitación conocida:** el servicio arranca bajo demanda y no se detiene al cerrar la UI, así que la comprobación solo ocurre mientras el servicio esté en marcha. No se arranca con Windows, en línea con el requisito del producto.
-- **Pendiente de decidir:** las notificaciones de escritorio (Toast). Un servicio SYSTEM no puede mostrar avisos en la sesión del usuario. Opciones: (a) un aviso dentro de la UI cuando esté abierta; (b) una tarea programada por usuario que lance la UI en modo silencioso. La opción (a) está incluida en esta fase; la (b) requiere decisión explícita porque añade una tarea nueva al sistema.
-- Aviso en la UI (opción a): el contador de la pestaña Actualizaciones muestra las pendientes de una comprobación programada nueva, una sola vez por comprobación.
+- **Decisión: sin notificaciones de escritorio (Toast) ni tarea programada por usuario.** El usuario prefiere consultar las actualizaciones cuando quiera, y un aviso emergente se considera invasivo. La comprobación programada solo alimenta un indicador pasivo.
+- Indicador en la UI: el contador de la pestaña Actualizaciones muestra las pendientes de una comprobación programada nueva, una sola vez por comprobación. No hay avisos fuera de la app.
+- `notifications_enabled` se conserva en `config.json` y en el contrato por compatibilidad, pero no tiene efecto: no hay notificaciones que activar o desactivar.
 
 ### 13.3 Soporte oficial de la placa base (fase A)
 - La app detecta la placa con `Win32_BaseBoard` (fabricante y modelo) y muestra el enlace a la página oficial de soporte de drivers de ese fabricante.
