@@ -180,6 +180,98 @@ public sealed class WuaDriverInstallerTests
     }
 
     [Fact]
+    public async Task InstallAsync_Should_Abort_When_Signature_Valid_But_Not_Whql_And_OnlyWhql_Enabled()
+    {
+        // Regla 1 de seguridad: Por defecto, solo WHQL / firmados por Microsoft.
+        var update = CreateSampleUpdate();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns(new WuaDownloadResult
+            {
+                Success = true,
+                ErrorMessage = null,
+                DownloadedFilePaths = [@"C:\temp\oem_driver.sys"]
+            });
+
+        _signatureVerifier.VerifyAsync(@"C:\temp\oem_driver.sys", Arg.Any<CancellationToken>())
+            .Returns(new SignatureVerificationResult
+            {
+                IsValid = true,
+                SignerName = "ACME Hardware Co.",
+                FailureReason = null,
+                IsWhql = false
+            });
+
+        var result = await _installer.InstallAsync(update, progress: null, onlyWhql: true);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("WHQL");
+
+        // No debe crear restore point ni instalar
+        await _restorePointService.DidNotReceive().CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _wuaExecutor.DidNotReceive().InstallAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        // Debe registrar fallo en el historial
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                !e.Success &&
+                e.ErrorMessage != null &&
+                e.ErrorMessage.Contains("WHQL")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task InstallAsync_Should_Proceed_When_Signature_Valid_And_Not_Whql_And_OnlyWhql_Disabled()
+    {
+        // Directiva relajada por el usuario: se aceptan firmas válidas no-WHQL
+        var update = CreateSampleUpdate();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns(new WuaDownloadResult
+            {
+                Success = true,
+                ErrorMessage = null,
+                DownloadedFilePaths = [@"C:\temp\oem_driver.sys"]
+            });
+
+        _signatureVerifier.VerifyAsync(@"C:\temp\oem_driver.sys", Arg.Any<CancellationToken>())
+            .Returns(new SignatureVerificationResult
+            {
+                IsValid = true,
+                SignerName = "ACME Hardware Co.",
+                FailureReason = null,
+                IsWhql = false
+            });
+
+        _restorePointService.CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        _wuaExecutor.InstallAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns(new WuaInstallExecutionResult
+            {
+                Success = true,
+                RebootRequired = false,
+                ErrorMessage = null
+            });
+
+        var result = await _installer.InstallAsync(update, progress: null, onlyWhql: false);
+
+        result.Success.Should().BeTrue();
+
+        // Debe crear restore point e instalar
+        await _restorePointService.Received(1).CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _wuaExecutor.Received(1).InstallAsync(update.UpdateId, Arg.Any<CancellationToken>());
+
+        // Debe registrar éxito en el historial
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(e =>
+                e.OperationType == "Install" &&
+                e.Success),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task InstallAsync_Should_Abort_When_Download_Fails()
     {
         var update = CreateSampleUpdate();

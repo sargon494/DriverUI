@@ -761,6 +761,60 @@ public class DriverAgentGrpcServiceTests
         }
 
         [Fact]
+        public async Task Should_Reject_Requests_Exceeding_Batch_Limit()
+        {
+            await using var harness = await AgentHarness.StartAsync();
+
+            var request = new InstallRequest();
+            for (var i = 0; i < 51; i++)
+            {
+                request.UpdateIds.Add($"update-{i}");
+            }
+
+            using var call = harness.Client.Install(request);
+            var act = () => CollectAllAsync(call.ResponseStream);
+
+            await act.Should().ThrowAsync<RpcException>().Where(ex => ex.StatusCode == StatusCode.InvalidArgument);
+        }
+
+        [Fact]
+        public async Task Should_Pass_OnlyWhql_From_Settings_To_Installer()
+        {
+            var store = SettingsStubs.Mutable(new AppSettings { OnlyWhql = false });
+            await using var harness = await AgentHarness.StartAsync(services =>
+            {
+                services.Remove(services.First(s => s.ServiceType == typeof(Core.Interfaces.ISettingsStore)));
+                services.AddSingleton(store);
+            });
+
+            var update = CreateUpdate("update-nonwhql");
+            harness.Inventory
+                .GetInstalledDriversAsync(Arg.Any<CancellationToken>())
+                .Returns(new List<InstalledDriver> { CreateInstalledDriver() });
+            harness.UpdateSource
+                .FindUpdatesAsync(Arg.Any<IReadOnlyList<InstalledDriver>>(), Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(new[] { update }));
+
+            harness.Installer
+                .InstallAsync(
+                    Arg.Is<DriverUpdate>(u => u.UpdateId == "update-nonwhql"),
+                    Arg.Any<IProgress<InstallProgress>>(),
+                    Arg.Any<bool>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(CreateInstallResult("update-nonwhql", success: true));
+
+            using var call = harness.Client.Install(new InstallRequest { UpdateIds = { "update-nonwhql" } });
+            var messages = await CollectAllAsync(call.ResponseStream);
+
+            messages.Should().ContainSingle(m => m.Finished && m.Success);
+            await harness.Installer.Received(1).InstallAsync(
+                Arg.Is<DriverUpdate>(u => u.UpdateId == "update-nonwhql"),
+                Arg.Any<IProgress<InstallProgress>>(),
+                false,
+                Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
         public async Task Should_Serialize_Concurrent_Operations()
         {
             await using var harness = await AgentHarness.StartAsync();
@@ -1057,6 +1111,41 @@ public class DriverAgentGrpcServiceTests
         }
     }
 
+    public class Settings_Tests
+    {
+        [Fact]
+        public async Task Should_Get_And_Update_Settings_Including_OnlyWhql()
+        {
+            var store = SettingsStubs.Mutable(new AppSettings { OnlyWhql = true, CheckIntervalHours = 24 });
+            await using var harness = await AgentHarness.StartAsync(services =>
+            {
+                services.Remove(services.First(s => s.ServiceType == typeof(Core.Interfaces.ISettingsStore)));
+                services.AddSingleton(store);
+            });
+
+            var initial = await harness.Client.GetSettingsAsync(new SettingsRequest());
+            initial.OnlyWhql.Should().BeTrue();
+            initial.CheckIntervalHours.Should().Be(24);
+
+            var updateRequest = new SettingsMsg
+            {
+                CheckIntervalHours = 168,
+                OnlyWhql = false,
+            };
+            updateRequest.ExcludedHardwareIds.Add(@"PCI\VEN_8086&DEV_1234");
+
+            var updated = await harness.Client.UpdateSettingsAsync(updateRequest);
+            updated.OnlyWhql.Should().BeFalse();
+            updated.CheckIntervalHours.Should().Be(168);
+            updated.ExcludedHardwareIds.Should().ContainSingle().Which.Should().Be(@"PCI\VEN_8086&DEV_1234");
+
+            var retrieved = await harness.Client.GetSettingsAsync(new SettingsRequest());
+            retrieved.OnlyWhql.Should().BeFalse();
+            retrieved.CheckIntervalHours.Should().Be(168);
+            retrieved.ExcludedHardwareIds.Should().ContainSingle().Which.Should().Be(@"PCI\VEN_8086&DEV_1234");
+        }
+    }
+
     private static async Task<StatusResponse> PollUntilAsync(
         Func<Task<StatusResponse>> get,
         Func<StatusResponse, bool> condition,
@@ -1086,6 +1175,20 @@ internal static class SettingsStubs
     {
         var store = NSubstitute.Substitute.For<Core.Interfaces.ISettingsStore>();
         store.GetAsync(Arg.Any<CancellationToken>()).Returns(new AppSettings());
+        return store;
+    }
+
+    public static Core.Interfaces.ISettingsStore Mutable(AppSettings? initial = null)
+    {
+        var current = initial ?? new AppSettings();
+        var store = NSubstitute.Substitute.For<Core.Interfaces.ISettingsStore>();
+        store.GetAsync(Arg.Any<CancellationToken>()).Returns(_ => current);
+        store.SaveAsync(Arg.Any<AppSettings>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                current = callInfo.ArgAt<AppSettings>(0);
+                return Task.CompletedTask;
+            });
         return store;
     }
 

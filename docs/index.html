@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriverUpdater — Safe, Verified & Official Windows Driver Updates</title>
+  <meta name="description" content="Open-source, secure Windows 10/11 driver updater. Official Windows Update sources, cryptographic WHQL verification, automatic restore points, and zero-privilege UI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Ambient Glow Background Canvas -->
+  <div class="ambient-glow glow-top"></div>
+  <div class="ambient-glow glow-center"></div>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M7 7h.01"/>
+            <path d="M17 7h.01"/>
+            <path d="M7 17h.01"/>
+            <path d="M17 17h.01"/>
+            <path d="M12 7v10"/>
+            <path d="M7 12h10"/>
+          </svg>
+        </div>
+        <span class="brand-name">Driver<span>Updater</span></span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features">Architecture</a>
+        <a href="#pipeline">Safe Pipeline</a>
+        <a href="#simulator">Live Simulator</a>
+        <a href="#cli">CLI & Engine</a>
+        <a href="#security">Security Core</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="https://github.com/Leonxlnx/DriverUI" class="btn-github" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-container">
+      <div class="hero-badge">
+        <span class="badge-pulse"></span>
+        <span>Windows 10/11 · .NET 10 LTS · 100% WHQL Cryptographically Verified</span>
+      </div>
+
+      <h1 class="hero-title">
+        Windows Driver Updates <br>
+        <span class="gradient-text">Engineered for Safety</span>.
+      </h1>
+
+      <p class="hero-subtitle">
+        Eliminate the shady third-party driver bloatware. Built on <strong>pure official Windows Update Agent (WUA) APIs</strong>, 
+        strict <strong>WinVerifyTrust WHQL cryptography</strong>, mandatory <strong>System Restore points</strong>, 
+        and an unprivileged UI running over local named-pipe gRPC.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#simulator" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Explore Live Simulator
+        </a>
+        <a href="https://github.com/Leonxlnx/DriverUI/releases" class="btn btn-secondary" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download WiX MSI Installer
+        </a>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-number">0 UAC</div>
+          <div class="stat-label">Elevation prompts in UI</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-number">100% WHQL</div>
+          <div class="stat-label">Signed driver policy by default</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-number">1-Click</div>
+          <div class="stat-label">Atomic PnP rollback & restore</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-number">&lt; 50 MB</div>
+          <div class="stat-label">Lightweight background RAM</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dual-Process Architecture Showcase -->
+  <section id="features" class="section architecture-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Zero-Trust Isolation</span>
+        <h2 class="section-title">Split-Process Architecture Over gRPC Named Pipe</h2>
+        <p class="section-desc">
+          The user interface runs without administrative privileges (<span class="code-inline">asInvoker</span>). 
+          Privileged operations execute inside an isolated Windows Service under the SYSTEM account, communicating strictly through an ACL-secured local named pipe.
+        </p>
+      </div>
+
+      <div class="arch-diagram">
+        <!-- Client Node -->
+        <div class="arch-box client-box">
+          <div class="box-header">
+            <span class="box-badge client-badge">User Context · asInvoker</span>
+            <h3>Ui.Wpf Desktop App</h3>
+          </div>
+          <p class="box-desc">Zero Windows privileges. Pure MVVM with CommunityToolkit.Mvvm.</p>
+          <ul class="box-features">
+            <li><span>✓</span> Frameless glassmorphic dark interface</li>
+            <li><span>✓</span> Reactive telemetry & hardware overview</li>
+            <li><span>✓</span> Real-time streaming progress reader</li>
+            <li><span>✓</span> Deferred safe cancellation UX</li>
+          </ul>
+        </div>
+
+        <!-- Connection Pipe -->
+        <div class="arch-pipe">
+          <div class="pipe-line">
+            <div class="pipe-pulse"></div>
+          </div>
+          <div class="pipe-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>\\.\pipe\DriverUpdater</span>
+          </div>
+          <div class="pipe-protocol">HTTP/2 Cleartext · S-1-5-4 Interactive ACL</div>
+        </div>
+
+        <!-- Service Node -->
+        <div class="arch-box service-box">
+          <div class="box-header">
+            <span class="box-badge service-badge">SYSTEM Account · Windows Service</span>
+            <h3>Agent.Service Daemon</h3>
+          </div>
+          <p class="box-desc">Strictly isolated privileged worker. Serialized execution queue.</p>
+          <ul class="box-features">
+            <li><span>✓</span> WMI PnP Signed Driver Inventory (<span class="code-inline">Win32_PnPSignedDriver</span>)</li>
+            <li><span>✓</span> Windows Update Agent COM (<span class="code-inline">Type='Driver'</span>)</li>
+            <li><span>✓</span> WinVerifyTrust Win32 API & WHQL OID verification</li>
+            <li><span>✓</span> Pre-installation System Restore checkpoint</li>
+            <li><span>✓</span> SQLite persistent audit ledger (<span class="code-inline">history.db</span>)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Simulator Section -->
+  <section id="simulator" class="section simulator-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Hands-On Demonstration</span>
+        <h2 class="section-title">Interactive Driver Lifecycle Simulator</h2>
+        <p class="section-desc">
+          Test the exact 8-phase execution pipeline of DriverUpdater in your browser. 
+          Toggle safety constraints, trigger simulated scans, and observe live cryptographic validations and rollback protections.
+        </p>
+      </div>
+
+      <div class="simulator-card">
+        <!-- Controls Header -->
+        <div class="sim-toolbar">
+          <div class="sim-actions">
+            <button id="sim-scan-btn" class="sim-btn sim-btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <span>Scan Windows Update</span>
+            </button>
+            <button id="sim-install-btn" class="sim-btn sim-btn-accent" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Install Selected Driver</span>
+            </button>
+            <button id="sim-rollback-btn" class="sim-btn sim-btn-danger" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span>Rollback to Previous</span>
+            </button>
+          </div>
+
+          <!-- Policy Toggles -->
+          <div class="sim-policies">
+            <label class="toggle-control" title="Enforce Microsoft WHQL signature certification">
+              <input type="checkbox" id="policy-whql" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">WHQL Only Policy</span>
+            </label>
+            <label class="toggle-control" title="Enforce Windows System Restore Point creation">
+              <input type="checkbox" id="policy-restore" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">System Restore Checkpoint</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="sim-body">
+          <!-- Drivers Table -->
+          <div class="sim-table-panel">
+            <div class="panel-header">
+              <h4>Hardware Inventory & Pending Updates</h4>
+              <span id="sim-driver-count" class="panel-pill">3 Installed · 1 Pending</span>
+            </div>
+            <div class="sim-table-wrap">
+              <table class="sim-table">
+                <thead>
+                  <tr>
+                    <th>Device</th>
+                    <th>Current Version</th>
+                    <th>Available Update</th>
+                    <th>Certification</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="sim-tbody">
+                  <!-- Populated dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Console & Pipeline Telemetry -->
+          <div class="sim-console-panel">
+            <div class="panel-header">
+              <h4>gRPC Pipeline Stream</h4>
+              <span id="sim-status-pill" class="status-pill status-ready">IDLE / READY</span>
+            </div>
+
+            <!-- Progress tracker -->
+            <div class="sim-progress-box">
+              <div class="progress-labels">
+                <span id="progress-phase-label">System standby</span>
+                <span id="progress-percent-label">0%</span>
+              </div>
+              <div class="progress-track">
+                <div id="sim-progress-bar" class="progress-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Terminal output -->
+            <div id="sim-terminal" class="terminal-log">
+              <div class="log-line log-info">[IPC] Connected to \\.\pipe\DriverUpdater via SocketsHttpHandler.</div>
+              <div class="log-line log-info">[ACL] Granted ReadWrite to Interactive User (S-1-5-4).</div>
+              <div class="log-line log-muted">[QUEUE] OperationQueue idle. Ready for command.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bento Features Grid -->
+  <section class="section bento-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Production Grade</span>
+        <h2 class="section-title">Built with Zero Compromise on Stability</h2>
+        <p class="section-desc">
+          Every layer of DriverUpdater conforms to defensive systems programming standards.
+        </p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Bento 1 -->
+        <div class="bento-card bento-span-2">
+          <div class="bento-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3>Cryptographic Authenticode & WHQL Verification</h3>
+          <p>
+            Before staging any INF or SYS binary, DriverUpdater executes Win32 <span class="code-inline">WinVerifyTrust</span> 
+            with <span class="code-inline">WINTRUST_ACTION_GENERIC_VERIFY_V2</span>. It inspects certificate chains and checks 
+            standard WHQL Enhanced Key Usage OIDs (<span class="code-inline">1.3.6.1.4.1.311.10.3.5</span>), guaranteeing packages originate directly from Microsoft.
+          </p>
+          <div class="bento-tags">
+            <span>WinVerifyTrust</span>
+            <span>WHQL EKU OIDs</span>
+            <span>Revocation Checking</span>
+          </div>
+        </div>
+
+        <!-- Bento 2 -->
+        <div class="bento-card">
+          <div class="bento-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </div>
+          <h3>Mandatory System Restore Checkpoint</h3>
+          <p>
+            Rule 2 of security: No driver is installed without a preceding Windows System Restore Point. If checkpoint creation fails, the entire transaction is immediately aborted.
+          </p>
+          <div class="bento-tags">
+            <span>SystemRestore WMI</span>
+            <span>Atomic Abort</span>
+          </div>
+        </div>
+
+        <!-- Bento 3 -->
+        <div class="bento-card">
+          <div class="bento-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <h3>SQLite Audit Ledger</h3>
+          <p>
+            Full transactional audit history saved to <span class="code-inline">%ProgramData%\DriverUpdater\history.db</span>. 
+            Logs operation type, previous version, applied version, device hardware IDs, and execution timestamps.
+          </p>
+          <div class="bento-tags">
+            <span>Microsoft.Data.Sqlite</span>
+            <span>ISO 8601 UTC</span>
+          </div>
+        </div>
+
+        <!-- Bento 4 -->
+        <div class="bento-card bento-span-2">
+          <div class="bento-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3>Motherboard & OEM Hardware Intelligence</h3>
+          <p>
+            Queries <span class="code-inline">Win32_BaseBoard</span> to identify motherboard vendors (ASUS, Gigabyte, MSI, ASRock) 
+            and links users to authenticated official support portals. No web scraping or unofficial mirrors.
+          </p>
+          <div class="bento-tags">
+            <span>Win32_BaseBoard</span>
+            <span>Strict HTTPS Only</span>
+            <span>OemSupportCatalog</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLI Diagnostic Terminal Showcase -->
+  <section id="cli" class="section cli-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">DevOps & Diagnostics</span>
+        <h2 class="section-title">Headless Diagnostic CLI Included</h2>
+        <p class="section-desc">
+          Automate or diagnose driver state on headless Windows servers or CI environments without firing up the WPF GUI.
+        </p>
+      </div>
+
+      <div class="cli-mockup">
+        <div class="cli-tabs">
+          <button class="cli-tab active" data-cmd="scan">driverupdater scan</button>
+          <button class="cli-tab" data-cmd="updates">driverupdater updates</button>
+          <button class="cli-tab" data-cmd="log">driverupdater log</button>
+        </div>
+        <div class="cli-window">
+          <div class="cli-header-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+            <span class="cli-title-text">PowerShell 7.5 — Administrator</span>
+          </div>
+          <pre id="cli-output" class="cli-code"><code><span class="prompt">PS C:\></span> dotnet run --project src/Cli -- scan
+
+[INF] Scanning installed drivers via WMI (Win32_PnPSignedDriver)...
+[INF] Scanned 185 hardware drivers in 1.48s.
+
+Dispositivo                             Fabricante         Versión          Fecha        Estado
+--------------------------------------  -----------------  ---------------  -----------  ------
+Intel(R) Iris(R) Xe Graphics            Intel Corporation  31.0.101.4500    2024-05-12   Ok
+Realtek High Definition Audio           Realtek            6.0.9239.1       2023-09-18   Ok
+Intel(R) Wi-Fi 6 AX201 160MHz           Intel              23.20.0.4        2024-03-02   Ok
+Samsung NVMe SSD Controller             Samsung            3.3.0.1000       2022-01-15   Ok
+Intel(R) Serial IO I2C Host Controller  Intel Corporation  30.100.2221.20   2023-04-10   Ok
+
+[INF] Operation finished successfully. Total devices: 185.</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security Comparison Matrix -->
+  <section id="security" class="section comparison-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Architectural Comparison</span>
+        <h2 class="section-title">DriverUpdater vs. Traditional Updaters</h2>
+        <p class="section-desc">See why DriverUpdater is safe for critical workstation hardware.</p>
+      </div>
+
+      <div class="table-responsive">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Security & Architecture Metric</th>
+              <th class="col-highlight">DriverUpdater (This Project)</th>
+              <th>Generic Driver Updaters</th>
+              <th>Windows Device Manager</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Driver Source</strong></td>
+              <td class="col-highlight text-success">Official Microsoft Windows Update (WUA)</td>
+              <td class="text-danger">Scraped 3rd-party FTP / Unofficial CDN</td>
+              <td>Microsoft Windows Update Catalog</td>
+            </tr>
+            <tr>
+              <td><strong>Cryptographic Verification</strong></td>
+              <td class="col-highlight text-success">WinVerifyTrust + WHQL EKU OIDs enforced</td>
+              <td class="text-danger">Often bypassed or stripped</td>
+              <td class="text-success">Enforced by OS kernel</td>
+            </tr>
+            <tr>
+              <td><strong>UI Elevation Privileges</strong></td>
+              <td class="col-highlight text-success">Standard user (asInvoker), 0 UAC popups</td>
+              <td class="text-danger">Runs entirely as elevated Admin</td>
+              <td>Requires Administrator UAC</td>
+            </tr>
+            <tr>
+              <td><strong>Mandatory Restore Point</strong></td>
+              <td class="col-highlight text-success">Created before every batch; aborts if failed</td>
+              <td class="text-danger">Optional or absent</td>
+              <td>Manual user responsibility</td>
+            </tr>
+            <tr>
+              <td><strong>Telemetry & Ads</strong></td>
+              <td class="col-highlight text-success">Zero telemetry, zero ads, 100% open-source</td>
+              <td class="text-danger">Aggressive adware & licensing paywalls</td>
+              <td>Microsoft Telemetry</td>
+            </tr>
+            <tr>
+              <td><strong>Audit Ledger</strong></td>
+              <td class="col-highlight text-success">Persistent local SQLite ledger (<span class="code-inline">history.db</span>)</td>
+              <td class="text-danger">Opaque proprietary logs</td>
+              <td>Windows Event Viewer (complex)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+              <path d="M12 7v10"/>
+              <path d="M7 12h10"/>
+            </svg>
+          </div>
+          <span class="brand-name">Driver<span>Updater</span></span>
+        </div>
+        <p class="footer-tagline">Safe, verifiable and robust driver maintenance for Windows 10 and Windows 11.</p>
+      </div>
+
+      <div class="footer-links">
+        <div class="footer-group">
+          <h5>Documentation</h5>
+          <a href="https://github.com/Leonxlnx/DriverUI/blob/master/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a>
+          <a href="https://github.com/Leonxlnx/DriverUI/blob/master/DESIGN.md" target="_blank" rel="noopener">Design Specifications</a>
+          <a href="https://github.com/Leonxlnx/DriverUI/blob/master/MVP.md" target="_blank" rel="noopener">MVP Roadmap</a>
+          <a href="https://github.com/Leonxlnx/DriverUI/blob/master/TESTING.md" target="_blank" rel="noopener">VM Test Matrix</a>
+        </div>
+        <div class="footer-group">
+          <h5>Repository</h5>
+          <a href="https://github.com/Leonxlnx/DriverUI" target="_blank" rel="noopener">GitHub Repository</a>
+          <a href="https://github.com/Leonxlnx/DriverUI/releases" target="_blank" rel="noopener">MSI Releases</a>
+          <a href="https://github.com/Leonxlnx/DriverUI/actions" target="_blank" rel="noopener">CI / GitHub Actions</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>&copy; 2026 DriverUpdater Contributors. Open source under the MIT License.</p>
+        <p class="footer-tech">Engineered with C# 14 · .NET 10 (LTS) · WPF · gRPC · SQLite</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

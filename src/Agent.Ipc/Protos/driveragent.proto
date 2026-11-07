@@ -173,6 +173,8 @@ message SettingsMsg {
   // Campo 3 retirado (sin notificaciones de escritorio). No reutilizar.
   reserved 3;
   reserved "notifications_enabled";
+  // Directiva de seguridad: solo controladores con certificación WHQL / Microsoft.
+  bool only_whql = 4;
 }
 
 message MotherboardRequest {

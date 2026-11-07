@@ -49,6 +49,23 @@ public sealed class AppSettingsTests
 
         new AppSettings { ExcludedHardwareIds = ids }.Normalize().ExcludedHardwareIds.Should().HaveCount(500);
     }
+
+    [Fact]
+    public void Default_HasOnlyWhqlEnabled()
+    {
+        var settings = new AppSettings();
+        settings.OnlyWhql.Should().BeTrue();
+        settings.Normalize().OnlyWhql.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Normalize_PreservesOnlyWhqlSetting(bool onlyWhql)
+    {
+        var settings = new AppSettings { OnlyWhql = onlyWhql };
+        settings.Normalize().OnlyWhql.Should().Be(onlyWhql);
+    }
 }
 
 public sealed class OemSupportCatalogTests

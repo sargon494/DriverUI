@@ -218,3 +218,25 @@ Implementación:
 
 ### 13.4 Llamadas de red
 - Ninguna en esta fase: la app solo abre el navegador cuando el usuario pulsa el enlace de soporte.
+
+## 14. Sprint 7: Seguridad, robustez y directiva WHQL (Cierre Hito 3)
+
+### 14.1 Directiva WHQL configurable y persistente
+- Regla 1 de `AGENTS.md` y requisito de Hito 3 de `MVP.md`: Por defecto, solo se aceptan controladores con certificación WHQL / Microsoft (`OnlyWhql = true`).
+- Se introduce `OnlyWhql` en `AppSettings` y en el mensaje gRPC `SettingsMsg` (`only_whql = 4`).
+- La UI (`SettingsView.xaml`) conecta su conmutador de seguridad directamente con el servicio gRPC (`SettingsViewModel.cs`).
+- En `WuaDriverInstaller`, durante la fase `Verifying`, si `onlyWhql == true` y el driver no tiene certificación WHQL (`!sigResult.IsWhql`), la instalación se aborta inmediatamente con registro de auditoría en SQLite sin crear punto de restauración ni alterar el equipo.
+- Si el usuario desactiva la directiva (`onlyWhql == false`), se admiten controladores con firma Authenticode válida no-WHQL (modo avanzado).
+
+### 14.2 Detección criptográfica avanzada de WHQL
+- `WinTrustSignatureVerifier` amplía el reconocimiento de certificación WHQL:
+  - Verificación de emisores y firmantes reconocidos ("Microsoft Windows Hardware Compatibility Publisher", "Microsoft Windows Driver Publisher", "Windows Hardware", "Windows Compatibility").
+  - Verificación de OIDs de las extensiones EKU del certificado: `1.3.6.1.4.1.311.10.3.5` (WHQL), `1.3.6.1.4.1.311.10.3.5.1` (WHQL Crypto), `1.3.6.1.4.1.311.10.3.39` (Windows Hardware Compatibility) y `1.3.6.1.4.1.311.10.3.4.1` (Driver Verification Intermediate).
+
+### 14.3 Endurecimiento de entradas y mitigación DoS
+- `DriverAgentGrpcService`:
+  - `Install`: límite máximo de 50 identificadores de actualización por lote (`MaxUpdateBatchSize`), evitando desbordamiento de memoria o ataques por lotes masivos.
+  - `GetHistory`: acotación de límite (`request.Limit` clamped a máx. 1000 registros).
+- `JsonSettingsStore`:
+  - Límite de tamaño de lectura de `config.json` de 1 MB (`MaxConfigFileSizeBytes`) para evitar agotamiento de memoria ante archivos manipulados.
+

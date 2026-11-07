@@ -40,6 +40,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
             var settings = await _agent.GetSettingsAsync(PageToken);
             AutoCheckEnabled = settings.CheckIntervalHours > 0;
             CheckIntervalDays = settings.CheckIntervalHours >= 168 ? 7 : 1;
+            OnlyWhql = settings.OnlyWhql;
 
             Exclusions.Clear();
             foreach (var id in settings.ExcludedHardwareIds)
@@ -85,6 +86,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
             {
                 // El servicio solo admite 0 (desactivado), 24 o 168 horas.
                 CheckIntervalHours = AutoCheckEnabled ? (CheckIntervalDays >= 7 ? 168 : 24) : 0,
+                OnlyWhql = OnlyWhql,
             };
             request.ExcludedHardwareIds.AddRange(Exclusions);
 

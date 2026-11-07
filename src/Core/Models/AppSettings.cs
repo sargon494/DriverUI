@@ -18,6 +18,12 @@ public sealed record AppSettings
     public int CheckIntervalHours { get; init; }
 
     /// <summary>
+    /// Directiva de seguridad: solo instalar controladores con certificación WHQL / Microsoft.
+    /// Por defecto es <c>true</c>. Si se desactiva, se permiten controladores firmados no-WHQL.
+    /// </summary>
+    public bool OnlyWhql { get; init; } = true;
+
+    /// <summary>
     /// Devuelve una copia saneada: elimina entradas vacías o no válidas, deduplica
     /// hardware IDs sin distinguir mayúsculas, limita su número y admite solo intervalos conocidos.
     /// </summary>
@@ -36,7 +42,8 @@ public sealed record AppSettings
         return this with
         {
             ExcludedHardwareIds = ids,
-            CheckIntervalHours = interval
+            CheckIntervalHours = interval,
+            OnlyWhql = OnlyWhql
         };
     }
 }

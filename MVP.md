@@ -58,37 +58,37 @@ El MVP **no necesita backend**.
 ## 5. Hitos y tareas
 
 ### Hito 0: Prototipos (1-2 semanas)
-- [ ] Crear solución .NET 10 y proyectos `Core`, `Agent.Drivers`, `Cli`.
-- [ ] Listar drivers con `Win32_PnPSignedDriver`.
-- [ ] Buscar drivers con WUA (`Type='Driver'`) y mostrar resultados.
-- [ ] Instalar un driver de prueba en una VM.
-- [ ] Decisión go / no-go: ¿la fuente da resultados útiles?
+- [x] Crear solución .NET 10 y proyectos `Core`, `Agent.Drivers`, `Cli`.
+- [x] Listar drivers con `Win32_PnPSignedDriver`.
+- [x] Buscar drivers con WUA (`Type='Driver'`) y mostrar resultados.
+- [ ] Instalar un driver de prueba en una VM (reservado para pruebas en VM).
+- [x] Decisión go / no-go: ¿la fuente da resultados útiles?
 
 ### Hito 1: Núcleo + CLI (3-4 semanas)
-- [ ] Modelos e interfaces en `Core`; comparación de versiones con tests.
-- [ ] `IDriverInventory` y `IUpdateSource` (WUA).
-- [ ] `ISignatureVerifier` (WinVerifyTrust).
-- [ ] `IRestorePointService`.
-- [ ] `IDriverInstaller` con instalación, registro y rollback.
-- [ ] Historial en SQLite.
-- [ ] Comandos CLI: `scan`, `updates`, `install`, `rollback`, `log`.
+- [x] Modelos e interfaces en `Core`; comparación de versiones con tests.
+- [x] `IDriverInventory` y `IUpdateSource` (WUA).
+- [x] `ISignatureVerifier` (WinVerifyTrust).
+- [x] `IRestorePointService`.
+- [x] `IDriverInstaller` con instalación, registro y rollback.
+- [x] Historial en SQLite.
+- [x] Comandos CLI: `scan`, `updates`, `install`, `rollback`, `log`.
 
 ### Hito 2: Servicio + UI (3-4 semanas)
-- [ ] Worker Service como servicio de Windows.
-- [ ] Servidor gRPC sobre named pipe con ACL restringida.
-- [ ] Cola de operaciones (una instalación a la vez) y cancelación.
-- [ ] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
-- [ ] Exclusiones y comprobación programada.
+- [x] Worker Service como servicio de Windows.
+- [x] Servidor gRPC sobre named pipe con ACL restringida.
+- [x] Cola de operaciones (una instalación a la vez) y cancelación.
+- [x] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
+- [x] Exclusiones y comprobación programada.
 - [x] Aviso de reinicio pendiente dentro de la app (sin notificaciones de escritorio); sobrevive a reinicios del servicio.
 
 ### Hito 3: Seguridad y robustez (2-3 semanas)
-- [ ] Solo drivers firmados por defecto; opción documentada para el resto.
-- [ ] Pruebas en VMs con Windows 10 y 11 y en 2-3 equipos reales.
-- [ ] Pruebas de fallo (corte de red, firma inválida, reinicio durante instalación).
-- [ ] Revisión de ACL del pipe y validación de entradas.
+- [x] Solo drivers firmados por defecto; opción documentada para el resto.
+- [ ] Pruebas en VMs con Windows 10 y 11 y en 2-3 equipos reales (documentado en `TESTING.md`).
+- [ ] Pruebas de fallo (corte de red, firma inválida, reinicio durante instalación) (documentado en `TESTING.md`).
+- [x] Revisión de ACL del pipe y validación de entradas.
 
 ### Hito 4: Instalador y beta (2 semanas)
-- [ ] MSI con WiX que registre servicio y UI.
+- [x] MSI con WiX que registre servicio y UI.
 - [ ] Firma de código del instalador y binarios.
 - [ ] Beta cerrada con pocos usuarios y recogida de feedback.
 

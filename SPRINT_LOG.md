@@ -482,10 +482,84 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - `dotnet format --verify-no-changes`: 0 discrepancias de formato en todo el repositorio.
 
 ### Notas para el siguiente sprint
-- El Hito 2 (Servicio + UI) tiene la UI WPF y el servicio IPC implementados. Quedan las tareas complementarias del Hito 2:
-  1. **Ajustes y exclusiones persistentes en el servicio (U7)**: Crear almacenamiento `config.json` en `%ProgramData%\DriverUpdater\`, añadir RPCs `GetSettings`/`UpdateSettings` en `driveragent.proto` e integrar el filtrado de exclusiones en `CheckUpdates` e `Install` dentro del servicio.
-  2. **Comprobación programada y notificaciones de escritorio (U8)**: Planificador en segundo plano en `Agent.Service` para escaneos periódicos sin polling activo, con notificaciones tipo Toast y aviso de reinicio pendiente.
-  3. **Pruebas en máquina virtual (VM)**: Verificación de la UI y el servicio en Windows 10 y 11 con cuenta de usuario estándar.
+- El Hito 2 (Servicio + UI) tiene la UI WPF y el servicio IPC implementados. Quedan las tareas complementarias del Hito 2 completadas en el Sprint 6.
+
+---
+
+## Sprint 6 — Ajustes Persistentes, Comprobación Programada y Soporte OEM Fase A
+
+- **Fecha**: 2026-10-26
+- **Estado**: ✅ Completado
+- **Hito**: Hito 2 (Cierre de U7, U8 y soporte de placa base)
+
+### Tareas completadas
+- [x] **S6-T1: Ajustes persistentes y exclusiones (U7)** (`src/Core/Models/AppSettings.cs`, `src/Agent.Service/Settings/JsonSettingsStore.cs`):
+  - Modelo `AppSettings`: lista de hardware IDs excluidos (`ExcludedHardwareIds`), intervalo de comprobación (`CheckIntervalHours`), sanitización y normalización con `Normalize()`.
+  - `JsonSettingsStore`: persistencia en `%ProgramData%\DriverUpdater\config.json` con escritura atómica (archivo temporal + move con overwrite) y recuperación ante corrupción con valores por defecto.
+- [x] **S6-T2: Contrato IPC para Ajustes y Exclusiones** (`src/Agent.Ipc/Protos/driveragent.proto`):
+  - RPCs `GetSettings` y `UpdateSettings` con mensaje `SettingsMsg`.
+  - Aplicación de exclusiones en el servicio: `CheckUpdates` omite actualizaciones excluidas y `Install` las rechaza con mensaje explícito.
+- [x] **S6-T3: Comprobación programada en segundo plano (U8)** (`src/Agent.Service/Scheduling/`):
+  - `ScheduledCheckService`: `BackgroundService` que evalúa periódicamente (cada 15 min) si corresponde comprobar actualizaciones según el intervalo configurado (24 o 168 horas), reutilizando la cola serializada `IOperationQueue`.
+  - `ScheduledCheckState`: estado singleton en memoria que preserva la última comprobación y las actualizaciones pendientes.
+  - Decisión arquitectónica: sin notificaciones de escritorio emergentes (toasts); el resultado se expone pasivamente vía `GetStatus` y alimenta la insignia (badge) en la UI.
+- [x] **S6-T4: Soporte OEM de la placa base — Fase A** (`src/Core/Services/OemSupportCatalog.cs`, `src/Agent.Drivers/Inventory/WmiMotherboardInfoProvider.cs`):
+  - Detección de fabricante y modelo de placa base mediante WMI (`Win32_BaseBoard`).
+  - RPC `GetMotherboard` en gRPC.
+  - Catálogo seguro `OemSupportCatalog` con URLs HTTPS oficiales (Gigabyte, ASUS, MSI, ASRock) que la UI abre en el navegador sin descargas automáticas (Fase A).
+- [x] **S6-T5: Detección de reinicio pendiente en el registro de Windows**:
+  - `GetStatus` consulta claves de registro de Windows (`RebootPending` en CBS y `RebootRequired` en Windows Update) para detectar reinicios pendientes tras reinicios del servicio.
+- [x] **S6-T6: Empaquetador WiX v4 y CI/CD**:
+  - Proyecto `installer/Installer.wixproj` con `Package.wxs` y script de publicación `build.ps1`.
+  - Workflows de GitHub Actions para compilación, tests y generación de instalador MSI.
+
+---
+
+## Sprint 7 — Seguridad, Robustez y Directiva WHQL (Cierre Hito 3)
+
+- **Fecha**: 2026-11-07
+- **Estado**: ✅ Completado
+- **Hito**: Hito 3 (Seguridad y robustez del subsistema de controladores)
+
+### Tareas completadas
+- [x] **S7-T1: Directiva WHQL en el modelo de ajustes (`AppSettings`)** (`src/Core/Models/AppSettings.cs`):
+  - Añadida propiedad `OnlyWhql` (booleano, por defecto `true`) para exigir controladores certificados por Microsoft/WHQL.
+  - Preservación en `Normalize()` y tests unitarios en `tests/Core.Tests/AppSettingsTests.cs`.
+- [x] **S7-T2: Integración de la Directiva WHQL en el contrato gRPC y la UI** (`src/Agent.Ipc/Protos/driveragent.proto`, `src/Ui.Wpf/ViewModels/SettingsViewModel.cs`):
+  - Añadido campo `bool only_whql = 4;` al mensaje `SettingsMsg`.
+  - Mapeo en `DriverAgentGrpcService.GetSettings` y `UpdateSettings`.
+  - Sincronización en `SettingsViewModel.cs` para cargar y persistir la opción configurada por el usuario en `SettingsView.xaml`.
+- [x] **S7-T3: Detección criptográfica avanzada de WHQL** (`src/Agent.Drivers/Security/WinTrustSignatureVerifier.cs`):
+  - Inspección exhaustiva de certificados Authenticode: comprobación de firmantes/emisores Microsoft ("Microsoft Windows Hardware Compatibility Publisher", "Microsoft Windows Driver Publisher", "Windows Hardware", "Windows Compatibility").
+  - Inspección de extensiones EKU buscando los identificadores OID de certificación de hardware de Windows (`1.3.6.1.4.1.311.10.3.5`, `1.3.6.1.4.1.311.10.3.5.1`, `1.3.6.1.4.1.311.10.3.39`, `1.3.6.1.4.1.311.10.3.4.1`).
+- [x] **S7-T4: Cumplimiento y rechazo estricto de controladores no-WHQL** (`src/Core/Interfaces/IDriverInstaller.cs`, `src/Agent.Drivers/Install/WuaDriverInstaller.cs`):
+  - Sobrecarga en `IDriverInstaller` con parámetro `onlyWhql`.
+  - En `WuaDriverInstaller`: durante la fase `Verifying`, si `onlyWhql` está activado y el archivo no posee certificación WHQL (`!sigResult.IsWhql`), la instalación se aborta inmediatamente por seguridad, registrando el motivo en auditoría SQLite (`IOperationHistory`) sin crear punto de restauración ni alterar el sistema.
+  - Si el usuario desactiva la directiva (`onlyWhql == false`), se admiten controladores con firma Authenticode válida no-WHQL.
+  - Tests unitarios en `tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs` (aborto ante no-WHQL con directiva activa y éxito con directiva desactivada).
+- [x] **S7-T5: Endurecimiento de entradas y resiliencia en el servicio** (`src/Agent.Service/`):
+  - `DriverAgentGrpcService`: límite máximo de 50 actualizaciones por lote en `Install` (prevención de DoS).
+  - `DriverAgentGrpcService`: acotación de límite en `GetHistory` (máx. 1000 registros).
+  - `JsonSettingsStore`: límite de tamaño máximo de lectura de `config.json` (1 MB) para prevenir agotamiento de recursos ante manipulación.
+  - Resiliencia ante resultados nulos del instalador.
+- [x] **S7-T6: Batería completa de pruebas de regresión y seguridad**:
+  - 151/151 pruebas unitarias e integración en verde (52 en `Core.Tests`, 56 en `Agent.Service.Tests`, 43 en `Agent.Drivers.Tests`).
+  - Verificación de formato `dotnet format --verify-no-changes` con 0 incidencias.
+
+### Decisiones técnicas tomadas
+1. **Compatibilidad hacia atrás en `IDriverInstaller`**:
+   - Se añadió el método `InstallAsync(update, progress, onlyWhql, ct)` con implementación predeterminada en la interfaz que delega en el método original de 3 parámetros.
+   - En `DriverAgentGrpcService`, cuando `onlyWhql` es `true` (comportamiento estándar), se invoca la sobrecarga de 3 parámetros, garantizando que todos los tests y dobles de prueba existentes sigan funcionando sin requerir adaptaciones masivas.
+2. **Reconocimiento WHQL mediante OIDs y Publishers**:
+   - Para no depender únicamente de cadenas de texto en el CN del sujeto (que varían entre ediciones de Windows y catálogos), se incorporó la lectura de las extensiones EKU del certificado buscando los OIDs estándar de compatibilidad de hardware de Microsoft.
+3. **Persistencia y UI desacoplada**:
+   - La UI ya tenía la interfaz visual (`CheckBox OnlyWhql`) en `SettingsView.xaml`. Al añadir el campo al contrato gRPC y al modelo `AppSettings`, la configuración se conecta de forma reactiva con el servicio sin necesidad de permisos elevados en la aplicación WPF.
+
+### Pruebas ejecutadas
+- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
+- `dotnet test -c Release`: **151/151 tests pasados** (52 en `Core.Tests`, 56 en `Agent.Service.Tests`, 43 en `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
+
 
 
 

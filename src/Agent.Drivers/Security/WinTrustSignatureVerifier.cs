@@ -100,9 +100,37 @@ public sealed class WinTrustSignatureVerifier : ISignatureVerifier
                 }
 
                 if (signerName.Contains("Microsoft", StringComparison.OrdinalIgnoreCase) ||
-                    signerName.Contains("Windows Hardware", StringComparison.OrdinalIgnoreCase))
+                    signerName.Contains("Windows Hardware", StringComparison.OrdinalIgnoreCase) ||
+                    signerName.Contains("Windows Compatibility", StringComparison.OrdinalIgnoreCase) ||
+                    cert.Issuer.Contains("Microsoft", StringComparison.OrdinalIgnoreCase))
                 {
                     isWhql = true;
+                }
+
+                if (!isWhql)
+                {
+                    foreach (var ext in cert.Extensions)
+                    {
+                        if (ext is X509EnhancedKeyUsageExtension ekuExt)
+                        {
+                            foreach (var oid in ekuExt.EnhancedKeyUsages)
+                            {
+                                if (oid.Value is "1.3.6.1.4.1.311.10.3.5" or
+                                                 "1.3.6.1.4.1.311.10.3.5.1" or
+                                                 "1.3.6.1.4.1.311.10.3.39" or
+                                                 "1.3.6.1.4.1.311.10.3.4.1")
+                                {
+                                    isWhql = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (isWhql)
+                        {
+                            break;
+                        }
+                    }
                 }
 #pragma warning restore SYSLIB0057
             }

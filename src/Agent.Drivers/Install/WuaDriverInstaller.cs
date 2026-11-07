@@ -52,16 +52,24 @@ public sealed class WuaDriverInstaller : IDriverInstaller
     }
 
     /// <inheritdoc/>
-    public async Task<InstallResult> InstallAsync(
+    public Task<InstallResult> InstallAsync(
         DriverUpdate update,
         IProgress<InstallProgress>? progress = null,
+        CancellationToken ct = default)
+        => InstallAsync(update, progress, onlyWhql: true, ct);
+
+    /// <inheritdoc/>
+    public async Task<InstallResult> InstallAsync(
+        DriverUpdate update,
+        IProgress<InstallProgress>? progress,
+        bool onlyWhql,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(update);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Iniciando flujo de instalación segura para: {Title} ({NewVersion})", update.Title, update.NewVersion);
+            _logger.LogInformation("Iniciando flujo de instalación segura para: {Title} ({NewVersion}) [OnlyWhql: {OnlyWhql}]", update.Title, update.NewVersion, onlyWhql);
         }
 
         var currentPhase = InstallPhase.Downloading;
@@ -107,6 +115,12 @@ public sealed class WuaDriverInstaller : IDriverInstaller
                 {
                     var sigError = $"Firma no válida en archivo '{filePath}': {sigResult.FailureReason}. Instalación abortada por seguridad.";
                     return await RecordFailureAsync(update, sigError, InstallPhase.Verifying, progress, ct).ConfigureAwait(false);
+                }
+
+                if (onlyWhql && !sigResult.IsWhql)
+                {
+                    var whqlError = $"El archivo '{Path.GetFileName(filePath)}' no cuenta con certificación WHQL de Microsoft (firmado por '{sigResult.SignerName ?? "Desconocido"}'). La directiva de seguridad exige controladores WHQL.";
+                    return await RecordFailureAsync(update, whqlError, InstallPhase.Verifying, progress, ct).ConfigureAwait(false);
                 }
             }
 

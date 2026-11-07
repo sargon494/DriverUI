@@ -68,6 +68,8 @@ public sealed class JsonSettingsStore : ISettingsStore, IDisposable
         }
     }
 
+    private const long MaxConfigFileSizeBytes = 1024 * 1024; // 1 MB máximo
+
     private async Task<AppSettings> LoadAsync(CancellationToken ct)
     {
         if (!File.Exists(_path))
@@ -77,6 +79,13 @@ public sealed class JsonSettingsStore : ISettingsStore, IDisposable
 
         try
         {
+            var fileInfo = new FileInfo(_path);
+            if (fileInfo.Length > MaxConfigFileSizeBytes)
+            {
+                _logger.LogWarning("config.json excede el tamaño máximo permitido ({Length} bytes); se usan ajustes por defecto.", fileInfo.Length);
+                return new AppSettings().Normalize();
+            }
+
             await using var stream = File.OpenRead(_path);
             var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(stream, _jsonOptions, ct).ConfigureAwait(false);
             return (loaded ?? new AppSettings()).Normalize();

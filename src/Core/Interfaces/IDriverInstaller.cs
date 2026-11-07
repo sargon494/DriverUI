@@ -9,11 +9,21 @@ public interface IDriverInstaller
 {
     /// <summary>
     /// Instala una actualización de controlador siguiendo el flujo de seguridad estricto.
+    /// Por defecto exige que el controlador cuente con firma WHQL de Microsoft.
     /// </summary>
     Task<InstallResult> InstallAsync(
         DriverUpdate update,
         IProgress<InstallProgress>? progress = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Instala una actualización de controlador indicando explícitamente si se restringe solo a firmas WHQL.
+    /// </summary>
+    Task<InstallResult> InstallAsync(
+        DriverUpdate update,
+        IProgress<InstallProgress>? progress,
+        bool onlyWhql,
+        CancellationToken ct = default) => InstallAsync(update, progress, ct);
 
     /// <summary>
     /// Deshace una instalación de controlador previamente realizada según su identificador de operación.

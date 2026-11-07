@@ -21,6 +21,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 {
     private const int MaxUpdateIdLength = 256;
     private const int MaxOperationIdLength = 32;
+    private const int MaxUpdateBatchSize = 50;
 
     private readonly IDriverInventory _inventory;
     private readonly IUpdateSource _updateSource;
@@ -118,6 +119,11 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             throw new RpcException(new Status(StatusCode.InvalidArgument, "No se especificó ninguna actualización a instalar."));
         }
 
+        if (updateIds.Count > MaxUpdateBatchSize)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"El número de actualizaciones a instalar excede el límite permitido de {MaxUpdateBatchSize}."));
+        }
+
         if (updateIds.Any(id => id.Length > MaxUpdateIdLength))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Identificador de actualización no válido."));
@@ -165,7 +171,8 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
         if (request.Limit > 0)
         {
-            entries = entries.TakeLast(request.Limit).ToList();
+            var limit = Math.Min(request.Limit, 1000);
+            entries = entries.TakeLast(limit).ToList();
         }
 
         var response = new HistoryResponse();
@@ -212,6 +219,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         {
             ExcludedHardwareIds = request.ExcludedHardwareIds.ToList(),
             CheckIntervalHours = request.CheckIntervalHours,
+            OnlyWhql = request.OnlyWhql,
         }.Normalize();
 
         await _settings.SaveAsync(requested, context.CancellationToken).ConfigureAwait(false);
@@ -219,9 +227,10 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Ajustes actualizados: {Excluded} exclusión(es), comprobación cada {Hours} h.",
+                "Ajustes actualizados: {Excluded} exclusión(es), comprobación cada {Hours} h, Solo WHQL: {OnlyWhql}.",
                 requested.ExcludedHardwareIds.Count,
-                requested.CheckIntervalHours);
+                requested.CheckIntervalHours,
+                requested.OnlyWhql);
         }
 
         return ToMessage(requested);
@@ -245,6 +254,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         var message = new SettingsMsg
         {
             CheckIntervalHours = settings.CheckIntervalHours,
+            OnlyWhql = settings.OnlyWhql,
         };
         message.ExcludedHardwareIds.AddRange(settings.ExcludedHardwareIds);
         return message;
@@ -258,7 +268,9 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         // Re-resolver las actualizaciones contra Windows Update evita instalar
         // datos anticuados o manipulados que envíe el cliente: solo se aceptan
         // actualizaciones presentes en la fuente en este instante.
-        var excluded = (await _settings.GetAsync(ct).ConfigureAwait(false)).ExcludedHardwareIds;
+        var settings = await _settings.GetAsync(ct).ConfigureAwait(false);
+        var excluded = settings.ExcludedHardwareIds;
+        var onlyWhql = settings.OnlyWhql;
         var installedDrivers = await _inventory.GetInstalledDriversAsync(ct).ConfigureAwait(false);
         _operationQueue.MarkScanCompleted();
 
@@ -307,7 +319,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
             bool transportError;
             try
             {
-                (result, transportError) = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, ct)
+                (result, transportError) = await InstallSingleUpdateAsync(match, responseStream, totalUpdates, completedUpdates, onlyWhql, ct)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -403,6 +415,7 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
         IServerStreamWriter<InstallProgressMsg> responseStream,
         int totalUpdates,
         int completedUpdates,
+        bool onlyWhql,
         CancellationToken ct)
     {
         // Enlazamos un CancellationTokenSource que cancela la instalación si el lector de progreso
@@ -463,7 +476,20 @@ public sealed class DriverAgentGrpcService : DriverAgent.DriverAgentBase
 
         try
         {
-            result = await _installer.InstallAsync(update, progress, installCts.Token).ConfigureAwait(false);
+            result = onlyWhql
+                ? await _installer.InstallAsync(update, progress, installCts.Token).ConfigureAwait(false)
+                : await _installer.InstallAsync(update, progress, false, installCts.Token).ConfigureAwait(false);
+
+            result ??= new InstallResult
+            {
+                UpdateId = update.UpdateId,
+                Success = false,
+                ErrorMessage = "El instalador no devolvió un resultado.",
+                RebootRequired = false,
+                PreviousVersion = update.CurrentVersion,
+                InstalledVersion = string.Empty,
+                Timestamp = DateTime.UtcNow
+            };
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
