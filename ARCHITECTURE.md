@@ -157,7 +157,7 @@ La comprobación programada no muestra notificaciones de escritorio. Solo actual
 
 ### Instalación y verificación
 
-El instalador descarga mediante WUA, pasa al verificador las rutas devueltas por el ejecutor, crea un punto de restauración para cada controlador y luego invoca la instalación nativa. **Limitación actual que debe resolverse:** `DefaultWuaExecutor` devuelve una lista de rutas vacía incluso cuando informa de una descarga correcta; por tanto, el bucle de `WuaDriverInstaller` no verifica ningún archivo en ese recorrido. Esto documenta el comportamiento del código, pero no demuestra si WUA puede instalar un controlador no WHQL por esa vía. No debe describirse como una verificación efectiva de cada paquete hasta cerrar esta brecha.
+El instalador descarga mediante WUA, verifica las rutas devueltas por el ejecutor y solo después crea un punto de restauración e invoca la instalación nativa. `WuaDriverInstaller` aborta y registra un fallo si la descarga correcta no incluye archivos verificables. Como `DefaultWuaExecutor` aún devuelve una lista de rutas vacía, la instalación real mediante ese adaptador falla de forma segura hasta que se resuelva cómo obtener y verificar los archivos. No se debe afirmar que cada paquete se verifica efectivamente ni habilitar la instalación por este recorrido hasta cerrar esta brecha.
 
 El caso está pendiente de validación aislada; consulta `TESTING.md` para las restricciones de pruebas en VM. La política de producto sigue siendo exigir firma válida y, por defecto, WHQL (`OnlyWhql = true`).
 
