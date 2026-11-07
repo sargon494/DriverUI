@@ -2,138 +2,172 @@
 
 # DriverUpdater
 
-**Safe, Cryptographically Verified & Official Windows 10/11 Driver Updates**
+**Actualizaciones de drivers oficiales, verificadas y 100% seguras para Windows 10 y 11**
 
-[![CI](https://github.com/Leonxlnx/DriverUI/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonxlnx/DriverUI/actions/workflows/ci.yml)
-[![Pages](https://github.com/Leonxlnx/DriverUI/actions/workflows/pages.yml/badge.svg)](https://github.com/Leonxlnx/DriverUI/actions/workflows/pages.yml)
+[![CI](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml)
+[![GitHub Pages](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml)
 [![.NET 10 LTS](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(x64)-0078D6?logo=windows&logoColor=white)](https://microsoft.com/windows)
-[![IPC](https://img.shields.io/badge/IPC-gRPC%20Named%20Pipes-00599C?logo=grpc&logoColor=white)](https://grpc.io/)
-[![Security](https://img.shields.io/badge/Security-WHQL%20%26%20WinVerifyTrust-10b981?logo=shield&logoColor=white)](#security-principles)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011%20(64--bit)-0078D6?logo=windows&logoColor=white)](https://microsoft.com/windows)
+[![Seguridad WHQL](https://img.shields.io/badge/Firma-WHQL%20%2F%20Microsoft-10b981?logo=shield&logoColor=white)](#-las-5-garantías-de-seguridad)
+[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
 
 <br />
 
-[**Interactive Live Web Simulator**](https://leonxlnx.github.io/DriverUI/) · [**Architecture Docs**](ARCHITECTURE.md) · [**Design Specs**](DESIGN.md) · [**Test Plan**](TESTING.md)
+### 🌐 [Probar Simulador Interactivo en GitHub Pages](https://sargon494.github.io/DriverUI/)
 
 </div>
 
 ---
 
-## 💡 Overview
+## 💡 ¿Por qué DriverUpdater?
 
-Traditional third-party "driver updater" tools are notorious for bundling aggressive adware, pushing uncertified beta drivers, downloading from suspicious third-party mirrors, and frequently causing Blue Screens of Death (BSOD).
+Muchos programas conocidos para "actualizar controladores" son poco fiables: instalan publicidad no deseada, intentan cobrar suscripciones, descargan drivers de servidores web no oficiales o instalan versiones beta que acaban provocando pantallazos azules (**BSOD**).
 
-**DriverUpdater** solves this through a defensive, security-first architecture:
-- **100% Official Sources**: Searches exclusively against the official **Windows Update Agent (WUA)** catalog. No third-party mirrors or proprietary web scrapers.
-- **Cryptographic WinVerifyTrust Shield**: Every binary is validated using the Win32 `WinVerifyTrust` API with WHQL Enhanced Key Usage OIDs (`1.3.6.1.4.1.311.10.3.5`) prior to disk staging.
-- **Mandatory System Restore Checkpoint**: If a System Restore Point cannot be created prior to installation, **the operation is immediately aborted**.
-- **Zero-Privilege Desktop UI**: The WPF interface runs as a standard interactive user (`asInvoker`) with zero administrative elevation, communicating with a SYSTEM Windows Service via an ACL-restricted local named pipe (`\\.\pipe\DriverUpdater`).
-- **Transactional Audit & Rollback**: Complete history preserved in local SQLite (`history.db`) with one-click rollback via `pnputil`.
+**DriverUpdater** se creó con una filosofía totalmente opuesta:
+- **Sin publicidad ni costes**: Código abierto (Open Source), gratuito y transparente.
+- **Solo fuentes 100% oficiales**: Se conecta directamente al catálogo oficial de **Windows Update** (WUA) de Microsoft. No existen servidores intermediarios ni repositorios de terceros.
+- **Seguridad primero**: Si un driver no tiene una firma digital válida o si no se puede crear un punto de restauración en Windows, **la instalación se detiene automáticamente**.
 
 ---
 
-## 🏗️ Architecture
+## 🛡️ Las 5 Garantías de Seguridad
 
-```
-┌──────────────────────────────────────┐     gRPC over Named Pipe     ┌──────────────────────────────────────────────┐
-│  Ui.Wpf (Desktop GUI)                │ ◄──────────────────────────► │  Agent.Service (Windows Service)             │
-│  - Standard User (asInvoker, 0 UAC)  │   \\.\pipe\DriverUpdater     │  - SYSTEM Account Worker Service             │
-│  - Modern Glassmorphic Dark UI       │   HTTP/2 Cleartext           │  - OperationQueue (Single mutex per install) │
-│  - Reactive Hardware Metrics         │   ACL: S-1-5-4 (Interactive) │  - WMI (Win32_PnPSignedDriver)               │
-│  - Real-Time gRPC Streaming Reader   │                              │  - Windows Update Agent COM (Type='Driver')  │
-│  - Safe Deferred Cancellation UX     │                              │  - WinVerifyTrust & WHQL OID Verification    │
-└──────────────────┬───────────────────┘                              │  - SystemRestore WMI Checkpoint Service      │
-                   │ uses                                             │  - SQLite Audit Ledger (%ProgramData%)       │
-                   ▼                                                  └──────────────────────┬───────────────────────┘
-            Agent.Ipc Contract                                                               │ uses
-       (driveragent.proto + Channel)                                                         ▼
-                                                                                   Agent.Drivers & Core
-                                                                               (Implementations & Domain)
-```
-
-### Solution Projects
-
-| Project | Target | Description |
-|---|---|---|
-| [`src/Core`](src/Core) | `net10.0` | Domain models (`InstalledDriver`, `DriverUpdate`, `AppSettings`), interfaces, version math (`VersionComparer`), and driver matching logic. **Zero Windows dependencies.** |
-| [`src/Agent.Drivers`](src/Agent.Drivers) | `net10.0-windows` | Windows subsystems: WMI inventory, WUA COM interop, `WinVerifyTrust` P/Invoke, `WmiRestorePointService`, and SQLite persistence (`SqliteOperationHistory`). |
-| [`src/Agent.Ipc`](src/Agent.Ipc) | `net10.0-windows` | Shared gRPC protobuf contract (`driveragent.proto`) and named pipe channel factory (`DriverAgentChannel`). |
-| [`src/Agent.Service`](src/Agent.Service) | `net10.0-windows` | SYSTEM Worker Service, serialized `OperationQueue`, scheduled background check daemon, and named pipe security factory. |
-| [`src/Ui.Wpf`](src/Ui.Wpf) | `net10.0-windows` | Desktop client in WPF MVVM (`CommunityToolkit.Mvvm`). Runs unprivileged (`asInvoker`). |
-| [`src/Cli`](src/Cli) | `net10.0-windows` | Headless diagnostic command-line interface (`scan`, `updates`, `log`, `install`, `rollback`). |
-| [`tests/`](tests/) | `net10.0` | Comprehensive xUnit, FluentAssertions, and NSubstitute test suites (**151 automated tests**). |
-| [`installer/`](installer/) | WiX v4 | Standalone MSI installer definition with automated service registration and ACL bootstrapping. |
+| Garantía | ¿Cómo te protege? |
+|---|---|
+| **1. Solo controladores certificados (WHQL)** | Antes de instalar un archivo `.inf` o `.sys`, se comprueba mediante la API de Windows `WinVerifyTrust` que su firma digital pertenece a Microsoft y cumple con los identificadores de certificación de hardware **WHQL**. |
+| **2. Punto de restauración automático** | Antes de instalar cualquier actualización, se genera un punto de restauración en Windows. Si algo falla o el sistema no permite crearlo, **no se modifica absolutamente nada de tu equipo**. |
+| **3. Deshacer cambios en 1 clic (*Rollback*)** | ¿Un controlador nuevo da problemas de sonido o imagen? En la pestaña de Historial puedes pulsar **Revertir** para volver al controlador anterior que funcionaba bien. |
+| **4. Tu usuario sin riesgos (Sin UAC continuo)** | La interfaz gráfica se ejecuta con tu usuario normal, sin privilegios de administrador. Las tareas delicadas las realiza un servicio en segundo plano de Windows de forma aislada. |
+| **5. Historial permanente y transparente** | Todas las operaciones quedan registradas en una base de datos local SQLite (`history.db` en `%ProgramData%\DriverUpdater\`), para que siempre sepas qué versión tenías y cuál se aplicó. |
 
 ---
 
-## 🔒 Security Principles (Mandatory Invariants)
+## 🖥️ ¿Cómo funciona la aplicación?
 
-1. **Mandatory Signature Verification**: No driver is installed without cryptographic Authenticode verification (`WinVerifyTrust`). By default, only drivers certified by Microsoft / WHQL are accepted.
-2. **Mandatory Pre-Install Restore Point**: A Windows System Restore Point must be generated prior to installing any update batch. If checkpoint creation fails, installation is aborted.
-3. **Unprivileged Presentation Layer**: The GUI **never** runs elevated. All privileged actions are mediated through the service.
-4. **Restricted Pipe ACL**: The named pipe only permits connections from local interactive user sessions (SID `S-1-5-4`); network callers and unauthorized accounts are rejected at the kernel level.
-5. **Safe Process Invocation**: System commands (`pnputil`) strictly use `ProcessStartInfo.ArgumentList` to guarantee command injection immunity.
-6. **Immutable Audit Ledger**: Every transaction (success, failure, rollback) is permanently recorded in `%ProgramData%\DriverUpdater\history.db`.
+La aplicación está diseñada para ser intuitiva y clara para cualquier persona:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  DriverUpdater — Panel de Control                                      │
+├───────────────┬────────────────────────────────────────────────────────┤
+│ 🏠 Inicio     │  Estado de salud: [ 185 Dispositivos Operativos  ✓ ]   │
+│ 🔄 Actualizar │                                                        │
+│ 📜 Historial  │  Placa base: Gigabyte B760M DS3H DDR4                  │
+│ ⚙️ Ajustes    │  [ Enlace a soporte oficial de controladores del OEM ] │
+└───────────────┴────────────────────────────────────────────────────────┘
+```
+
+### 1. Pantalla de Inicio (Dashboard)
+- Muestra el estado global de los componentes de tu equipo (tarjeta gráfica, red, sonido, chipset, almacenamiento).
+- Detecta el fabricante y modelo de tu placa base (ASUS, Gigabyte, MSI, ASRock) y te proporciona un botón seguro para abrir la **página oficial de soporte del fabricante** en tu navegador.
+
+### 2. Pantalla de Actualizaciones
+- Al pulsar **Buscar actualizaciones**, consulta a Windows Update qué drivers oficiales tienen una versión más reciente para tu hardware exacto.
+- Te muestra una comparativa clara: **Versión actual instalada → Nueva versión recomendada** y el tamaño de la descarga.
+- Puedes marcar qué controladores quieres actualizar y pulsar **Instalar seleccionadas**. Verás una barra de progreso en tiempo real con las fases (`Descargando` → `Verificando firma` → `Creando punto de restauración` → `Instalando`).
+- Si un componente no quieres actualizarlo nunca (por ejemplo, una tarjeta de sonido dedicada o un mando especial), dispones de un botón **Excluir**.
+
+### 3. Pantalla de Historial
+- Muestra una auditoría detallada de cada driver instalado o revertido: fecha, dispositivo, versión previa y resultado.
+- Si una actualización te da problemas, seleccionas la fila y pulsas **Revertir controlador** para volver inmediatamente a la versión previa.
+
+### 4. Pantalla de Ajustes
+- **Comprobación automática**: Elige si el servicio en segundo plano debe comprobar si hay drivers nuevos (desactivado, cada 24 horas o cada semana).
+- **Directiva WHQL**: Activada por defecto para exigir certificados oficiales de Microsoft.
+- **Lista de exclusiones**: Consulta o elimina los identificadores de hardware que hayas decidido no actualizar.
 
 ---
 
-## 🚀 Quick Start
+## 📥 Instalación
 
-### Prerequisites
-- Windows 10 (22H2+) or Windows 11 (x64)
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/)
+### Requisitos del sistema
+- **Windows 10 (versión 22H2 o superior)** o **Windows 11** (64 bits).
+- Protección del sistema activa en la unidad del sistema (`C:\`) para permitir puntos de restauración.
 
-### 1. Build the Solution
+### Descarga del instalador
+1. Ve a la sección de [**Releases en GitHub**](https://github.com/sargon494/DriverUI/releases).
+2. Descarga el archivo de instalación `.msi` (ejemplo: `DriverUpdater-1.0.0-x64.msi`).
+3. Ejecuta el instalador con permisos de administrador una sola vez. Registrará el servicio seguro de Windows y creará el acceso directo en tu menú de inicio.
+4. Abre **DriverUpdater** desde el Menú Inicio.
+
+---
+
+## ⌨️ Herramienta por línea de comandos (CLI)
+
+Para técnicos de soporte, administradores de sistemas o usuarios avanzados que prefieren la consola sin abrir la interfaz gráfica:
+
 ```powershell
-# Clone the repository
-git clone https://github.com/Leonxlnx/DriverUI.git
-cd DriverUI
-
-# Restore and compile in Release mode
-dotnet restore
-dotnet build -c Release
-```
-
-### 2. Run the Automated Tests (151 Tests)
-```powershell
-dotnet test -c Release
-```
-
-### 3. Using the Diagnostic CLI
-```powershell
-# 1. Scan and list all installed hardware drivers
+# 1. Escanear e inventariar todos los drivers instalados con fabricante y versión
 dotnet run --project src/Cli -- scan
 
-# 2. Check for official updates from Windows Update
+# 2. Comprobar actualizaciones oficiales en Windows Update
 dotnet run --project src/Cli -- updates
 
-# 3. View the SQLite audit log
+# 3. Ver el registro de auditoría e instalaciones previas
 dotnet run --project src/Cli -- log
+
+# 4. Instalar un controlador concreto mediante su identificador
+dotnet run --project src/Cli -- install <UpdateId>
+
+# 5. Revertir una operación por su ID de historial
+dotnet run --project src/Cli -- rollback <OperationId>
 ```
 
-### 4. Build the WiX v4 MSI Installer
-```powershell
-# Install WiX Toolset
-dotnet tool install --global wix
+---
 
-# Build self-contained single-file win-x64 binaries and package MSI
+## ❓ Preguntas Frecuentes (FAQ)
+
+#### ¿Por qué DriverUpdater encuentra menos actualizaciones que otros programas comerciales?
+Porque DriverUpdater **solo te ofrece controladores oficiales publicados y certificados por Microsoft** para tu modelo exacto de hardware. Otros programas comerciales indexan versiones beta de foros, drivers de otros ordenadores parecidos o archivos no certificados que ponen en riesgo la estabilidad del equipo.
+
+#### ¿El programa consume recursos en segundo plano?
+Casi cero. El servicio en reposo ocupa menos de **50 MB de memoria RAM** y prácticamente **0% de uso de CPU**. No hace escaneos continuos en bucle ni muestra molestas ventanas emergentes o notificaciones de publicidad.
+
+#### ¿Qué ocurre si se va la luz o se cancela una instalación a mitad?
+DriverUpdater sigue una política de cancelación segura:
+- Si se cancela durante la descarga o verificación, se cancela inmediatamente.
+- Si el driver ya ha empezado a instalarse a bajo nivel en Windows, espera a que termine de copiarse dicho archivo de forma atómica para no dejar el subsistema de Windows corrupto.
+- Además, siempre tienes el **Punto de Restauración del Sistema** generado previamente para volver atrás.
+
+---
+
+## 🛠️ Para Desarrolladores
+
+### Stack Tecnológico
+- **Lenguaje**: C# 14 / .NET 10 (LTS).
+- **Servicio Windows**: Worker Service en cuenta SYSTEM con Kestrel y transporte nativo de named pipes.
+- **IPC (Comunicación entre procesos)**: gRPC sobre Named Pipe local (`\\.\pipe\DriverUpdater`) con control de acceso estricto a usuarios interactivos (`S-1-5-4`).
+- **Acceso a Windows**: WMI (`System.Management`), COM (`Microsoft.Update.Session`), `WinVerifyTrust` nativo (P/Invoke) y `pnputil`.
+- **Interfaz de Usuario**: WPF en arquitectura MVVM limpia con `CommunityToolkit.Mvvm`.
+- **Pruebas**: 151 pruebas automáticas en xUnit, FluentAssertions y NSubstitute.
+- **Instalador**: WiX Toolset v4 (MSI).
+
+### Compilar y probar localmente
+```powershell
+# Clonar el repositorio
+git clone https://github.com/sargon494/DriverUI.git
+cd DriverUI
+
+# Restaurar paquetes y compilar en modo Release
+dotnet restore
+dotnet build -c Release
+
+# Ejecutar la suite completa de 151 pruebas unitarias e integración
+dotnet test -c Release
+
+# Generar el instalador MSI con WiX v4
 powershell ./installer/build.ps1 -Version 1.0.0
 ```
 
----
-
-## 🌐 Interactive Web Showcase & GitHub Pages
-
-An interactive simulator demonstrating the complete **8-phase driver installation and rollback state machine** is hosted on GitHub Pages:
-
-👉 **[https://leonxlnx.github.io/DriverUI/](https://leonxlnx.github.io/DriverUI/)**
-
-The website is styled according to the design tenets of [`Leonxlnx/taste-skill`](https://github.com/Leonxlnx/taste-skill) and [`nextlevelbuilder/ui-ux-pro-max-skill`](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), featuring a clean dark engineering aesthetic, responsive bento grids, and a live client/service pipe visualization.
+### Documentación técnica adicional
+- 🗺️ [`ARCHITECTURE.md`](ARCHITECTURE.md): Diagramas de flujo de datos, seguridad IPC y estructura de proyectos.
+- 📐 [`DESIGN.md`](DESIGN.md): Decisiones técnicas y registro de especificaciones de diseño.
+- 🎯 [`MVP.md`](MVP.md): Alcance del producto, historias de usuario y criterios de aceptación.
+- 🧪 [`TESTING.md`](TESTING.md): Guía de pruebas manuales y matriz de escenarios de fallo en máquina virtual (VM).
+- 📋 [`SPRINT_LOG.md`](SPRINT_LOG.md): Registro cronológico detallado de todos los sprints.
 
 ---
 
-## 📄 License
+## 📄 Licencia
 
-This project is licensed under the [MIT License](LICENSE).
-
+Este proyecto está bajo la licencia [MIT](LICENSE). Eres libre de usarlo, estudiarlo y mejorarlo.
