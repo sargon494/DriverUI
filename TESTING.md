@@ -2,7 +2,7 @@
 
 Pruebas manuales que no pueden hacerse en CI: instalación real, UI con cuenta estándar, fallos a mitad de operación y reinicios. Las pruebas automáticas (tests de `tests/`) se ejecutan en el CI; este documento cubre lo que queda.
 
-Referencias: `installer/README.md` (compilar e instalar), `ARCHITECTURE.md` (qué hace cada pieza), `MVP.md` (Hito 3).
+Este documento es la fuente de verdad para los procedimientos de validación manual y sus resultados. Referencias: `installer/README.md` (compilar e instalar), `ARCHITECTURE.md` (comportamiento actual), `MVP.md` (criterios de aceptación).
 
 ## 0. Preparación (una vez por VM)
 
@@ -89,7 +89,7 @@ Prueba de la última funcionalidad (`GetStatus` lee las marcas de Windows). No r
 
 ## 3. Registro de resultados
 
-Cada ejecución se anota aquí o en el Hito 3 de `MVP.md`:
+Anota cada ejecución únicamente en esta tabla; `MVP.md` enlaza los criterios, no duplica resultados de VM.
 
 | Escenario | Windows | MSI | Resultado | Notas |
 |---|---|---|---|---|

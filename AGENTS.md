@@ -6,10 +6,16 @@ Guía para agentes de IA (y personas) que trabajen en este repositorio.
 
 **DriverUpdater**: aplicación para Windows 10/11 que detecta e instala automáticamente actualizaciones de drivers de forma segura (solo drivers firmados, con punto de restauración previo y rollback).
 
-Documentos relacionados:
-- `ARCHITECTURE.md`: mapa del proyecto, cómo se conectan los componentes y cómo extenderlo. Leer primero.
-- `DESIGN.md`: decisiones técnicas y detalle de cada sprint.
-- `MVP.md`: alcance, tareas y criterios de aceptación de la primera versión.
+## Documentación y fuente de verdad
+
+- `MVP.md`: alcance, historias de usuario, criterios de aceptación y estado de los hitos.
+- `ARCHITECTURE.md`: arquitectura implementada, proyectos, flujos y puntos de extensión.
+- `DESIGN.md`: decisiones técnicas duraderas y cuestiones de diseño abiertas; no es un diario de implementación.
+- `TESTING.md`: procedimientos de validación manual y resultados de pruebas en VM.
+- `SPRINT_LOG.md`: historial cronológico. Sus notas describen el estado en la fecha del sprint; no prevalecen sobre la documentación actual.
+- `PRIVACY.md`: información pública sobre datos locales y servicios externos.
+
+Si dos documentos discrepan, usa el documento dueño del tema indicado arriba y actualiza las referencias relacionadas. Para una tarea, consulta primero `MVP.md` si afecta al alcance y `ARCHITECTURE.md` para entender el comportamiento actual.
 
 ## Stack
 
@@ -35,12 +41,15 @@ DriverUpdater/
 │  ├─ Agent.Ipc/       # contrato gRPC (proto) y fábrica de canal cliente sobre named pipe
 │  ├─ Ui.Wpf/          # interfaz de usuario
 │  ├─ Cli/             # herramienta de pruebas sin UI
-│  └─ Backend.Api/     # (fase posterior)
 ├─ tests/
 ├─ installer/
 ├─ AGENTS.md
+├─ ARCHITECTURE.md
 ├─ DESIGN.md
-└─ MVP.md
+├─ MVP.md
+├─ TESTING.md
+├─ SPRINT_LOG.md
+└─ PRIVACY.md
 ```
 
 ## Comandos
@@ -77,6 +86,8 @@ Las operaciones que instalan drivers requieren consola de administrador y **debe
 7. No guardar secretos en el repositorio. Usar `dotnet user-secrets` o variables de entorno.
 8. Cada instalación deja registro en el log de operaciones (qué, cuándo, versión anterior, resultado).
 
+Estas reglas expresan requisitos, no certifican que todos los flujos actuales ya los cumplan. La limitación del adaptador WUA en la comprobación de archivos está descrita en `ARCHITECTURE.md` y requiere resolución antes de afirmar que cada paquete se verifica.
+
 ## Pruebas
 
 - Lógica pura (`Core`): tests unitarios, sin dependencias de Windows.
@@ -93,7 +104,7 @@ Las operaciones que instalan drivers requieren consola de administrador y **debe
 
 ## Cómo trabajar en una tarea
 
-1. Leer `MVP.md` y localizar la tarea y su criterio de aceptación.
-2. Cambios mínimos y enfocados; si surge una decisión de diseño, anotarla en `DESIGN.md`.
+1. Consultar `MVP.md` para el alcance y `ARCHITECTURE.md` para la implementación actual.
+2. Hacer cambios mínimos y enfocados; anotar en `DESIGN.md` solo las decisiones técnicas duraderas.
 3. Compilar, ejecutar tests y `dotnet format` antes de dar la tarea por terminada.
 4. Resumir qué se hizo, qué se probó y qué queda pendiente.

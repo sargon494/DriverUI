@@ -1,242 +1,41 @@
-# DESIGN.md
+# Decisiones técnicas
 
-Diseño técnico de **DriverUpdater**.
+Este documento registra decisiones transversales y sus motivos; no intenta duplicar el mapa de componentes ni el historial de implementación.
 
-## 1. Objetivos y no objetivos
+- La arquitectura actual y sus flujos están en [`ARCHITECTURE.md`](ARCHITECTURE.md).
+- El alcance y el estado de aceptación están en [`MVP.md`](MVP.md).
+- Las pruebas y su evidencia están en [`TESTING.md`](TESTING.md).
+- Los detalles cronológicos de cada sprint están en [`SPRINT_LOG.md`](SPRINT_LOG.md). Las notas históricas no son especificaciones actuales.
 
-**Objetivos**
-- Detectar drivers desactualizados en Windows 10/11 e instalar versiones nuevas de forma segura.
-- Seguridad por defecto: solo drivers firmados, punto de restauración previo, rollback.
-- Bajo consumo de recursos en segundo plano.
-- Arquitectura que permita añadir fuentes de drivers y un backend más adelante.
+## Decisiones vigentes
 
-**No objetivos (de momento)**
-- Soporte para Linux o macOS.
-- Redistribuir drivers de terceros desde servidores propios.
-- Gestión de flotas empresariales (consola web).
+### D1. C#/.NET para la aplicación
 
-## 2. Decisión de stack
+Se eligió C#/.NET para compartir lenguaje entre el servicio Windows, la UI y posibles componentes futuros, y para usar directamente las API de Windows. Un backend futuro no forma parte del MVP y no debe condicionar el funcionamiento local.
 
-Se evaluaron cuatro opciones:
+### D2. Separación entre UI y servicio privilegiado
 
-| Opción | Valoración |
-|---|---|
-| Todo Java | Buen backend, pero el agente local depende de JNA/Panama para cada API de Windows, runtime empaquetado de 40-60 MB y más RAM en un proceso siempre activo. |
-| Híbrido (agente .NET + backend Java) | Válido, pero dos lenguajes, dos pipelines y modelos duplicados son un coste alto para un equipo pequeño. |
-| **Todo C# / .NET** | **Elegida.** Acceso nativo a Windows, un solo lenguaje, código compartido entre agente, UI y backend. Sintaxis muy cercana a Java. |
-| Rust en el agente | Más ligero, pero curva alta y el cuello de botella no es el rendimiento. |
+La UI WPF se ejecuta como usuario estándar. El servicio Windows concentra las operaciones que modifican el sistema; la comunicación local usa gRPC sobre un named pipe con ACL. No se elevará la UI para simplificar flujos. La arquitectura implementada está en `ARCHITECTURE.md`; los procedimientos de validación están en `TESTING.md`.
 
-Java sigue siendo una alternativa razonable para el backend si crece mucho o lo toma otro equipo; la API HTTP del backend es independiente del cliente.
+### D3. Windows Update como fuente del MVP
 
-## 3. Arquitectura
+El MVP consulta Windows Update Agent. No se redistribuyen paquetes desde un catálogo propio. Los enlaces OEM son una ayuda que el usuario abre en el navegador; no implican descarga ni instalación desde esos fabricantes.
 
-```
-┌─────────────────────┐   gRPC / named pipe   ┌──────────────────────────┐
-│ UI (WPF, usuario)   │ ◄───────────────────► │ Servicio Windows (SYSTEM)│
-│ sin privilegios     │                       │ - inventario (WMI)       │
-└─────────────────────┘                       │ - WUA / pnputil          │
-                                              │ - restore point, rollback│
-                                              │ - verificación de firmas │
-                                              └───────────┬──────────────┘
-                                                          │ HTTPS (TLS)  [fase posterior]
-                                              ┌───────────▼──────────────┐
-                                              │ Backend ASP.NET Core     │
-                                              │ catálogo, cuentas,       │
-                                              │ telemetría · PostgreSQL  │
-                                              └──────────────────────────┘
-```
+### D4. Política de instalación
 
-### Principio central
-La **UI no tiene privilegios**; el **servicio hace todo lo peligroso**. La UI solo envía órdenes ("escanear", "instalar el driver X") por un canal local restringido. Así se evita pedir UAC en cada acción y se reduce la superficie de ataque.
+Se exige una firma válida y se aplica WHQL por defecto (`OnlyWhql = true`); el ajuste permite desactivar únicamente el requisito WHQL, no la comprobación de validez de firma. La instalación requiere un punto de restauración previo. Estas son invariantes de diseño, no una afirmación de que cada camino de ejecución las aplique correctamente: `ARCHITECTURE.md` registra la limitación observada en el adaptador WUA hasta que se resuelva.
 
-## 4. Componentes
+### D5. Comprobaciones periódicas sin notificaciones de escritorio
 
-### 4.1 `Core`
-Sin dependencias de Windows. Contiene:
-- Modelos: `InstalledDriver`, `DriverUpdate`, `HardwareId`, `InstallResult`, `OperationLogEntry`.
-- Comparación de versiones de driver y lógica de selección (mejor candidato por hardware ID).
-- Interfaces: `IDriverInventory`, `IUpdateSource`, `IDriverInstaller`, `ISignatureVerifier`, `IRestorePointService`.
+La comprobación configurable (desactivada, diaria o semanal) se ejecuta mientras el servicio está activo. Su resultado se comunica mediante el indicador de Actualizaciones dentro de la aplicación. No se muestran notificaciones toast ni se crea una tarea programada de usuario.
 
-### 4.2 `Agent.Drivers`
-Implementaciones Windows de las interfaces de `Core`:
-- **Inventario**: WMI `Win32_PnPSignedDriver` (nombre, fabricante, versión, fecha, `HardwareID`, `DeviceID`, `InfName`).
-- **Fuente de actualizaciones**: Windows Update Agent (COM `Microsoft.Update.Session`, criterio `Type='Driver'`). Fuente principal del MVP.
-- **Instalación**: vía WUA (`IUpdateInstaller`) o `pnputil /add-driver <inf> /install` cuando el paquete ya está descargado.
-- **Firmas**: WinVerifyTrust por P/Invoke; comprobación de cadena y de que el catálogo es WHQL/Microsoft.
-- **Restore points**: `Checkpoint-Computer` / WMI `SystemRestore`.
-- **Rollback**: `pnputil /delete-driver` del nuevo paquete y reinstalación del anterior, o restauración del punto creado.
+## Decisiones pendientes
 
-### 4.3 `Agent.Service`
-- Worker Service con `UseWindowsService()`.
-- Servidor gRPC en named pipe `\\.\pipe\DriverUpdater` con ACL limitada a usuarios interactivos.
-- Cola de operaciones: **una instalación a la vez**, cancelable y con estado persistente.
-- Planificador de comprobaciones periódicas (configurable).
-- Manejo de reinicios pendientes (`RebootRequired`).
+- Evaluar fuentes de drivers adicionales solo después de revisar licencias, procedencia y un mecanismo de manifiesto/hash/firma.
+- Definir si el producto seguirá dirigido a usuarios particulares o también a empresas antes de diseñar cuentas, licencias o backend.
+- Decidir el modelo de negocio y si existe una necesidad real de migrar de WPF.
+- Elegir un certificado de firma de código antes de distribuir binarios firmados.
 
-### 4.4 `Ui.Wpf`
-- **Patrón**: MVVM con `CommunityToolkit.Mvvm` (`ObservableObject`, `[ObservableProperty]`, `[RelayCommand]`).
-- **Arquitectura de ventanas**: Ventana principal `ShellWindow` sin bordes estándar (*frameless chrome*), controles de ventana integrados, barra de navegación lateral con contadores (*badges*) reactivos y área de contenido dinámica mapeada mediante `DataTemplate` a los ViewModels correspondientes.
-- **Pantallas**:
-  - *Dashboard (Inicio)*: Métricas globales de hardware, buscador reactivo, pill de salud del sistema y tabla de controladores instalados.
-  - *Actualizaciones*: Lista con selección múltiple/individual, comparación de versiones actual vs. nueva, barra de progreso global y por controlador en tiempo real vía streaming gRPC, indicador de necesidad de reinicio y botón de cancelación.
-  - *Historial*: Auditoría persistente de instalaciones y rollbacks con filtrado y reversión directa del controlador seleccionado.
-  - *Ajustes*: Configuración de intervalo de comprobación periódica, política de controladores firmados (WHQL) y lista de exclusiones por identificador.
-- **Seguridad**: Ejecución obligatoria en contexto de usuario estándar (no elevado); no invoca APIs de Windows privilegiadas y toda interacción pasa por `Agent.Ipc` hacia el servicio Windows.
-- **Resiliencia gRPC**: `DriverAgentService` maneja reconexión automática ante caídas del servicio y sincronización reactiva de estado (`GetStatus`).
-- **Experiencia de cancelación**: Si se cancela una instalación durante la fase nativa, la UI entra en estado diferido (*"Cancelando... esperando a que finalice el controlador en curso"*) hasta que el servicio confirma la liberación segura de la cola.
+## Cómo actualizar este registro
 
-### 4.5 `Cli`
-Herramienta de desarrollo y diagnóstico: `scan`, `updates`, `install <id>`, `rollback <opId>`, `log`. Reutiliza `Agent.Drivers` directamente.
-
-### 4.6 `Agent.Ipc`
-Proyecto compartido con el **contrato gRPC** (`Protos/driveragent.proto`, generado con `Grpc.Services=Both`) y la **fábrica de canal cliente** (`DriverAgentChannel.CreateChannel`) que conecta por named pipe mediante `SocketsHttpHandler.ConnectCallback`. Lo consumen el servicio (base del servidor), la UI (cliente) y los tests de integración IPC.
-
-### 4.7 `Backend.Api` (fase posterior)
-- ASP.NET Core minimal API + EF Core + PostgreSQL.
-- Catálogo de drivers por hardware ID, versiones, compatibilidad, listas de bloqueo (drivers conocidos como problemáticos).
-- Cuentas, licencias y telemetría opcional.
-- El agente funciona sin backend; este añade valor, no es un requisito.
-
-## 5. Contrato IPC (gRPC)
-
-Contrato en `src/Agent.Ipc/Protos/driveragent.proto` (namespace C# `Agent.Ipc.Grpc`):
-
-```proto
-service DriverAgent {
-  rpc Scan (ScanRequest) returns (ScanResponse);
-  rpc CheckUpdates (CheckUpdatesRequest) returns (stream DriverUpdateMsg);
-  rpc Install (InstallRequest) returns (stream InstallProgressMsg);
-  rpc Rollback (RollbackRequest) returns (RollbackResultMsg);
-  rpc GetHistory (HistoryRequest) returns (HistoryResponse);
-  rpc GetStatus (StatusRequest) returns (StatusResponse);
-}
-```
-
-El streaming permite mostrar progreso en la UI en tiempo real.
-
-Implementación:
-- **Transporte**: transporte nativo de named pipes de Kestrel (`ListenNamedPipe`), HTTP/2 en claro (sin TLS: el pipe es local y su ACL restringe el acceso).
-- **ACL del pipe**: SYSTEM y Administradores con control completo; usuarios interactivos (SID `S-1-5-4`) con permisos de lectura y escritura (`ReadWrite`). Esto evita conceder `WRITE_DAC` o `WRITE_OWNER` a usuarios interactivos sin privilegios para que no puedan modificar la ACL del objeto. Sin `CurrentUserOnly` (incompatible con ACL explícita y bloquearía a los usuarios de sesiones interactivas, ya que el servicio corre como SYSTEM). *Nota de verificación*: La prueba de extremo a extremo con una cuenta interactiva estándar (no administradora) en VM para certificar la conexión, lectura/escritura y denegación de modificación de ACL queda agendada para el entorno VM.
-- **Frontera de seguridad de identidad**: toda la frontera de autorización descansa en la ACL del pipe (`S-1-5-4` local); el servicio no comprueba la identidad individual del usuario en cada RPC porque cualquier sesión interactiva local está autorizada para solicitar comprobaciones e instalaciones (conforme a la regla 4 de `AGENTS.md`).
-- **Instalación segura**: `Install` recibe solo identificadores de actualización; el servicio **re-resuelve** cada ID contra Windows Update en el momento de instalar, de modo que el cliente no puede inyectar metadatos de driver manipulados.
-- **Progreso en tiempo real desacoplado**: la transmisión de eventos de progreso se realiza en tiempo real a través de un `Channel<T>` con lector concurrente hacia el stream gRPC.
-- **Transmisión de `CheckUpdates`**: La búsqueda WUA es una operación COM bloqueante; se ejecuta dentro de la cola serializada y, una vez finalizada la consulta, las actualizaciones encontradas se transmiten al stream gRPC fuera del semáforo para que clientes lentos no retengan la cola.
-- **Cancelación y experiencia de usuario (UI)**: Si el usuario cancela una instalación durante las fases de descarga, verificación o creación de punto de restauración, la operación se cancela de inmediato y se audita el fallo. Si la cancelación se solicita cuando el driver ya ha iniciado la fase de instalación nativa (`WUA`/`pnputil`), por seguridad e integridad del subsistema de controladores no se interrumpe y se espera a que dicho driver finalice, cancelando las actualizaciones restantes del lote. La UI (`Ui.Wpf`) debe mostrar en este caso el estado *"Cancelando... esperando a que finalice el controlador en curso"* sin asumir aborto inmediato ni permitir reintentos hasta que el RPC concluya.
-- **Política de desconexión del cliente (fallo de transporte)**: Si el cliente gRPC se desconecta de forma abrupta (cierre de la UI, caída del proceso o rotura del pipe durante la transmisión de progreso o resultados):
-  - Cualquier pérdida de conexión con el cliente interrumpe de inmediato el trabajo previo a la fase nativa (descarga, verificación o punto de restauración) mediante un token de cancelación enlazado.
-  - Si el controlador ya había iniciado la fase nativa de instalación (`WUA`/`pnputil`), esta no se interrumpe y continúa hasta finalizar su ciclo para garantizar la estabilidad del sistema operativo.
-  - En ambos casos, el instalador asienta el resultado correspondiente en el historial (`history.db`).
-  - El lote se interrumpe de inmediato: las actualizaciones posteriores de la petición no se inician.
-  - Los errores de transporte gRPC/I/O no generan registros espurios ni fallos duplicados en el historial.
-  - La UI, al reconectar, puede consultar `GetStatus` (para saber si el servicio sigue ocupado completando el driver) y `GetHistory` (para conocer el resultado final).
-- **Cola de operaciones**: `OperationQueue` serializa instalaciones, rollbacks y búsquedas (una a la vez, la sesión COM de WUA no debe atenderlas en paralelo). Al completarse la llamada gRPC o al concluir el proceso de cancelación (respetando la finalización de la fase nativa si ya se inició), la cola queda liberada para la siguiente operación.
-- **Creación de instancias del pipe**: hook `CreateNamedPipeServerStream` con `NamedPipeStreamFactory`, que normaliza `FirstPipeInstance` (solo la primera instancia real) y aplica la ACL del contexto.
-- **Ajustes** (`GetSettings`/`UpdateSettings`): se añadirán al contrato junto con la gestión de ajustes y exclusiones (Hito 2).
-
-## 6. Flujo de actualización
-
-1. **Escaneo**: se obtiene el inventario de drivers instalados.
-2. **Búsqueda**: se consulta la fuente (Windows Update) y se cruzan resultados por hardware ID.
-3. **Filtrado**: se descartan los ya actualizados, los excluidos por el usuario y los no firmados.
-4. **Selección**: el usuario elige uno, varios o todos.
-5. **Pre-instalación**: descarga, verificación de hash y firma, creación de punto de restauración.
-6. **Instalación**: una a una, registrando resultado.
-7. **Post-instalación**: verificación de que el dispositivo funciona (estado PnP sin error), aviso de reinicio si hace falta.
-8. **Fallo**: rollback automático del driver afectado y entrada en el log.
-
-## 7. Datos locales
-
-- Ruta: `%ProgramData%\DriverUpdater\`
-  - `config.json`: ajustes (frecuencia de comprobación, exclusiones, solo WHQL).
-  - `history.db` (SQLite): operaciones, versión anterior/nueva, resultado, hash.
-  - `logs\`: Serilog con rotación.
-- Permisos: escritura solo para SYSTEM y Administradores.
-
-## 8. Seguridad
-
-| Amenaza | Mitigación |
-|---|---|
-| Driver manipulado | Verificación de firma (WinVerifyTrust) y hash antes de instalar |
-| Driver que rompe el sistema | Punto de restauración, rollback, lista de bloqueo, instalación una a una |
-| Elevación de privilegios vía IPC | Named pipe con ACL restringida; el servicio valida y solo expone operaciones de alto nivel, nunca "ejecutar comando" |
-| Inyección de argumentos | `ArgumentList`, validación estricta de rutas e IDs |
-| Man-in-the-middle (backend) | TLS, y firma del catálogo con clave propia |
-| Falsos positivos de antivirus | Firma de código (certificado EV recomendado), instalador firmado, reputación |
-| Autoactualización comprometida | Actualizaciones firmadas y verificadas antes de aplicar |
-
-## 9. Rendimiento
-
-- Servicio en reposo: objetivo < 50 MB de RAM y CPU cercana a 0 %.
-- Escaneo completo en menos de 30 s en un equipo típico.
-- Evitar polling: comprobaciones programadas, no bucles continuos.
-
-## 10. Pruebas
-
-- Unitarias en `Core` (versiones, matching, selección).
-- Integración en `Agent.Drivers` sobre VM (Windows 10 y 11) con snapshots para volver atrás.
-- Matriz de hardware mínima: VM, portátil Intel, equipo AMD, equipo con GPU NVIDIA.
-- Pruebas de fallo: corte de red en descarga, driver con firma inválida, reinicio durante instalación.
-
-## 11. Distribución
-
-- Instalador MSI (WiX) firmado; registra el servicio y la UI.
-- Autoactualización del propio producto (fase 4).
-- Canales `stable` y `beta`.
-
-## 12. Cuestiones abiertas
-
-1. **Fuente de drivers más allá de Windows Update**: catálogos OEM (Dell, HP, Lenovo) y fabricantes de componentes; revisar licencias antes de integrar.
-2. **Público objetivo**: particulares o empresas; condiciona el backend.
-3. **Modelo de negocio**: gratuito, de pago o freemium.
-4. **WPF vs WinUI 3**: WPF por madurez; la UI es intercambiable al estar aislada tras gRPC.
-5. **Certificado de firma de código**: elegir proveedor y presupuestar.
-
-## 13. Sprint 6: ajustes, comprobación programada y soporte OEM (fase A)
-
-### 13.1 Ajustes persistentes (U7)
-- Fichero `%ProgramData%\DriverUpdater\config.json`, escrito por el servicio (cuenta SYSTEM) con escritura atómica (fichero temporal + reemplazo). Si está dañado se usan los valores por defecto.
-- Contenido: `excluded_hardware_ids` (dispositivos excluidos), `check_interval_hours` (0, 24 o 168).
-- La UI no escribe el fichero: lo cambia con los RPC `GetSettings` / `UpdateSettings`, y el servicio normaliza y valida los valores antes de guardarlos.
-- Las exclusiones se aplican en el servicio, tanto en `CheckUpdates` como en `Install`. Una actualización excluida no se muestra y, si llega a pedirse, se rechaza con un mensaje claro.
-- La pantalla de Ajustes carga y guarda con `GetSettings`/`UpdateSettings`.
-- **Pendiente:** hoy las exclusiones se escriben a mano como hardware ID. Falta el botón "Excluir" en la lista de actualizaciones, que es lo que pide U7.
-
-### 13.2 Comprobación programada (U8)
-- `ScheduledCheckService` (BackgroundService) revisa cada 15 minutos si toca comprobar. La búsqueda pasa por la misma cola que la UI, así que nunca se solapa con una instalación.
-- El resultado (última comprobación y número de actualizaciones pendientes) se expone en `GetStatus`. Vive en memoria; tras reiniciar el servicio, la primera comprobación se hace al vencer el intervalo.
-- **Limitación conocida:** el servicio arranca bajo demanda y no se detiene al cerrar la UI, así que la comprobación solo ocurre mientras el servicio esté en marcha. No se arranca con Windows, en línea con el requisito del producto.
-- **Decisión: sin notificaciones de escritorio (Toast) ni tarea programada por usuario.** El usuario prefiere consultar las actualizaciones cuando quiera, y un aviso emergente se considera invasivo. La comprobación programada solo alimenta un indicador pasivo.
-- Indicador en la UI: el contador de la pestaña Actualizaciones muestra las pendientes de una comprobación programada nueva, una sola vez por comprobación. No hay avisos fuera de la app.
-- El campo `notifications_enabled` se retiró del contrato (`reserved 3`) y de `AppSettings`. Los `config.json` antiguos que lo contengan siguen cargando: el campo desconocido se ignora.
-
-### 13.3 Soporte oficial de la placa base (fase A)
-- La app detecta la placa con `Win32_BaseBoard` (fabricante y modelo) y muestra el enlace a la página oficial de soporte de drivers de ese fabricante.
-- **Fase A no descarga nada**: solo abre la página oficial en el navegador del usuario. Solo se aceptan URLs HTTPS de la lista `OemSupportCatalog` (Gigabyte, ASUS, MSI, ASRock).
-- Se muestra la versión instalada de cada dispositivo, pero no se compara con la "última versión publicada": eso requeriría scraping de cada fabricante, que se deja para la fase B.
-- **Fase B (no iniciada):** descarga, verificación de SHA-256 y firma, e instalación con el mismo flujo de punto de restauración. Requiere cerrar antes la revisión de licencias (§12) y definir un manifiesto propio con URL, versión y hash por modelo.
-- Los drivers de chipset de Intel, AMD y Realtek se publican también en sus propias webs; se pueden añadir a la lista de fuentes directas en la fase B.
-
-### 13.4 Llamadas de red
-- Ninguna en esta fase: la app solo abre el navegador cuando el usuario pulsa el enlace de soporte.
-
-## 14. Sprint 7: Seguridad, robustez y directiva WHQL (Cierre Hito 3)
-
-### 14.1 Directiva WHQL configurable y persistente
-- Regla 1 de `AGENTS.md` y requisito de Hito 3 de `MVP.md`: Por defecto, solo se aceptan controladores con certificación WHQL / Microsoft (`OnlyWhql = true`).
-- Se introduce `OnlyWhql` en `AppSettings` y en el mensaje gRPC `SettingsMsg` (`only_whql = 4`).
-- La UI (`SettingsView.xaml`) conecta su conmutador de seguridad directamente con el servicio gRPC (`SettingsViewModel.cs`).
-- En `WuaDriverInstaller`, durante la fase `Verifying`, si `onlyWhql == true` y el driver no tiene certificación WHQL (`!sigResult.IsWhql`), la instalación se aborta inmediatamente con registro de auditoría en SQLite sin crear punto de restauración ni alterar el equipo.
-- Si el usuario desactiva la directiva (`onlyWhql == false`), se admiten controladores con firma Authenticode válida no-WHQL (modo avanzado).
-
-### 14.2 Detección criptográfica avanzada de WHQL
-- `WinTrustSignatureVerifier` amplía el reconocimiento de certificación WHQL:
-  - Verificación de emisores y firmantes reconocidos ("Microsoft Windows Hardware Compatibility Publisher", "Microsoft Windows Driver Publisher", "Windows Hardware", "Windows Compatibility").
-  - Verificación de OIDs de las extensiones EKU del certificado: `1.3.6.1.4.1.311.10.3.5` (WHQL), `1.3.6.1.4.1.311.10.3.5.1` (WHQL Crypto), `1.3.6.1.4.1.311.10.3.39` (Windows Hardware Compatibility) y `1.3.6.1.4.1.311.10.3.4.1` (Driver Verification Intermediate).
-
-### 14.3 Endurecimiento de entradas y mitigación DoS
-- `DriverAgentGrpcService`:
-  - `Install`: límite máximo de 50 identificadores de actualización por lote (`MaxUpdateBatchSize`), evitando desbordamiento de memoria o ataques por lotes masivos.
-  - `GetHistory`: acotación de límite (`request.Limit` clamped a máx. 1000 registros).
-- `JsonSettingsStore`:
-  - Límite de tamaño de lectura de `config.json` de 1 MB (`MaxConfigFileSizeBytes`) para evitar agotamiento de memoria ante archivos manipulados.
-
+Añade aquí decisiones nuevas que afecten a límites de confianza, compatibilidad, dependencias compartidas o comportamiento del producto. Actualiza `ARCHITECTURE.md` cuando cambie la implementación y `MVP.md` cuando cambien requisitos o criterios. El `SPRINT_LOG.md` conserva el contexto histórico; no copies allí el estado vigente como sustituto de estos documentos.

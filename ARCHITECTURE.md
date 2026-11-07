@@ -1,11 +1,12 @@
 # Arquitectura de DriverUpdater
 
-Guía para entender el proyecto sin leer carpeta por carpeta. Complementa a:
+Guía de la **arquitectura implementada**: componentes, dependencias, flujos y puntos de extensión. No es el registro de requisitos ni el historial de cambios.
 
-- `MVP.md`: alcance y criterios de aceptación.
-- `DESIGN.md`: decisiones técnicas y el detalle de cada sprint.
-- `AGENTS.md`: reglas de seguridad, convenciones de código y cómo trabajar.
-- `SPRINT_LOG.md`: histórico de sprints.
+- `MVP.md` es la fuente de verdad para alcance y criterios de aceptación.
+- `DESIGN.md` conserva decisiones técnicas duraderas y cuestiones abiertas.
+- `AGENTS.md` define convenciones y reglas de trabajo.
+- `TESTING.md` contiene procedimientos de pruebas manuales y resultados de VM.
+- `SPRINT_LOG.md` es histórico; sus notas reflejan el estado al cierre de cada sprint.
 
 ## 1. Qué es
 
@@ -127,8 +128,9 @@ UpdatesViewModel.InstallSelectedAsync
   → Install (stream de progreso)
     → OperationQueue
       → IDriverInstaller (WuaDriverInstaller), que:
-          · crea el punto de restauración (WmiRestorePointService) y aborta si falla
-          · instala vía WUA, con verificación de firma (ISignatureVerifier / WinVerifyTrust) en la fase Verifying
+          · intenta verificar las rutas recibidas con ISignatureVerifier / WinVerifyTrust
+          · crea el punto de restauración por controlador y aborta si falla
+          · instala vía WUA
       → IOperationHistory.RecordAsync (SQLite)
   ← InstallProgressMsg (fase, porcentaje, resultado)
 ```
@@ -141,7 +143,7 @@ UpdatesViewModel.ExcludeAsync
   → la lista se actualiza; las siguientes búsquedas ya no la muestran
 ```
 
-### Comprobación programada y aviso
+### Comprobación programada e indicador en la aplicación
 
 ```
 ScheduledCheckService (cada 15 min)
@@ -150,6 +152,14 @@ ScheduledCheckService (cada 15 min)
 GetStatus devuelve esos datos
 ShellViewModel.PollStatusAsync → UpdatesBadge (solo para una comprobación nueva)
 ```
+
+La comprobación programada no muestra notificaciones de escritorio. Solo actualiza el indicador de la pestaña Actualizaciones.
+
+### Instalación y verificación
+
+El instalador descarga mediante WUA, pasa al verificador las rutas devueltas por el ejecutor, crea un punto de restauración para cada controlador y luego invoca la instalación nativa. **Limitación actual que debe resolverse:** `DefaultWuaExecutor` devuelve una lista de rutas vacía incluso cuando informa de una descarga correcta; por tanto, el bucle de `WuaDriverInstaller` no verifica ningún archivo en ese recorrido. Esto documenta el comportamiento del código, pero no demuestra si WUA puede instalar un controlador no WHQL por esa vía. No debe describirse como una verificación efectiva de cada paquete hasta cerrar esta brecha.
+
+El caso está pendiente de validación aislada; consulta `TESTING.md` para las restricciones de pruebas en VM. La política de producto sigue siendo exigir firma válida y, por defecto, WHQL (`OnlyWhql = true`).
 
 ### Soporte de la placa (fase A)
 
@@ -172,14 +182,14 @@ La UI nunca escribe en `%ProgramData%`: pide los cambios al servicio.
 
 ## 7. Seguridad (resumen)
 
-Las reglas completas están en `AGENTS.md`. Las que definen la arquitectura:
+Las reglas de trabajo están en `AGENTS.md`; `DESIGN.md` conserva las decisiones de seguridad. Las que definen la arquitectura:
 
 - El privilegio vive en el servicio. La UI nunca se ejecuta elevada.
 - El pipe solo acepta usuarios locales. La ACL se configura al crear el pipe.
-- Ningún driver se instala sin verificar su firma. Por defecto solo WHQL o firmados por Microsoft.
+- La política exige firma válida y, por defecto, WHQL. Véase la limitación del flujo de verificación descrita arriba: el adaptador WUA actual no devuelve rutas de archivos.
 - Siempre hay punto de restauración antes de instalar. Si no se puede crear, no se instala.
 - Las URL de soporte son HTTPS y pertenecen a la lista de `OemSupportCatalog`.
-- No hay llamadas de red en el producto, salvo las que describe `DESIGN.md`.
+- El producto consulta Windows Update mediante WUA; el botón de soporte OEM abre en el navegador una URL HTTPS del catálogo local. No hay backend propio ni telemetría del proyecto.
 
 ## 8. Cómo extender
 
@@ -199,7 +209,7 @@ Las reglas completas están en `AGENTS.md`. Las que definen la arquitectura:
 
 ### Añadir una fuente de drivers
 
-Implementa `IUpdateSource` en `Agent.Drivers` y registrarla en `ServiceCollectionExtensions`. Fuentes OEM (fase B) están pendientes de la revisión de licencias (`DESIGN.md` §12).
+Implementa `IUpdateSource` en `Agent.Drivers` y registrarla en `ServiceCollectionExtensions`. Fuentes OEM (fase B) están pendientes de la revisión de licencias (decisiones pendientes en `DESIGN.md`).
 
 ## 9. Pruebas
 

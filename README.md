@@ -163,11 +163,12 @@ powershell ./installer/build.ps1 -Version 1.0.0
 ```
 
 ### Documentación técnica adicional
-- 🗺️ [`ARCHITECTURE.md`](ARCHITECTURE.md): Diagramas de flujo de datos, seguridad IPC y estructura de proyectos.
-- 📐 [`DESIGN.md`](DESIGN.md): Decisiones técnicas y registro de especificaciones de diseño.
-- 🎯 [`MVP.md`](MVP.md): Alcance del producto, historias de usuario y criterios de aceptación.
-- 🧪 [`TESTING.md`](TESTING.md): Guía de pruebas manuales y matriz de escenarios de fallo en máquina virtual (VM).
-- 📋 [`SPRINT_LOG.md`](SPRINT_LOG.md): Registro cronológico detallado de todos los sprints.
+- 🗺️ [`ARCHITECTURE.md`](ARCHITECTURE.md): Arquitectura implementada, flujos y puntos de extensión.
+- 📐 [`DESIGN.md`](DESIGN.md): Decisiones técnicas vigentes y cuestiones abiertas.
+- 🎯 [`MVP.md`](MVP.md): Alcance, historias de usuario y criterios de aceptación.
+- 🧪 [`TESTING.md`](TESTING.md): Procedimientos manuales y registro de resultados en VM.
+- 📋 [`SPRINT_LOG.md`](SPRINT_LOG.md): Historial cronológico; no sustituye al estado actual.
+- 🛡️ [`AGENTS.md`](AGENTS.md): Convenciones, reglas de seguridad y mapa de documentación.
 
 ---
 

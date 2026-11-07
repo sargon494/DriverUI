@@ -2,6 +2,8 @@
 
 Este documento registra de forma cronológica y detallada cada sprint ejecutado en el proyecto **DriverUpdater**, con las tareas completadas, decisiones de arquitectura, resultados de pruebas, problemas resueltos y notas esenciales para los siguientes agentes.
 
+Es un registro histórico, no una descripción del estado actual. Las tareas y decisiones reflejan lo que se sabía al cerrar cada sprint; para el estado vigente consulta `MVP.md`, `ARCHITECTURE.md`, `DESIGN.md` y `TESTING.md`.
+
 ---
 
 ## Sprint 0 — Preparación del entorno y estructura base
@@ -344,7 +346,7 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - [x] **S4B-T1: Proyecto `Agent.Ipc` — contrato IPC compartido** (`src/Agent.Ipc`):
   - `Protos/driveragent.proto` con el servicio `DriverAgent`: `Scan`, `CheckUpdates` (streaming), `Install` (streaming de progreso), `Rollback`, `GetHistory` y `GetStatus`. Codegen `GrpcServices="Both"`, namespace C# `Agent.Ipc.Grpc`.
   - `DriverAgentChannel.CreateChannel()`: fábrica de canal gRPC sobre named pipe usando `SocketsHttpHandler.ConnectCallback` con `NamedPipeClientStream` (cliente para UI y tests).
-  - Constante `DefaultPipeName = "DriverUpdater"` (equivale a `\\.\pipe\DriverUpdater`, según DESIGN.md §5).
+  - Constante `DefaultPipeName = "DriverUpdater"` (equivale a `\\.\pipe\DriverUpdater`, según la arquitectura documentada en `ARCHITECTURE.md`).
   - Referencia a `Grpc.AspNetCore 2.76.0` + `Grpc.Tools 2.76.0` explícito (los targets de `Grpc.Tools` no se importan como dependencia transitiva en este entorno; ver Decisiones).
 - [x] **S4B-T2: `OperationQueue` — cola de operaciones** (`src/Agent.Service/Operations/`):
   - `IOperationQueue` / `OperationQueue`: exclusión mutua con `SemaphoreSlim(1,1)`; garantiza **una operación privilegiada a la vez** (instalaciones, rollbacks y búsquedas de WUA; la sesión COM no debe atenderlas en paralelo).
@@ -442,7 +444,7 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
   - Comparativa de versión actual instalada frente a la versión nueva recomendada.
   - Tamaño de descarga formateado y badge de "Requiere reinicio" cuando procede.
   - Barra de progreso global y reporte de fase en tiempo real por cada controlador (`Downloading`, `Verifying`, `CreatingRestorePoint`, `Installing`, etc.) consumiendo el stream gRPC de `Install`.
-  - **Experiencia de cancelación diferida (DESIGN.md §5)**: al pulsar "Cancelar", la UI activa el estado *"Cancelando... esperando a que finalice el controlador en curso"* para respetar la fase nativa de WUA en ejecución y asegurar la estabilidad del sistema operativo.
+  - **Experiencia de cancelación diferida (`ARCHITECTURE.md`, flujo IPC)**: al pulsar "Cancelar", la UI activa el estado *"Cancelando... esperando a que finalice el controlador en curso"* para respetar la fase nativa de WUA en ejecución y asegurar la estabilidad del sistema operativo.
 - [x] **S5-T5: Pantalla de Historial y Rollback** (`src/Ui.Wpf/Views/HistoryView.xaml` y `HistoryViewModel.cs`):
   - Tabla de auditoría con fecha ISO formateada, dispositivo, versiones previa y aplicada, tipo de operación y resultado.
   - Buscador para filtrar eventos por nombre de dispositivo o ID.
@@ -467,7 +469,7 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 ### Decisiones técnicas tomadas
 1. **Consumo no privilegiado sobre gRPC (Reglas 3 y 4 de AGENTS.md)**:
    - La aplicación `Ui.Wpf` no utiliza elevación de privilegios administrativa. Toda operación privilegiada (escaneo de hardware, descarga, punto de restauración, instalación y rollback) se delega a través del cliente gRPC sobre el named pipe `\\.\pipe\DriverUpdater`.
-2. **Experiencia de cancelación diferida (DESIGN.md §5)**:
+2. **Experiencia de cancelación diferida (`ARCHITECTURE.md`, flujo IPC)**:
    - Siguiendo las directrices de diseño para evitar corrupciones en el subsistema de controladores durante la fase nativa de WUA o PnPUtil, la UI refleja de forma explícita el estado *"Cancelando... esperando a que finalice el controlador en curso"* y desactiva nuevos intentos hasta que el RPC de instalación completa su ciclo seguro.
 3. **Navegación declarativa por ViewModel**:
    - En lugar de usar `Frame` y `Page` de WPF clásico, se empleó un `ContentControl` en `ShellWindow` con `DataTemplate` implícitos vinculados a `DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel` y `SettingsViewModel`.

@@ -14,12 +14,12 @@ El MVP **no necesita backend**.
 - Inventario de drivers instalados.
 - Búsqueda de actualizaciones de drivers vía Windows Update Agent.
 - Instalación de uno o varios drivers.
-- Verificación de firma digital antes de instalar (solo drivers firmados).
-- Punto de restauración previo a cada lote de instalaciones.
+- Verificación de firma digital antes de instalar; WHQL es obligatorio por defecto y el usuario puede desactivar solo ese requisito.
+- Punto de restauración previo a la instalación de cada controlador.
 - Rollback de la última actualización.
 - Historial de operaciones y log.
 - Servicio de Windows + UI WPF sin privilegios.
-- Comprobación programada (diaria/semanal) y notificación.
+- Comprobación programada opcional (diaria/semanal) con indicador pasivo dentro de la aplicación; sin notificaciones de escritorio.
 - CLI de diagnóstico.
 
 ### Excluido (fases posteriores)
@@ -28,6 +28,7 @@ El MVP **no necesita backend**.
 - Gestión de flotas / consola web.
 - Autoactualización de la aplicación.
 - Localización a varios idiomas (el MVP en español).
+- Notificaciones toast o tareas programadas por usuario.
 
 ## 3. Historias de usuario
 
@@ -51,7 +52,7 @@ El MVP **no necesita backend**.
 - **U5**: tras el rollback, la versión del driver vuelve a la anterior y queda registrado.
 - **U6**: el historial persiste tras reiniciar el equipo.
 - **U7**: un driver excluido no aparece en actualizaciones ni se instala en lote.
-- **U8**: no aplica. Decisión: sin notificaciones de escritorio ni tarea programada por usuario (`DESIGN.md` §13.2). La comprobación programada deja su resultado en el indicador de la app.
+- **U8**: si está activada, la comprobación se ejecuta cada 24 o 168 horas mientras el servicio esté activo; el resultado nuevo se refleja una vez en el indicador de Actualizaciones. No hay toast ni tarea programada por usuario.
 - **Seguridad**: un paquete con firma inválida o sin firma es rechazado y registrado.
 - **Rendimiento**: servicio en reposo por debajo de 50 MB de RAM.
 
@@ -79,11 +80,11 @@ El MVP **no necesita backend**.
 - [x] Cola de operaciones (una instalación a la vez) y cancelación.
 - [x] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
 - [x] Exclusiones y comprobación programada.
-- [x] Aviso de reinicio pendiente dentro de la app (sin notificaciones de escritorio); sobrevive a reinicios del servicio.
+- [x] Indicador de comprobación programada y aviso de reinicio pendiente dentro de la app; sin notificaciones de escritorio.
 
 ### Hito 3: Seguridad y robustez (2-3 semanas)
-- [x] Solo drivers firmados por defecto; opción documentada para el resto.
-- [ ] Pruebas en VMs con Windows 10 y 11 y en 2-3 equipos reales (documentado en `TESTING.md`).
+- [x] Firma válida obligatoria; WHQL exigido por defecto con opción avanzada para aceptar firmas válidas no-WHQL.
+- [ ] Pruebas en VMs con Windows 10 y 11 y pruebas no destructivas en 2-3 equipos reales (documentadas en `TESTING.md`). Las instalaciones reales de drivers se prueban solo en VM.
 - [ ] Pruebas de fallo (corte de red, firma inválida, reinicio durante instalación) (documentado en `TESTING.md`).
 - [x] Revisión de ACL del pipe y validación de entradas.
 
@@ -95,7 +96,7 @@ El MVP **no necesita backend**.
 ## 6. Definición de "hecho" para el MVP
 
 - Todos los criterios de aceptación cumplidos.
-- Probado en Windows 10 y 11 (VM + hardware real).
+- Probado en Windows 10 y 11 en VM; cualquier prueba de instalación real se hace solo en VM, nunca en el equipo principal de desarrollo.
 - Sin warnings en `Release`; tests unitarios en verde.
 - Instalador firmado que instala y desinstala sin dejar restos.
 - Documentación mínima de usuario (instalar, escanear, actualizar, deshacer).
@@ -117,3 +118,5 @@ El MVP **no necesita backend**.
 3. Autoactualización y canales stable/beta.
 4. Cuentas, licencias y telemetría opcional.
 5. Versión para empresas con consola de gestión.
+
+El estado de cada validación manual se registra en `TESTING.md`; el historial de implementación está en `SPRINT_LOG.md`.
