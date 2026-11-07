@@ -64,11 +64,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install WiX v4
+      - name: Install WiX v4.0.5
         run: |
-          dotnet tool install --global wix
+          dotnet tool install --global wix --version 4.0.5
           wix --version
-          # La EULA se acepta dentro de build.ps1, con la salida visible.
+          wix extension add -g WixToolset.Util.wixext/4.0.5
 
       - name: Build MSI
         shell: pwsh

@@ -1,7 +1,6 @@
-# Instalador (MSI · WiX v4)
+# Instalador (MSI · WiX 4.0.5)
 
-Estado: **fuentes escritas, sin compilar** (el entorno de desarrollo que las generó no tiene .NET ni WiX).
-Hay que compilarlas y probarlas en una VM Windows 10/11 antes de usarlas.
+Estado: el workflow instala WiX 4.0.5 y la extensión Util 4.0.5; la compilación del MSI de esta revisión debe confirmarse en CI y probarse en una VM Windows 10/11 antes de distribuirla. WiX 7 no es compatible con esta configuración y requiere aceptar por separado su EULA OSMF.
 
 ## Qué instala
 

@@ -3,7 +3,7 @@
   Publica el servicio y la UI, y compila el MSI de DriverUpdater con WiX v4.
 .EXAMPLE
   .\installer\build.ps1 -Version 1.0.0
-  Requisitos: .NET 10 SDK y WiX v4 (dotnet tool install --global wix).
+  Requisitos: .NET 10 SDK, WiX 4.0.5 y WixToolset.Util.wixext 4.0.5.
 #>
 param(
     [Parameter(Mandatory)] [string] $Version,
@@ -35,12 +35,17 @@ $msi = Join-Path $art "DriverUpdater-$Version-x64.msi"
 
 # Diagnóstico de WiX v4 con salida visible (sin silenciar errores)
 Write-Host "== wix --version"
-wix --version
+$wixVersion = (wix --version 2>&1 | Out-String).Trim()
+Write-Host $wixVersion
+if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar la versión de WiX." }
+if ($wixVersion -notmatch '^4\.') {
+    throw "Se requiere WiX v4 para este proyecto (WiX v7 requiere aceptar la EULA OSMF). Instala WiX 4.0.5: dotnet tool install --global wix --version 4.0.5"
+}
 Write-Host "== wix extension list"
 $extensionList = wix extension list 2>&1
 $extensionList | ForEach-Object { Write-Host $_ }
 if (($extensionList -join "`n") -notmatch 'WixToolset\.Util\.wixext') {
-    throw "Falta la extension WiX Util. Instalala con: wix extension add -g WixToolset.Util.wixext"
+    throw "Falta WixToolset.Util.wixext 4.0.5. Instalala con: wix extension add -g WixToolset.Util.wixext/4.0.5"
 }
 Write-Host "== wix build"
 $wixOut = wix build (Join-Path $PSScriptRoot 'DriverUpdater.wxs') -arch x64 `
