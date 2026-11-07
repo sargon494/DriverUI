@@ -21,6 +21,7 @@
     <Feature Id="Main" Title="DriverUpdater" Level="1">
       <ComponentRef Id="AgentServiceComponent" />
       <ComponentRef Id="UiComponent" />
+      <ComponentRef Id="ComplianceFilesComponent" />
       <ComponentRef Id="StartMenuShortcutComponent" />
       <ComponentRef Id="DesktopShortcutComponent" />
     </Feature>
@@ -72,6 +73,26 @@
           <File Id="UiExe"
                 Source="$(var.UiDir)\Ui.Wpf.exe"
                 KeyPath="yes" />
+        </Component>
+
+        <!-- Licencia del proyecto, avisos de dependencias y SBOM de esta versión -->
+        <Component Id="ComplianceFilesComponent" Guid="2D4DDFAB-14C7-4DB6-9D2F-7C823B38B34D" Bitness="always64">
+          <File Id="ProjectLicenseFile"
+                Source="$(var.ProjectLicenseFile)"
+                Name="LICENSE.txt"
+                KeyPath="yes" />
+          <File Id="ThirdPartyNoticesFile"
+                Source="$(var.ThirdPartyNoticesFile)"
+                Name="THIRD-PARTY-NOTICES.txt" />
+          <File Id="ApacheLicenseFile"
+                Source="$(var.ApacheLicenseFile)"
+                Name="LICENSE-APACHE-2.0.txt" />
+          <File Id="BsdLicenseFile"
+                Source="$(var.BsdLicenseFile)"
+                Name="LICENSE-BSD-3-Clause.txt" />
+          <File Id="SbomFile"
+                Source="$(var.SbomFile)"
+                Name="SBOM.cdx.json" />
         </Component>
 
       </Directory>

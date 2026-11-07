@@ -16,6 +16,7 @@ $art  = Join-Path $PSScriptRoot 'artifacts'
 $svcDir = Join-Path $art 'service'
 $uiDir  = Join-Path $art 'ui'
 Remove-Item $art -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $art -Force | Out-Null
 
 # Un solo .exe autocontenido por aplicación (no hace falta instalar .NET en el equipo)
 dotnet publish (Join-Path $root 'src\Agent.Service\Agent.Service.csproj') -c Release -r $Runtime `
@@ -26,6 +27,10 @@ dotnet publish (Join-Path $root 'src\Ui.Wpf\Ui.Wpf.csproj') -c Release -r $Runti
     --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $uiDir
 if ($LASTEXITCODE -ne 0) { throw "publish Ui.Wpf falló" }
 
+$complianceScript = Join-Path $PSScriptRoot 'Generate-ComplianceArtifacts.ps1'
+& $complianceScript -Root $root -OutputDirectory $art -Version $Version -Runtime $Runtime
+if ($LASTEXITCODE -ne 0) { throw "La generación del SBOM o los avisos de terceros falló" }
+
 $msi = Join-Path $art "DriverUpdater-$Version-x64.msi"
 
 # Diagnóstico: versión de WiX y aceptación de la EULA, con salida visible (sin silenciar errores)
@@ -35,7 +40,12 @@ Write-Host "== wix eula accept wix7"
 wix eula accept wix7
 Write-Host "== wix build"
 $wixOut = wix build (Join-Path $PSScriptRoot 'DriverUpdater.wxs') -arch x64 `
-    -d "Version=$Version" -d "AgentServiceDir=$svcDir" -d "UiDir=$uiDir" -o $msi 2>&1
+    -d "Version=$Version" -d "AgentServiceDir=$svcDir" -d "UiDir=$uiDir" `
+    -d "ProjectLicenseFile=$(Join-Path $root 'LICENSE')" `
+    -d "ThirdPartyNoticesFile=$(Join-Path $art 'THIRD-PARTY-NOTICES.txt')" `
+    -d "ApacheLicenseFile=$(Join-Path $PSScriptRoot 'licenses\Apache-2.0.txt')" `
+    -d "BsdLicenseFile=$(Join-Path $PSScriptRoot 'licenses\BSD-3-Clause.txt')" `
+    -d "SbomFile=$(Join-Path $art "DriverUpdater-$Version.cdx.json")" -o $msi 2>&1
 $wixCode = $LASTEXITCODE
 $wixOut | ForEach-Object { Write-Host $_ }
 if ($wixCode -ne 0) { throw "wix build falló (código $wixCode):`n$($wixOut -join [Environment]::NewLine)" }

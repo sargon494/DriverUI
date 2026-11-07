@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DriverUpdater — Safe, Verified & Official Windows Driver Updates</title>
-  <meta name="description" content="Open-source, secure Windows 10/11 driver updater. Official Windows Update sources, cryptographic WHQL verification, automatic restore points, and zero-privilege UI.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Community-built Windows 10/11 driver updater using Windows Update Agent, local operation history, and configurable signature checks.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -74,7 +71,7 @@
     <div class="container hero-container">
       <div class="hero-badge">
         <span class="badge-pulse"></span>
-        <span>Windows 10/11 · .NET 10 LTS · 100% WHQL Cryptographically Verified</span>
+        <span>Windows 10/11 · .NET 10 · WHQL signature policy enabled by default</span>
       </div>
 
       <h1 class="hero-title">
@@ -83,9 +80,9 @@
       </h1>
 
       <p class="hero-subtitle">
-        Eliminate the shady third-party driver bloatware. Built on <strong>pure official Windows Update Agent (WUA) APIs</strong>, 
-        strict <strong>WinVerifyTrust WHQL cryptography</strong>, mandatory <strong>System Restore points</strong>, 
-        and an unprivileged UI running over local named-pipe gRPC.
+        A community-built utility using <strong>Windows Update Agent (WUA)</strong>,
+        <strong>WinVerifyTrust signature checks</strong>, a requested <strong>System Restore point</strong> before installation,
+        and an unprivileged UI communicating with a local Windows service.
       </p>
 
       <div class="hero-cta">
@@ -113,13 +110,13 @@
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <div class="stat-number">100% WHQL</div>
-          <div class="stat-label">Signed driver policy by default</div>
+          <div class="stat-number">WHQL</div>
+          <div class="stat-label">Policy enabled by default; configurable</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
           <div class="stat-number">1-Click</div>
-          <div class="stat-label">Atomic PnP rollback & restore</div>
+          <div class="stat-label">Rollback and restore support</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
@@ -152,7 +149,7 @@
           <p class="box-desc">Zero Windows privileges. Pure MVVM with CommunityToolkit.Mvvm.</p>
           <ul class="box-features">
             <li><span>✓</span> Frameless glassmorphic dark interface</li>
-            <li><span>✓</span> Reactive telemetry & hardware overview</li>
+            <li><span>✓</span> Reactive hardware overview</li>
             <li><span>✓</span> Real-time streaming progress reader</li>
             <li><span>✓</span> Deferred safe cancellation UX</li>
           </ul>
@@ -325,7 +322,7 @@
           <p>
             Before staging any INF or SYS binary, DriverUpdater executes Win32 <span class="code-inline">WinVerifyTrust</span> 
             with <span class="code-inline">WINTRUST_ACTION_GENERIC_VERIFY_V2</span>. It inspects certificate chains and checks 
-            standard WHQL Enhanced Key Usage OIDs (<span class="code-inline">1.3.6.1.4.1.311.10.3.5</span>), guaranteeing packages originate directly from Microsoft.
+            standard WHQL Enhanced Key Usage OIDs (<span class="code-inline">1.3.6.1.4.1.311.10.3.5</span>) as part of its signature policy. A valid signature does not guarantee that a driver is defect-free or compatible with every system.
           </p>
           <div class="bento-tags">
             <span>WinVerifyTrust</span>
@@ -447,7 +444,7 @@ Intel(R) Serial IO I2C Host Controller  Intel Corporation  30.100.2221.20   2023
       <div class="section-header">
         <span class="section-tag">Architectural Comparison</span>
         <h2 class="section-title">DriverUpdater vs. Traditional Updaters</h2>
-        <p class="section-desc">See why DriverUpdater is safe for critical workstation hardware.</p>
+        <p class="section-desc">A high-level view of this project's documented behavior. Verify suitability for your own system before installing drivers.</p>
       </div>
 
       <div class="table-responsive">
@@ -464,37 +461,37 @@ Intel(R) Serial IO I2C Host Controller  Intel Corporation  30.100.2221.20   2023
             <tr>
               <td><strong>Driver Source</strong></td>
               <td class="col-highlight text-success">Official Microsoft Windows Update (WUA)</td>
-              <td class="text-danger">Scraped 3rd-party FTP / Unofficial CDN</td>
+              <td>Varies by product</td>
               <td>Microsoft Windows Update Catalog</td>
             </tr>
             <tr>
               <td><strong>Cryptographic Verification</strong></td>
-              <td class="col-highlight text-success">WinVerifyTrust + WHQL EKU OIDs enforced</td>
-              <td class="text-danger">Often bypassed or stripped</td>
+              <td class="col-highlight text-success">WinVerifyTrust checks; WHQL enabled by default</td>
+              <td>Varies by product</td>
               <td class="text-success">Enforced by OS kernel</td>
             </tr>
             <tr>
               <td><strong>UI Elevation Privileges</strong></td>
               <td class="col-highlight text-success">Standard user (asInvoker), 0 UAC popups</td>
-              <td class="text-danger">Runs entirely as elevated Admin</td>
+              <td>Varies by product</td>
               <td>Requires Administrator UAC</td>
             </tr>
             <tr>
               <td><strong>Mandatory Restore Point</strong></td>
-              <td class="col-highlight text-success">Created before every batch; aborts if failed</td>
-              <td class="text-danger">Optional or absent</td>
+              <td class="col-highlight text-success">Requested before installation; aborts if creation fails</td>
+              <td>Varies by product</td>
               <td>Manual user responsibility</td>
             </tr>
             <tr>
               <td><strong>Telemetry & Ads</strong></td>
-              <td class="col-highlight text-success">Zero telemetry, zero ads, 100% open-source</td>
-              <td class="text-danger">Aggressive adware & licensing paywalls</td>
-              <td>Microsoft Telemetry</td>
+              <td class="col-highlight text-success">No project analytics service; Windows Update network traffic still applies</td>
+              <td>Varies by product</td>
+              <td>Windows privacy settings apply</td>
             </tr>
             <tr>
               <td><strong>Audit Ledger</strong></td>
               <td class="col-highlight text-success">Persistent local SQLite ledger (<span class="code-inline">history.db</span>)</td>
-              <td class="text-danger">Opaque proprietary logs</td>
+              <td>Varies by product</td>
               <td>Windows Event Viewer (complex)</td>
             </tr>
           </tbody>
@@ -517,7 +514,7 @@ Intel(R) Serial IO I2C Host Controller  Intel Corporation  30.100.2221.20   2023
           </div>
           <span class="brand-name">Driver<span>Updater</span></span>
         </div>
-        <p class="footer-tagline">Safe, verifiable and robust driver maintenance for Windows 10 and Windows 11.</p>
+        <p class="footer-tagline">A community project for Windows 10 and Windows 11 driver maintenance. Driver changes can affect system stability; restore and rollback are not guaranteed. Not affiliated with Microsoft or device manufacturers.</p>
       </div>
 
       <div class="footer-links">
@@ -527,6 +524,8 @@ Intel(R) Serial IO I2C Host Controller  Intel Corporation  30.100.2221.20   2023
           <a href="https://github.com/sargon494/DriverUI/blob/master/DESIGN.md" target="_blank" rel="noopener">Design Specifications</a>
           <a href="https://github.com/sargon494/DriverUI/blob/master/MVP.md" target="_blank" rel="noopener">MVP Roadmap</a>
           <a href="https://github.com/sargon494/DriverUI/blob/master/TESTING.md" target="_blank" rel="noopener">VM Test Matrix</a>
+          <a href="https://github.com/sargon494/DriverUI/blob/master/PRIVACY.md" target="_blank" rel="noopener">Privacy</a>
+          <a href="https://github.com/sargon494/DriverUI/blob/master/LICENSE" target="_blank" rel="noopener">License</a>
         </div>
         <div class="footer-group">
           <h5>Repository</h5>

@@ -560,6 +560,44 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - `dotnet test -c Release`: **151/151 tests pasados** (52 en `Core.Tests`, 56 en `Agent.Service.Tests`, 43 en `Agent.Drivers.Tests`).
 - `dotnet format --verify-no-changes`: 0 discrepancias de formato.
 
+---
 
+## Sprint 8 — Documentación comunitaria y cumplimiento de distribución
 
+- **Fecha**: 2026-11-07
+- **Estado**: 🟡 Implementado; compilación MSI pendiente de validar con WiX
+- **Hito**: Preparación de documentación y artefactos de distribución
 
+### Tareas completadas
+- [x] **S8-T1: Declaración de licencia del proyecto** (`LICENSE`):
+  - Añadido el texto estándar de MIT con titular `Sargon494`.
+  - Se mantiene la intención de distribuir el proyecto como software libre/open source; no se añadieron restricciones comerciales. La propuesta de restringir la venta se descartó.
+- [x] **S8-T2: Nota de privacidad y tratamiento local** (`PRIVACY.md`):
+  - Documentados el inventario de hardware/controladores, configuración, exclusiones, historial SQLite y registros que la aplicación conserva localmente.
+  - Explicados Windows Update Agent, GitHub Pages y los enlaces a sitios de terceros, distinguiendo los tratamientos que controla el proyecto de los servicios externos.
+  - Documentado que la desinstalación no borra `%ProgramData%\DriverUpdater` y cómo eliminar los datos locales.
+- [x] **S8-T3: Ajuste de afirmaciones públicas de seguridad y privacidad** (`README.md`, `docs/index.html`, `docs/styles.css`):
+  - Sustituidas afirmaciones absolutas de seguridad por descripciones de los controles existentes y sus límites (firma, punto de restauración y rollback).
+  - Aclarada la independencia respecto a Microsoft y fabricantes, y la ausencia de afiliación.
+  - Eliminada la descarga de fuentes tipográficas desde Google Fonts; la web usa fuentes locales/de sistema.
+  - Añadidos enlaces a la licencia y a la nota de privacidad.
+- [x] **S8-T4: Generación de SBOM y avisos de terceros** (`installer/Generate-ComplianceArtifacts.ps1`):
+  - Añadido un generador PowerShell de CycloneDX 1.5 a partir de las dependencias NuGet resueltas para los ejecutables de servicio y UI, sus hashes SHA-256 y frameworks .NET autocontenidos.
+  - Genera un listado de paquetes, versiones, licencias declaradas, autores, copyright, enlaces de proyecto y un grafo de dependencias. Falla explícitamente ante manifiestos, licencias o avisos del runtime ausentes o no contemplados.
+  - Incluye los textos MIT, Apache-2.0 y BSD-3-Clause aplicables, además de `LICENSE.txt` y `ThirdPartyNotices.txt` del runtime .NET.
+- [x] **S8-T5: Integración de los documentos en el MSI** (`installer/build.ps1`, `installer/DriverUpdater.wxs`, `installer/README.md`, `installer/licenses/`):
+  - El build genera el SBOM y `THIRD-PARTY-NOTICES.txt` antes de invocar WiX.
+  - El MSI instala en `Program Files\DriverUpdater` la licencia del proyecto, los avisos, los textos Apache/BSD aplicables y el SBOM de la versión.
+  - Documentados el flujo y la necesidad de revisar los avisos para cada publicación.
+
+### Validación ejecutada
+- Publicación autocontenida de `Agent.Service` y `Ui.Wpf` para `win-x64` completada.
+- Generación de los artefactos de ejemplo `installer/artifacts/DriverUpdater-1.0.0.cdx.json` y `installer/artifacts/THIRD-PARTY-NOTICES.txt`: 65 paquetes NuGet y 3 frameworks .NET; el SBOM contiene 70 componentes y 71 entradas de dependencia, sin referencias sin resolver.
+- Verificados los textos de licencia MIT, Apache-2.0 y BSD-3-Clause en los avisos generados.
+- Sintaxis PowerShell y XML WiX comprobadas; `git diff --check` sin errores.
+- **MSI no compilado ni probado**: WiX no estaba instalado en el entorno. Probar en VM al disponer de WiX.
+
+### Limitaciones y seguimiento
+- El SBOM automatizado inventaría los paquetes NuGet con activos de ejecución resueltos para estos proyectos y los frameworks que figuran en sus runtimeconfig. No sustituye una auditoría legal de las dependencias, del contenido final del MSI ni de los avisos de cada distribución.
+- Revisar el SBOM y `THIRD-PARTY-NOTICES.txt` generados en cada versión antes de publicar, y validar que las versiones de runtime/avisos usados por el build son los mismos que se incluyen en el paquete.
+- La revisión documental no constituye asesoramiento jurídico ni una certificación de cumplimiento.

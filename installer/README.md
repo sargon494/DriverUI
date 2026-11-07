@@ -19,6 +19,15 @@ dotnet tool install --global wix          # WiX v4
 .\installer\build.ps1 -Version 1.0.0      # genera installer\artifacts\DriverUpdater-1.0.0-x64.msi
 ```
 
+El build también genera `DriverUpdater-<versión>.cdx.json` (SBOM CycloneDX 1.5)
+y `THIRD-PARTY-NOTICES.txt` en `installer\artifacts`. Ambos, junto con la licencia
+MIT del proyecto y los textos Apache-2.0/BSD-3-Clause que correspondan, se
+incluyen en `Program Files\DriverUpdater` dentro del MSI.
+El SBOM se deriva de las dependencias NuGet resueltas para los ejecutables y de
+los frameworks .NET incluidos. Los avisos NuGet identifican los paquetes y sus
+licencias declaradas; revisa los avisos y licencias de cada paquete antes de
+publicar una versión.
+
 ## Probar (solo en VM)
 
 ```powershell
@@ -33,5 +42,6 @@ desinstalador (`msiexec /x`) deja el sistema sin restos en Program Files ni serv
 - Revisar la decisión de permiso `RPWP` para `IU` (iniciar/detener el servicio sin elevación) con el equipo de seguridad.
 - Asistente gráfico: añadir la extensión `WixToolset.UI` (ahora la instalación es silenciosa por defecto).
 - Firma de código del MSI y de los `.exe` (`signtool`), requisito del Hito 4.
-- `%ProgramData%\DriverUpdater` (logs y configuración) no se borra al desinstalar; decidir si debe borrarse.
+- Revisar el SBOM y los avisos generados por versión antes de cada publicación.
+- `%ProgramData%\DriverUpdater` (historial, logs y configuración) no se borra al desinstalar; el usuario debe decidir si elimina esos datos. Consulta [PRIVACY.md](../PRIVACY.md).
 - Actualizaciones automáticas (autoactualización) quedan fuera de este MSI.

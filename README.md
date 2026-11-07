@@ -2,13 +2,13 @@
 
 # DriverUpdater
 
-**Actualizaciones de drivers oficiales, verificadas y 100% seguras para Windows 10 y 11**
+**Busca actualizaciones de drivers de Windows y aplica controles de seguridad en Windows 10 y 11**
 
 [![CI](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml)
 [![GitHub Pages](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml)
 [![.NET 10 LTS](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011%20(64--bit)-0078D6?logo=windows&logoColor=white)](https://microsoft.com/windows)
-[![Seguridad WHQL](https://img.shields.io/badge/Firma-WHQL%20%2F%20Microsoft-10b981?logo=shield&logoColor=white)](#-las-5-garantías-de-seguridad)
+[![Seguridad WHQL](https://img.shields.io/badge/Firma-WHQL%20%2F%20Microsoft-10b981?logo=shield&logoColor=white)](#-controles-de-seguridad)
 [![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
 
 <br />
@@ -21,24 +21,27 @@
 
 ## 💡 ¿Por qué DriverUpdater?
 
-Muchos programas conocidos para "actualizar controladores" son poco fiables: instalan publicidad no deseada, intentan cobrar suscripciones, descargan drivers de servidores web no oficiales o instalan versiones beta que acaban provocando pantallazos azules (**BSOD**).
-
-**DriverUpdater** se creó con una filosofía totalmente opuesta:
-- **Sin publicidad ni costes**: Código abierto (Open Source), gratuito y transparente.
-- **Solo fuentes 100% oficiales**: Se conecta directamente al catálogo oficial de **Windows Update** (WUA) de Microsoft. No existen servidores intermediarios ni repositorios de terceros.
-- **Seguridad primero**: Si un driver no tiene una firma digital válida o si no se puede crear un punto de restauración en Windows, **la instalación se detiene automáticamente**.
+**DriverUpdater** es un proyecto comunitario gratuito y de código abierto, pensado como alternativa a las aplicaciones comerciales de actualización de controladores. No desbloquea, modifica ni evita licencias de otros programas: ofrece una aplicación independiente. En esta versión busca actualizaciones mediante Windows Update Agent (WUA); no mantiene un catálogo ni un servidor de descarga propios. La instalación aplica comprobaciones de firma y requiere un punto de restauración previo según la configuración y el estado del sistema.
 
 ---
 
-## 🛡️ Las 5 Garantías de Seguridad
+## 🛡️ Controles de seguridad
 
 | Garantía | ¿Cómo te protege? |
 |---|---|
-| **1. Solo controladores certificados (WHQL)** | Antes de instalar un archivo `.inf` o `.sys`, se comprueba mediante la API de Windows `WinVerifyTrust` que su firma digital pertenece a Microsoft y cumple con los identificadores de certificación de hardware **WHQL**. |
-| **2. Punto de restauración automático** | Antes de instalar cualquier actualización, se genera un punto de restauración en Windows. Si algo falla o el sistema no permite crearlo, **no se modifica absolutamente nada de tu equipo**. |
-| **3. Deshacer cambios en 1 clic (*Rollback*)** | ¿Un controlador nuevo da problemas de sonido o imagen? En la pestaña de Historial puedes pulsar **Revertir** para volver al controlador anterior que funcionaba bien. |
-| **4. Tu usuario sin riesgos (Sin UAC continuo)** | La interfaz gráfica se ejecuta con tu usuario normal, sin privilegios de administrador. Las tareas delicadas las realiza un servicio en segundo plano de Windows de forma aislada. |
-| **5. Historial permanente y transparente** | Todas las operaciones quedan registradas en una base de datos local SQLite (`history.db` en `%ProgramData%\DriverUpdater\`), para que siempre sepas qué versión tenías y cuál se aplicó. |
+| **1. Comprobación de firmas** | El servicio comprueba firmas mediante `WinVerifyTrust`; la política WHQL está activada por defecto, pero puede modificarse en Ajustes. Una firma válida no garantiza que un controlador sea seguro, compatible o libre de defectos. |
+| **2. Punto de restauración** | Antes de instalar se solicita un punto de restauración; si no se puede crear, el flujo de instalación se aborta. La disponibilidad y eficacia de Restaurar sistema dependen de Windows y de su configuración. |
+| **3. Rollback** | La aplicación ofrece una operación para revertir una instalación registrada. No se puede garantizar que la reversión recupere el estado anterior en todos los equipos. |
+| **4. Separación de privilegios** | La UI se ejecuta como usuario estándar y solicita operaciones al servicio de Windows, que tiene privilegios elevados. Esto reduce la exposición de la UI, pero no elimina todos los riesgos. |
+| **5. Historial local** | El historial SQLite y los registros se guardan localmente en `%ProgramData%\DriverUpdater`. No se eliminan automáticamente al desinstalar; consulta [Privacidad](PRIVACY.md) para conocer los datos y cómo borrarlos. |
+
+Estos controles reducen algunos riesgos, pero la instalación de controladores puede causar fallos o pérdida de funcionalidad. Haz copias de seguridad y revisa cada actualización antes de instalarla.
+
+---
+
+## 🔎 Datos y conexiones
+
+La aplicación no tiene backend propio, cuentas ni analítica del proyecto. Consulta la [nota de privacidad](PRIVACY.md) para saber qué información se guarda localmente y cómo Windows Update y los sitios de terceros pueden tratar datos.
 
 ---
 
@@ -170,4 +173,10 @@ powershell ./installer/build.ps1 -Version 1.0.0
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia [MIT](LICENSE). Eres libre de usarlo, estudiarlo y mejorarlo.
+El código de este proyecto se ofrece bajo la licencia [MIT](LICENSE). Los instaladores públicos pueden incluir dependencias y componentes de terceros con licencias y avisos propios. Antes de publicar cada versión compilada, hay que generar y revisar un inventario/SBOM de dependencias y sus avisos de licencia, incluidos los componentes del runtime que se empaqueten.
+
+## ⚠️ Aviso de uso
+
+El software se proporciona «tal cual», conforme a la licencia MIT. No se garantiza que una actualización sea adecuada para un equipo concreto, ni que un punto de restauración o rollback siempre permita recuperar el estado anterior. El usuario decide qué instalar y asume los riesgos de cambios en controladores. No lo uses en equipos críticos sin validación y copias de seguridad adecuadas.
+
+DriverUpdater es un proyecto comunitario independiente y no está afiliado, patrocinado ni respaldado por Microsoft ni por los fabricantes de dispositivos. Windows, Microsoft y las marcas de terceros pertenecen a sus respectivos titulares.
