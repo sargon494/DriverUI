@@ -4,6 +4,10 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const mobileMenu = document.querySelector('.mobile-menu');
+  mobileMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => mobileMenu.removeAttribute('open'));
+  });
 
   // ==========================================
   // 1. Data Store & State
@@ -89,18 +93,18 @@ document.addEventListener('DOMContentLoaded', () => {
         : '<span class="whql-badge whql-untrusted">⚠ Non-WHQL / Self-Signed</span>';
 
       tr.innerHTML = `
-        <td>
+        <td data-label="Device">
           <div class="sim-device-title">${d.name}</div>
           <div class="sim-device-hwid">${d.hwid}</div>
         </td>
-        <td><span class="version-tag">${d.currentVersion}</span></td>
-        <td>
+        <td data-label="Current version"><span class="version-tag">${d.currentVersion}</span></td>
+        <td data-label="Available update">
           ${hasUpdate 
             ? `<span class="version-tag version-new">${d.newVersion} (${d.size})</span>` 
             : `<span class="version-tag" style="opacity: 0.5;">None</span>`}
         </td>
-        <td>${whqlBadge}</td>
-        <td><span class="status-cell ${hasUpdate ? 'text-success' : 'log-muted'}">${d.status}</span></td>
+        <td data-label="Certification">${whqlBadge}</td>
+        <td data-label="Status"><span class="status-cell ${hasUpdate ? 'text-success' : 'log-muted'}">${d.status}</span></td>
       `;
       tbody.appendChild(tr);
     });
@@ -362,4 +366,3 @@ ID  Fecha (UTC)          Operación  Dispositivo                   Versión ante
   // Initial table render
   renderTable();
 });
-
