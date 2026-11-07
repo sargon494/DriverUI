@@ -3,35 +3,61 @@ using Core.Models;
 namespace Core.Services;
 
 /// <summary>
-/// Página oficial de soporte de drivers de cada fabricante de placa base.
+/// Búsqueda oficial del modelo de placa base en el sitio de su fabricante.
 /// Solo se enlazan dominios oficiales; la app nunca descarga desde aquí.
 /// </summary>
 public sealed record OemSupportEntry(string Vendor, Uri SupportUrl);
 
 public static class OemSupportCatalog
 {
-    private static readonly Dictionary<string, OemSupportEntry> _entries =
-        new Dictionary<string, OemSupportEntry>(StringComparer.OrdinalIgnoreCase)
+    private sealed record OemSupportProvider(string Vendor, Func<string, Uri> CreateSearchUrl);
+
+    private static readonly OemSupportProvider Gigabyte = new(
+        "Gigabyte",
+        model => new Uri($"https://www.gigabyte.com/search?keyword={Uri.EscapeDataString(model)}&type=All"));
+
+    private static readonly OemSupportProvider Asus = new(
+        "ASUS",
+        model => new Uri($"https://www.asus.com/searchresult?searchType=products&searchKey={Uri.EscapeDataString(model)}&page=1"));
+
+    private static readonly OemSupportProvider Msi = new(
+        "MSI",
+        model => new Uri($"https://www.msi.com/search?kw={Uri.EscapeDataString(model)}"));
+
+    private static readonly OemSupportProvider Asrock = new(
+        "ASRock",
+        model => new Uri($"https://www.asrock.com/support/index.asp?Model={Uri.EscapeDataString(model)}"));
+
+    private static readonly Dictionary<string, OemSupportProvider> _providers =
+        new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Gigabyte"] = new("Gigabyte", new Uri("https://www.gigabyte.com/Support")),
-            ["ASUS"] = new("ASUS", new Uri("https://www.asus.com/support/")),
-            ["ASUSTeK COMPUTER INC."] = new("ASUS", new Uri("https://www.asus.com/support/")),
-            ["MSI"] = new("MSI", new Uri("https://www.msi.com/support")),
-            ["Micro-Star International Co., Ltd."] = new("MSI", new Uri("https://www.msi.com/support")),
-            ["ASRock"] = new("ASRock", new Uri("https://www.asrock.com/support/index.asp")),
+            ["Gigabyte"] = Gigabyte,
+            ["Gigabyte Technology Co., Ltd."] = Gigabyte,
+            ["ASUS"] = Asus,
+            ["ASUSTeK COMPUTER INC."] = Asus,
+            ["MSI"] = Msi,
+            ["Micro-Star International Co., Ltd."] = Msi,
+            ["ASRock"] = Asrock,
         };
 
     /// <summary>
-    /// Busca el soporte oficial del fabricante indicado. Devuelve null si no hay entrada
-    /// (en ese caso la UI debe mostrar el nombre tal cual y no enlazar nada).
+    /// Crea un enlace oficial de búsqueda para el modelo indicado. Devuelve null si el
+    /// fabricante no está soportado o el modelo está vacío.
     /// </summary>
     public static OemSupportEntry? Find(MotherboardInfo? board)
     {
-        if (board is null || string.IsNullOrWhiteSpace(board.Manufacturer))
+        if (board is null ||
+            string.IsNullOrWhiteSpace(board.Manufacturer) ||
+            string.IsNullOrWhiteSpace(board.Product))
         {
             return null;
         }
 
-        return _entries.TryGetValue(board.Manufacturer.Trim(), out var entry) ? entry : null;
+        if (!_providers.TryGetValue(board.Manufacturer.Trim(), out var provider))
+        {
+            return null;
+        }
+
+        return new OemSupportEntry(provider.Vendor, provider.CreateSearchUrl(board.Product.Trim()));
     }
 }

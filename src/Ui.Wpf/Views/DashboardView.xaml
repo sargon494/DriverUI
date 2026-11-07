@@ -57,7 +57,7 @@
                             <Hyperlink Command="{Binding OpenOemSupportCommand}"
                                        Foreground="{StaticResource AccentBrush}"
                                        TextDecorations="{x:Null}">
-                                <Run Text="Abrir soporte oficial de " />
+                                <Run Text="Buscar soporte y descargas en " />
                                 <Run Text="{Binding OemVendor}" />
                             </Hyperlink>
                         </TextBlock>

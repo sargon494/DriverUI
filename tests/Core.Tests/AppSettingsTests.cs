@@ -78,12 +78,62 @@ public sealed class OemSupportCatalogTests
         entry.Should().NotBeNull();
         entry!.SupportUrl.Scheme.Should().Be("https");
         entry.SupportUrl.Host.Should().EndWith("gigabyte.com");
+        entry.SupportUrl.AbsoluteUri.Should().Be(
+            "https://www.gigabyte.com/search?keyword=B760M%20DS3H%20DDR4&type=All");
+    }
+
+    [Fact]
+    public void Find_RecognizesGigabyteManufacturerReportedByWmi()
+    {
+        var entry = OemSupportCatalog.Find(new MotherboardInfo
+        {
+            Manufacturer = "Gigabyte Technology Co., Ltd.",
+            Product = "B760M DS3H DDR4"
+        });
+
+        entry.Should().NotBeNull();
+        entry!.Vendor.Should().Be("Gigabyte");
+        entry.SupportUrl.AbsoluteUri.Should().Be(
+            "https://www.gigabyte.com/search?keyword=B760M%20DS3H%20DDR4&type=All");
+    }
+
+    [Fact]
+    public void Find_SearchesAsusOfficialSiteForExactModel()
+    {
+        var entry = OemSupportCatalog.Find(new MotherboardInfo
+        {
+            Manufacturer = "ASUSTeK COMPUTER INC.",
+            Product = "TUF GAMING B650-PLUS"
+        });
+
+        entry.Should().NotBeNull();
+        entry!.Vendor.Should().Be("ASUS");
+        entry.SupportUrl.AbsoluteUri.Should().Be(
+            "https://www.asus.com/searchresult?searchType=products&searchKey=TUF%20GAMING%20B650-PLUS&page=1");
+    }
+
+    [Theory]
+    [InlineData("MSI", "MAG B650 TOMAHAWK WIFI", "www.msi.com")]
+    [InlineData("ASRock", "B650M Pro RS", "www.asrock.com")]
+    public void Find_IncludesExactModelInOfficialVendorSearch(string manufacturer, string model, string host)
+    {
+        var entry = OemSupportCatalog.Find(new MotherboardInfo
+        {
+            Manufacturer = manufacturer,
+            Product = model
+        });
+
+        entry.Should().NotBeNull();
+        entry!.SupportUrl.Scheme.Should().Be("https");
+        entry.SupportUrl.Host.Should().Be(host);
+        Uri.UnescapeDataString(entry.SupportUrl.Query).Should().Contain(model);
     }
 
     [Fact]
     public void Find_ReturnsNullForUnknownVendorOrMissingBoard()
     {
         OemSupportCatalog.Find(new MotherboardInfo { Manufacturer = "Acme", Product = "X" }).Should().BeNull();
+        OemSupportCatalog.Find(new MotherboardInfo { Manufacturer = "Gigabyte", Product = " " }).Should().BeNull();
         OemSupportCatalog.Find(null).Should().BeNull();
     }
 }

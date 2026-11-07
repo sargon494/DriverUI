@@ -165,8 +165,9 @@ El caso está pendiente de validación aislada; consulta `TESTING.md` para las r
 
 ```
 DashboardViewModel → GetMotherboard → Win32_BaseBoard
-OemSupportCatalog.Find(fabricante) → URL oficial HTTPS
-El botón solo abre el navegador. No se descarga nada.
+OemSupportCatalog.Find(fabricante, modelo) → búsqueda oficial HTTPS del modelo
+El usuario elige el producto/revisión en el sitio OEM y abre sus descargas.
+La aplicación solo abre el navegador; no descarga ni instala desde esa página.
 ```
 
 ## 6. Almacenamiento
@@ -188,8 +189,8 @@ Las reglas de trabajo están en `AGENTS.md`; `DESIGN.md` conserva las decisiones
 - El pipe solo acepta usuarios locales. La ACL se configura al crear el pipe.
 - La política exige firma válida y, por defecto, WHQL. Véase la limitación del flujo de verificación descrita arriba: el adaptador WUA actual no devuelve rutas de archivos.
 - Siempre hay punto de restauración antes de instalar. Si no se puede crear, no se instala.
-- Las URL de soporte son HTTPS y pertenecen a la lista de `OemSupportCatalog`.
-- El producto consulta Windows Update mediante WUA; el botón de soporte OEM abre en el navegador una URL HTTPS del catálogo local. No hay backend propio ni telemetría del proyecto.
+- Las búsquedas de soporte se generan solo para fabricantes conocidos y usan HTTPS en sus dominios oficiales. El modelo WMI se codifica como parámetro de búsqueda; no se supone la revisión de la placa.
+- El producto consulta Windows Update mediante WUA; el botón de soporte OEM abre en el navegador una búsqueda HTTPS del modelo en el sitio oficial. No hay backend propio ni telemetría del proyecto.
 
 ## 8. Cómo extender
 

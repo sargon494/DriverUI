@@ -74,8 +74,8 @@ public sealed partial class DashboardViewModel : PageViewModelBase
     }
 
     /// <summary>
-    /// Muestra la placa base y el soporte oficial de su fabricante. No descarga nada:
-    /// solo abre la página oficial en el navegador.
+    /// Muestra la placa base y busca su modelo en el sitio oficial del fabricante.
+    /// No descarga nada: solo abre la búsqueda oficial en el navegador.
     /// </summary>
     [RelayCommand]
     private void OpenOemSupport()
