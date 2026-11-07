@@ -108,6 +108,12 @@ public sealed class WuaDriverInstaller : IDriverInstaller
                 StatusMessage = "Verificando firmas digitales de seguridad..."
             });
 
+            if (downloadResult.DownloadedFilePaths.Count == 0)
+            {
+                const string verificationError = "No se pudo verificar la firma digital: Windows Update no proporcionó archivos descargados para comprobar. Instalación abortada por seguridad.";
+                return await RecordFailureAsync(update, verificationError, InstallPhase.Verifying, progress, ct).ConfigureAwait(false);
+            }
+
             foreach (var filePath in downloadResult.DownloadedFilePaths)
             {
                 var sigResult = await _signatureVerifier.VerifyAsync(filePath, ct).ConfigureAwait(false);

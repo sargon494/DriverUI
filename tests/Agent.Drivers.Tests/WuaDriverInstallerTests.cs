@@ -112,7 +112,16 @@ public sealed class WuaDriverInstallerTests
             {
                 Success = true,
                 ErrorMessage = null,
-                DownloadedFilePaths = []
+                DownloadedFilePaths = [@"C:\temp\driver.sys"]
+            });
+
+        _signatureVerifier.VerifyAsync(@"C:\temp\driver.sys", Arg.Any<CancellationToken>())
+            .Returns(new SignatureVerificationResult
+            {
+                IsValid = true,
+                SignerName = "Microsoft Windows Hardware Compatibility Publisher",
+                FailureReason = null,
+                IsWhql = true
             });
 
         _restorePointService.CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -134,6 +143,37 @@ public sealed class WuaDriverInstallerTests
                 !e.Success &&
                 e.ErrorMessage != null &&
                 e.ErrorMessage.Contains("punto de restauración")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task InstallAsync_Should_Abort_And_Record_Failure_When_No_Downloaded_Files_Can_Be_Verified()
+    {
+        var update = CreateSampleUpdate();
+
+        _wuaExecutor.DownloadAsync(update.UpdateId, Arg.Any<CancellationToken>())
+            .Returns(new WuaDownloadResult
+            {
+                Success = true,
+                ErrorMessage = null,
+                DownloadedFilePaths = []
+            });
+
+        var result = await _installer.InstallAsync(update);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("No se pudo verificar la firma");
+
+        await _signatureVerifier.DidNotReceive().VerifyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _restorePointService.DidNotReceive().CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _wuaExecutor.DidNotReceive().InstallAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _operationHistory.Received(1).RecordAsync(
+            Arg.Is<OperationLogEntry>(entry =>
+                entry.OperationType == "Install" &&
+                entry.UpdateId == update.UpdateId &&
+                !entry.Success &&
+                entry.ErrorMessage != null &&
+                entry.ErrorMessage.Contains("No se pudo verificar la firma")),
             Arg.Any<CancellationToken>());
     }
 
@@ -364,7 +404,16 @@ public sealed class WuaDriverInstallerTests
             {
                 Success = true,
                 ErrorMessage = null,
-                DownloadedFilePaths = []
+                DownloadedFilePaths = [@"C:\temp\driver.sys"]
+            });
+
+        _signatureVerifier.VerifyAsync(@"C:\temp\driver.sys", Arg.Any<CancellationToken>())
+            .Returns(new SignatureVerificationResult
+            {
+                IsValid = true,
+                SignerName = "Microsoft Windows Hardware Compatibility Publisher",
+                FailureReason = null,
+                IsWhql = true
             });
 
         _restorePointService.CreateRestorePointAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
