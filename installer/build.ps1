@@ -41,9 +41,13 @@ if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar la versión de WiX." }
 if ($wixVersion -notmatch '^4\.') {
     throw "Se requiere WiX v4 para este proyecto (WiX v7 requiere aceptar la EULA OSMF). Instala WiX 4.0.5: dotnet tool install --global wix --version 4.0.5"
 }
-Write-Host "== wix extension list"
-$extensionList = wix extension list 2>&1
+Write-Host "== wix extension list -g"
+$extensionList = wix extension list -g 2>&1
+$extensionListCode = $LASTEXITCODE
 $extensionList | ForEach-Object { Write-Host $_ }
+if ($extensionListCode -ne 0) {
+    throw "No se pudo consultar la lista global de extensiones WiX (código $extensionListCode)."
+}
 if (($extensionList -join "`n") -notmatch 'WixToolset\.Util\.wixext') {
     throw "Falta WixToolset.Util.wixext 4.0.5. Instalala con: wix extension add -g WixToolset.Util.wixext/4.0.5"
 }
