@@ -33,13 +33,18 @@ if ($LASTEXITCODE -ne 0) { throw "La generación del SBOM o los avisos de tercer
 
 $msi = Join-Path $art "DriverUpdater-$Version-x64.msi"
 
-# Diagnóstico: versión de WiX y aceptación de la EULA, con salida visible (sin silenciar errores)
+# Diagnóstico de WiX v4 con salida visible (sin silenciar errores)
 Write-Host "== wix --version"
 wix --version
-Write-Host "== wix eula accept wix7"
-wix eula accept wix7
+Write-Host "== wix extension list"
+$extensionList = wix extension list 2>&1
+$extensionList | ForEach-Object { Write-Host $_ }
+if (($extensionList -join "`n") -notmatch 'WixToolset\.Util\.wixext') {
+    throw "Falta la extension WiX Util. Instalala con: wix extension add -g WixToolset.Util.wixext"
+}
 Write-Host "== wix build"
 $wixOut = wix build (Join-Path $PSScriptRoot 'DriverUpdater.wxs') -arch x64 `
+    -ext WixToolset.Util.wixext `
     -d "Version=$Version" -d "AgentServiceDir=$svcDir" -d "UiDir=$uiDir" `
     -d "ProjectLicenseFile=$(Join-Path $root 'LICENSE')" `
     -d "ThirdPartyNoticesFile=$(Join-Path $art 'THIRD-PARTY-NOTICES.txt')" `

@@ -601,3 +601,31 @@ Este documento registra de forma cronológica y detallada cada sprint ejecutado 
 - El SBOM automatizado inventaría los paquetes NuGet con activos de ejecución resueltos para estos proyectos y los frameworks que figuran en sus runtimeconfig. No sustituye una auditoría legal de las dependencias, del contenido final del MSI ni de los avisos de cada distribución.
 - Revisar el SBOM y `THIRD-PARTY-NOTICES.txt` generados en cada versión antes de publicar, y validar que las versiones de runtime/avisos usados por el build son los mismos que se incluyen en el paquete.
 - La revisión documental no constituye asesoramiento jurídico ni una certificación de cumplimiento.
+
+## Sprint 9 — Calidad y limpieza opcional al desinstalar
+
+- **Fecha**: 2026-11-07
+- **Estado**: 🟡 Implementado; validación del flujo real pendiente en VM
+- **Hito**: Robustez y experiencia de desinstalación
+
+### Tareas completadas
+- [x] **S9-T1: Opción interactiva para borrar datos locales** (`installer/DriverUpdater.wxs`):
+  - Añadido un diálogo de desinstalación con una casilla desmarcada por defecto para eliminar `%ProgramData%\DriverUpdater`.
+  - La limpieza solo se ejecuta en una desinstalación interactiva cuando se selecciona expresamente; las desinstalaciones silenciosas y las actualizaciones conservan los datos.
+  - Documentados el alcance de la limpieza y los registros de CLI que pueden quedar fuera de esa carpeta.
+- [x] **S9-T2: Fallos de instalación explícitos y dependencias WiX** (`installer/DriverUpdater.wxs`, `installer/build.ps1`, `installer/README.md`):
+  - Un fallo al aplicar la ACL del servicio ahora detiene la instalación en lugar de ignorarse.
+  - El build comprueba la extensión `WixToolset.Util.wixext` y se corrigió el uso del comando EULA, incompatible con WiX 4.
+  - Documentada la versión WiX 4.0.5 y la extensión necesaria.
+- [x] **S9-T3: Información de privacidad actualizada** (`PRIVACY.md`, `README.md`, `installer/README.md`):
+  - Explicado cuándo se conservan o eliminan los datos locales al desinstalar y qué datos quedan fuera de la limpieza del MSI.
+
+### Validación ejecutada
+- Build del MSI `DriverUpdater-1.0.1-x64.msi` completado con WiX 4.0.5.
+- Inspeccionadas las tablas del MSI generado: diálogo, condición de secuencia, acción de limpieza y propiedad del directorio de datos presentes.
+- `dotnet test -c Release`: 151/151 pruebas pasaron.
+- `dotnet format --verify-no-changes` y `git diff --check` completados sin errores.
+
+### Limitaciones y seguimiento
+- Pendiente probar en una VM la desinstalación interactiva con la casilla marcada y desmarcada, la desinstalación silenciosa y una actualización. No se ejecutó el MSI en el equipo de desarrollo.
+- La limpieza solo cubre `%ProgramData%\DriverUpdater`; los logs de CLI guardados en otra ruta no se eliminan.

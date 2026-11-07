@@ -15,7 +15,8 @@ Al desinstalar, el servicio se detiene y se elimina antes de borrar los ficheros
 ## Compilar
 
 ```powershell
-dotnet tool install --global wix          # WiX v4
+dotnet tool install --global wix --version 4.0.5
+wix extension add -g WixToolset.Util.wixext/4.0.5
 .\installer\build.ps1 -Version 1.0.0      # genera installer\artifacts\DriverUpdater-1.0.0-x64.msi
 ```
 
@@ -34,8 +35,12 @@ publicar una versión.
 msiexec /i installer\artifacts\DriverUpdater-1.0.0-x64.msi /l*v install.log
 ```
 
-Comprobar: el servicio `DriverUpdater` está en marcha, la UI abre y conecta ("Servicio activo"), y el
-desinstalador (`msiexec /x`) deja el sistema sin restos en Program Files ni servicio registrado.
+Comprobar: después de abrir la UI, esta inicia el servicio `DriverUpdater` y conecta ("Servicio activo").
+Al desinstalar de forma interactiva, aparece una opción desmarcada por defecto para borrar
+`%ProgramData%\DriverUpdater` (historial, ajustes y registros). Si no se marca, los datos se conservan;
+la desinstalación silenciosa también los conserva. Las actualizaciones de versión nunca muestran la
+opción ni eliminan los datos. Probar ambos resultados, además de confirmar que se detiene y elimina el
+servicio y los archivos de `Program Files`.
 
 ## Pendiente
 
@@ -43,5 +48,5 @@ desinstalador (`msiexec /x`) deja el sistema sin restos en Program Files ni serv
 - Asistente gráfico: añadir la extensión `WixToolset.UI` (ahora la instalación es silenciosa por defecto).
 - Firma de código del MSI y de los `.exe` (`signtool`), requisito del Hito 4.
 - Revisar el SBOM y los avisos generados por versión antes de cada publicación.
-- `%ProgramData%\DriverUpdater` (historial, logs y configuración) no se borra al desinstalar; el usuario debe decidir si elimina esos datos. Consulta [PRIVACY.md](../PRIVACY.md).
+- La limpieza opcional del desinstalador cubre `%ProgramData%\DriverUpdater`; los logs de la CLI guardados en el directorio desde el que se ejecuta quedan fuera de esa carpeta.
 - Actualizaciones automáticas (autoactualización) quedan fuera de este MSI.

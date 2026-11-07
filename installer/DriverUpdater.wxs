@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Instalador MSI de DriverUpdater (WiX v4).
-  Registra el servicio de Windows (Agent.Service, cuenta LocalSystem, inicio automático)
+  Registra el servicio de Windows (Agent.Service, cuenta LocalSystem, inicio bajo demanda)
   e instala la UI (Ui.Wpf, sin elevación) con acceso desde el menú Inicio.
   Compilar con installer/build.ps1. Variables: Version, AgentServiceDir, UiDir.
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <Package Name="DriverUpdater"
            Manufacturer="sargon494"
@@ -18,6 +19,66 @@
     <MajorUpgrade DowngradeErrorMessage="Ya hay una versión más reciente de DriverUpdater instalada." />
     <MediaTemplate EmbedCab="yes" />
 
+    <Property Id="REMOVEAPPDATA" Secure="yes" />
+    <Property Id="APPDATADIR" Value="%ProgramData%\DriverUpdater" />
+
+    <UI>
+      <Dialog Id="UninstallDataDialog"
+              Width="370"
+              Height="170"
+              Title="Desinstalar DriverUpdater">
+        <Control Id="DialogTitle"
+                 Type="Text"
+                 X="18"
+                 Y="16"
+                 Width="334"
+                 Height="20"
+                 Text="¿Qué quieres hacer con los datos locales?" />
+        <Control Id="DialogDescription"
+                 Type="Text"
+                 X="18"
+                 Y="42"
+                 Width="334"
+                 Height="42"
+                 Text="Se conservan por defecto. Puedes eliminar el historial, los ajustes y los registros guardados en %ProgramData%\DriverUpdater. Esta acción no se puede deshacer." />
+        <Control Id="RemoveDataCheckBox"
+                 Type="CheckBox"
+                 X="18"
+                 Y="91"
+                 Width="334"
+                 Height="20"
+                 Property="REMOVEAPPDATA"
+                 CheckBoxValue="1"
+                 Text="Eliminar los datos locales de DriverUpdater" />
+        <Control Id="CancelUninstall"
+                 Type="PushButton"
+                 X="193"
+                 Y="135"
+                 Width="75"
+                 Height="22"
+                 Text="Cancelar"
+                 Cancel="yes">
+          <Publish Event="EndDialog" Value="Exit" />
+        </Control>
+        <Control Id="ContinueUninstall"
+                 Type="PushButton"
+                 X="277"
+                 Y="135"
+                 Width="75"
+                 Height="22"
+                 Text="Desinstalar"
+                 Default="yes">
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+      </Dialog>
+
+      <InstallUISequence>
+        <Show Dialog="UninstallDataDialog"
+              Before="ExecuteAction"
+              Condition="REMOVE=&quot;ALL&quot; AND UILevel &gt;= 4 AND NOT UPGRADINGPRODUCTCODE" />
+      </InstallUISequence>
+    </UI>
+
     <Feature Id="Main" Title="DriverUpdater" Level="1">
       <ComponentRef Id="AgentServiceComponent" />
       <ComponentRef Id="UiComponent" />
@@ -29,11 +90,11 @@
     <!-- Permiso para que los usuarios interactivos INICIEN y DETENGAN el servicio (RP/WP),
          sin poder cambiar su configuración. Se aplica tras instalar el servicio. -->
     <CustomAction Id="GrantInteractiveStartStop"
-                  Directory="INSTALLFOLDER"
+                  Directory="SystemFolder"
                   ExeCommand='sc.exe sdset DriverUpdater "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;IU)"'
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
     <InstallExecuteSequence>
       <Custom Action="GrantInteractiveStartStop" After="InstallServices" Condition="NOT REMOVE" />
     </InstallExecuteSequence>
@@ -44,6 +105,10 @@
 
         <!-- Servicio de Windows: el propio binario de Agent.Service -->
         <Component Id="AgentServiceComponent" Guid="80E3759C-18F3-417F-B16C-DDCB5BD035EB" Bitness="always64">
+          <util:RemoveFolderEx Id="RemoveAppDataFolder"
+                               Property="APPDATADIR"
+                               On="uninstall"
+                               Condition="REMOVEAPPDATA=1 AND NOT UPGRADINGPRODUCTCODE" />
           <File Id="AgentServiceExe"
                 Source="$(var.AgentServiceDir)\Agent.Service.exe"
                 KeyPath="yes" />
@@ -59,7 +124,7 @@
                           Account="LocalSystem"
                           Vital="yes" />
 
-          <!-- Arranca tras instalar; se detiene y elimina antes de borrar los ficheros al desinstalar -->
+          <!-- Se inicia bajo demanda desde la UI y se detiene y elimina al desinstalar -->
           <ServiceControl Id="DriverUpdaterServiceControl"
                           Name="DriverUpdater"
                           Start="none"

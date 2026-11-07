@@ -22,11 +22,14 @@ Para funcionar, la aplicación puede acceder localmente a:
 - Registros técnicos del servicio, que pueden incluir detalles de errores.
 
 La configuración, el historial y los registros se guardan en el equipo, bajo
-`%ProgramData%\DriverUpdater`. La aplicación no los envía al mantenedor. La
-desinstalación actual no elimina esta carpeta. Para borrar esos datos, cierra
-la aplicación, desinstálala y elimina manualmente la carpeta. La herramienta
-CLI también puede crear registros en una carpeta `logs` relativa al directorio
-desde el que se ejecuta.
+`%ProgramData%\DriverUpdater`. La aplicación no los envía al mantenedor. Al
+desinstalar de forma interactiva, el instalador ofrece una casilla, desmarcada
+por defecto, para borrar esta carpeta. Si se deja desmarcada o se usa una
+desinstalación silenciosa, los datos se conservan y se pueden borrar
+manualmente. Las actualizaciones de versión no eliminan la carpeta. La
+herramienta CLI también puede crear registros en una carpeta `logs` relativa al
+directorio desde el que se ejecuta; esos registros quedan fuera de la limpieza
+del MSI.
 
 Al buscar o instalar controladores, la aplicación utiliza Windows Update Agent
 (WUA) de Windows. La comunicación con Windows Update la realizan Windows y sus
