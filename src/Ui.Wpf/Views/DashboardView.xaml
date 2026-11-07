@@ -42,19 +42,22 @@
                                    Foreground="{StaticResource TextTertiaryBrush}" />
                     </StackPanel>
 
-                    <!-- Placa base y soporte oficial del fabricante (solo enlace, sin descargas) -->
-                    <StackPanel Orientation="Horizontal" Margin="0 6 0 0"
-                                Visibility="{Binding MotherboardName, Converter={StaticResource NotNullToVis}}">
+                    <!-- El soporte OEM se abre en el navegador; nunca se descargan drivers desde aquí. -->
+                    <StackPanel Orientation="Horizontal" Margin="0 6 0 0">
                         <TextBlock Style="{StaticResource TextCaption}" Text="Placa base:" />
                         <TextBlock Style="{StaticResource TextCaption}" Margin="6 0 0 0"
-                                   Text="{Binding MotherboardName}"
+                                   Text="{Binding MotherboardName, TargetNullValue='No detectada'}"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock Style="{StaticResource TextCaption}" Margin="12 0 0 0"
+                                   Text="{Binding MotherboardSupportStatus}"
+                                   Visibility="{Binding MotherboardSupportStatus, Converter={StaticResource NotNullToVis}}"
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                         <TextBlock Style="{StaticResource TextCaption}" Margin="12 0 0 0"
                                    Visibility="{Binding OemSupportUrl, Converter={StaticResource NotNullToVis}}">
                             <Hyperlink Command="{Binding OpenOemSupportCommand}"
                                        Foreground="{StaticResource AccentBrush}"
                                        TextDecorations="{x:Null}">
-                                <Run Text="Drivers oficiales en" />
+                                <Run Text="Abrir soporte oficial de " />
                                 <Run Text="{Binding OemVendor}" />
                             </Hyperlink>
                         </TextBlock>

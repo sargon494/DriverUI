@@ -35,6 +35,7 @@ public sealed partial class DashboardViewModel : PageViewModelBase
     [ObservableProperty] private string? _motherboardName;
     [ObservableProperty] private string? _oemVendor;
     [ObservableProperty] private Uri? _oemSupportUrl;
+    [ObservableProperty] private string? _motherboardSupportStatus = "Consultando la placa base…";
 
     public ObservableCollection<InstalledDriverMsg> Drivers { get; } = [];
     public ObservableCollection<InstalledDriverMsg> FilteredDrivers { get; } = [];
@@ -94,6 +95,7 @@ public sealed partial class DashboardViewModel : PageViewModelBase
             var board = await _agent.GetMotherboardAsync(PageToken);
             if (!board.Detected)
             {
+                MotherboardSupportStatus = "No detectada; en una máquina virtual puede aparecer hardware virtual.";
                 return;
             }
 
@@ -105,9 +107,13 @@ public sealed partial class DashboardViewModel : PageViewModelBase
             });
             OemVendor = entry?.Vendor;
             OemSupportUrl = entry?.SupportUrl;
+            MotherboardSupportStatus = entry is null
+                ? "No hay enlace oficial disponible para este fabricante."
+                : null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            MotherboardSupportStatus = "No se pudo consultar el servicio.";
             _logger.LogWarning(ex, "No se pudo obtener la placa base del servicio.");
         }
     }
