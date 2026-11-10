@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a problem with DriverUpdater
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug.
+
+        **Security problems must not be reported here.** Follow [SECURITY.md](../../SECURITY.md) instead.
+
+        **Do not paste hardware IDs, serial numbers, usernames, or log files that contain them.** Replace them with placeholders. See [PRIVACY.md](../../PRIVACY.md).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Updates page
+        2. Press "Search for updates"
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: DriverUpdater version
+      description: Shown in the installer name or the release you installed (for example, 1.0.0), or the commit you built from.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows version
+      options:
+        - Windows 10 22H2
+        - Windows 11
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did you run it?
+      options:
+        - Virtual machine
+        - Physical computer
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional information
+      description: Screenshots, the operation involved (scan, search, install, rollback), and any error message. Sanitize identifiers before attaching anything.
