@@ -12,32 +12,32 @@ public static class OemSupportCatalog
 {
     private sealed record OemSupportProvider(string Vendor, Func<string, Uri> CreateSearchUrl);
 
-    private static readonly OemSupportProvider Gigabyte = new(
+    private static readonly OemSupportProvider _gigabyte = new(
         "Gigabyte",
         model => new Uri($"https://www.gigabyte.com/search?keyword={Uri.EscapeDataString(model)}&type=All"));
 
-    private static readonly OemSupportProvider Asus = new(
+    private static readonly OemSupportProvider _asus = new(
         "ASUS",
         model => new Uri($"https://www.asus.com/searchresult?searchType=products&searchKey={Uri.EscapeDataString(model)}&page=1"));
 
-    private static readonly OemSupportProvider Msi = new(
+    private static readonly OemSupportProvider _msi = new(
         "MSI",
         model => new Uri($"https://www.msi.com/search?kw={Uri.EscapeDataString(model)}"));
 
-    private static readonly OemSupportProvider Asrock = new(
+    private static readonly OemSupportProvider _asrock = new(
         "ASRock",
         model => new Uri($"https://www.asrock.com/support/index.asp?Model={Uri.EscapeDataString(model)}"));
 
     private static readonly Dictionary<string, OemSupportProvider> _providers =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Gigabyte"] = Gigabyte,
-            ["Gigabyte Technology Co., Ltd."] = Gigabyte,
-            ["ASUS"] = Asus,
-            ["ASUSTeK COMPUTER INC."] = Asus,
-            ["MSI"] = Msi,
-            ["Micro-Star International Co., Ltd."] = Msi,
-            ["ASRock"] = Asrock,
+            ["Gigabyte"] = _gigabyte,
+            ["Gigabyte Technology Co., Ltd."] = _gigabyte,
+            ["ASUS"] = _asus,
+            ["ASUSTeK COMPUTER INC."] = _asus,
+            ["MSI"] = _msi,
+            ["Micro-Star International Co., Ltd."] = _msi,
+            ["ASRock"] = _asrock,
         };
 
     /// <summary>
