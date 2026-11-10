@@ -11,5 +11,6 @@
     <Project Path="tests/Agent.Drivers.Tests/Agent.Drivers.Tests.csproj" />
     <Project Path="tests/Agent.Service.Tests/Agent.Service.Tests.csproj" />
     <Project Path="tests/Core.Tests/Core.Tests.csproj" />
+    <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
   </Folder>
 </Solution>
