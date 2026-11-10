@@ -1,122 +1,122 @@
 # MVP.md
 
-Alcance de la primera versión utilizable de **DriverUpdater**.
+Scope of the first usable version of **DriverUpdater**.
 
-## 1. Objetivo del MVP
+## 1. MVP goal
 
-Demostrar que se puede **detectar e instalar actualizaciones de drivers de forma segura** en Windows 10/11 usando únicamente **Windows Update** como fuente, con un servicio en segundo plano y una interfaz sencilla.
+Demonstrate that driver updates can be **detected and installed safely** on Windows 10/11 using **only Windows Update** as the source, with a background service and a simple interface.
 
-El MVP **no necesita backend**.
+The MVP **does not need a backend**.
 
-## 2. Alcance
+## 2. Scope
 
-### Incluido
-- Inventario de drivers instalados.
-- Búsqueda de actualizaciones de drivers vía Windows Update Agent.
-- Instalación de uno o varios drivers.
-- Verificación de firma digital antes de instalar; WHQL es obligatorio por defecto y el usuario puede desactivar solo ese requisito.
-- Punto de restauración previo a la instalación de cada controlador.
-- Rollback de la última actualización.
-- Historial de operaciones y log.
-- Servicio de Windows + UI WPF sin privilegios.
-- Comprobación programada opcional (diaria/semanal) con indicador pasivo dentro de la aplicación; sin notificaciones de escritorio.
-- CLI de diagnóstico.
+### Included
+- Inventory of installed drivers.
+- Driver update search through the Windows Update Agent.
+- Installation of one or several drivers.
+- Digital signature verification before installing; WHQL is required by default, and the user can disable only that requirement.
+- A restore point before installing each driver.
+- Rollback of the last update.
+- Operations history and log.
+- Windows service + WPF UI without privileges.
+- Optional scheduled check (daily/weekly) with a passive indicator inside the application; no desktop notifications.
+- Diagnostic CLI.
 
-### Excluido (fases posteriores)
-- Backend, cuentas, licencias, telemetría.
-- Fuentes OEM o de fabricantes de componentes (NVIDIA, AMD, Intel).
-- Gestión de flotas / consola web.
-- Autoactualización de la aplicación.
-- Localización a varios idiomas (el MVP en español).
-- Notificaciones toast o tareas programadas por usuario.
+### Excluded (later phases)
+- Backend, accounts, licenses, telemetry.
+- OEM or component-manufacturer sources (NVIDIA, AMD, Intel).
+- Fleet management / web console.
+- Self-update of the application.
+- Localization into several languages (the MVP is in Spanish).
+- Toast notifications or user-defined scheduled tasks.
 
-## 3. Historias de usuario
+## 3. User stories
 
-| ID | Como usuario quiero… | Para… |
+| ID | As a user, I want… | So that… |
 |---|---|---|
-| U1 | ver la lista de drivers instalados con versión y fecha | saber el estado de mi equipo |
-| U2 | pulsar "Buscar actualizaciones" y ver cuáles hay | decidir qué instalar |
-| U3 | instalar un driver concreto o todos los pendientes | mantener el equipo actualizado |
-| U4 | que se cree un punto de restauración antes de instalar | poder volver atrás si algo falla |
-| U5 | deshacer la última actualización | recuperar un driver que da problemas |
-| U6 | ver un historial de lo que se instaló y cuándo | tener trazabilidad |
-| U7 | excluir drivers que no quiero actualizar | evitar cambios en hardware sensible |
-| U8 | que la app compruebe actualizaciones sola | no tener que acordarme |
+| U1 | to see the list of installed drivers with version and date | I know the state of my computer |
+| U2 | to press "Search for updates" and see which ones exist | I can decide what to install |
+| U3 | to install a specific driver or all pending ones | I keep the computer up to date |
+| U4 | a restore point to be created before installing | I can go back if something fails |
+| U5 | to undo the last update | I can recover a driver that causes problems |
+| U6 | to see a history of what was installed and when | I have traceability |
+| U7 | to exclude drivers I do not want to update | I avoid changes to sensitive hardware |
+| U8 | the app to check for updates by itself | I do not have to remember |
 
-## 4. Criterios de aceptación
+## 4. Acceptance criteria
 
-- **U1**: el inventario muestra nombre, fabricante, versión, fecha y estado de cada dispositivo; tarda menos de 30 s.
-- **U2**: la búsqueda lista solo actualizaciones de tipo driver, con versión actual → nueva.
-- **U3**: la instalación muestra progreso, informa de éxito o error por driver y avisa si hace falta reiniciar.
-- **U4**: si no se puede crear el punto de restauración, la instalación **no continúa** y se informa al usuario.
-- **U5**: tras el rollback, la versión del driver vuelve a la anterior y queda registrado.
-- **U6**: el historial persiste tras reiniciar el equipo.
-- **U7**: un driver excluido no aparece en actualizaciones ni se instala en lote.
-- **U8**: si está activada, la comprobación se ejecuta cada 24 o 168 horas mientras el servicio esté activo; el resultado nuevo se refleja una vez en el indicador de Actualizaciones. No hay toast ni tarea programada por usuario.
-- **Seguridad**: un paquete con firma inválida o sin firma es rechazado y registrado.
-- **Rendimiento**: servicio en reposo por debajo de 50 MB de RAM.
+- **U1**: the inventory shows the name, manufacturer, version, date, and status of each device; it takes less than 30 s.
+- **U2**: the search lists only driver-type updates, with current → new version.
+- **U3**: installation shows progress, reports success or error per driver, and warns if a reboot is needed.
+- **U4**: if the restore point cannot be created, installation **does not continue** and the user is informed.
+- **U5**: after the rollback, the driver version returns to the previous one and this is recorded.
+- **U6**: the history persists after the computer restarts.
+- **U7**: an excluded driver does not appear in updates and is not installed in batch.
+- **U8**: if enabled, the check runs every 24 or 168 hours while the service is active; a new result is shown once in the Updates indicator. There is no toast and no user-defined scheduled task.
+- **Security**: a package with an invalid or missing signature is rejected and recorded.
+- **Performance**: the idle service uses less than 50 MB of RAM.
 
-## 5. Hitos y tareas
+## 5. Milestones and tasks
 
-### Hito 0: Prototipos (1-2 semanas)
-- [x] Crear solución .NET 10 y proyectos `Core`, `Agent.Drivers`, `Cli`.
-- [x] Listar drivers con `Win32_PnPSignedDriver`.
-- [x] Buscar drivers con WUA (`Type='Driver'`) y mostrar resultados.
-- [ ] Instalar un driver de prueba en una VM (reservado para pruebas en VM).
-- [x] Decisión go / no-go: ¿la fuente da resultados útiles?
+### Milestone 0: Prototypes (1–2 weeks)
+- [x] Create the .NET 10 solution and the `Core`, `Agent.Drivers`, and `Cli` projects.
+- [x] List drivers with `Win32_PnPSignedDriver`.
+- [x] Search for drivers with WUA (`Type='Driver'`) and show the results.
+- [ ] Install a test driver in a VM (reserved for VM testing).
+- [x] Go / no-go decision: does the source give useful results?
 
-### Hito 1: Núcleo + CLI (3-4 semanas)
-- [x] Modelos e interfaces en `Core`; comparación de versiones con tests.
-- [x] `IDriverInventory` y `IUpdateSource` (WUA).
+### Milestone 1: Core + CLI (3–4 weeks)
+- [x] Models and interfaces in `Core`; version comparison with tests.
+- [x] `IDriverInventory` and `IUpdateSource` (WUA).
 - [x] `ISignatureVerifier` (WinVerifyTrust).
 - [x] `IRestorePointService`.
-- [x] `IDriverInstaller` con instalación, registro y rollback.
-- [x] Historial en SQLite.
-- [x] Comandos CLI: `scan`, `updates`, `install`, `rollback`, `log`.
+- [x] `IDriverInstaller` with installation, recording, and rollback.
+- [x] History in SQLite.
+- [x] CLI commands: `scan`, `updates`, `install`, `rollback`, `log`.
 
-### Hito 2: Servicio + UI (3-4 semanas)
-- [x] Worker Service como servicio de Windows.
-- [x] Servidor gRPC sobre named pipe con ACL restringida.
-- [x] Cola de operaciones (una instalación a la vez) y cancelación.
-- [x] UI WPF: inicio, lista de actualizaciones, historial, ajustes.
-- [x] Exclusiones y comprobación programada.
-- [x] Indicador de comprobación programada y aviso de reinicio pendiente dentro de la app; sin notificaciones de escritorio.
+### Milestone 2: Service + UI (3–4 weeks)
+- [x] Worker Service running as a Windows service.
+- [x] gRPC server over a named pipe with restricted ACL.
+- [x] Operations queue (one installation at a time) and cancellation.
+- [x] WPF UI: home, update list, history, settings.
+- [x] Exclusions and scheduled check.
+- [x] Scheduled check indicator and pending-reboot notice inside the app; no desktop notifications.
 
-### Hito 3: Seguridad y robustez (2-3 semanas)
-- [x] Firma válida obligatoria; WHQL exigido por defecto con opción avanzada para aceptar firmas válidas no-WHQL.
-- [ ] Pruebas en VMs con Windows 10 y 11 y pruebas no destructivas en 2-3 equipos reales (documentadas en `TESTING.md`). Las instalaciones reales de drivers se prueban solo en VM.
-- [ ] Pruebas de fallo (corte de red, firma inválida, reinicio durante instalación) (documentado en `TESTING.md`).
-- [x] Revisión de ACL del pipe y validación de entradas.
+### Milestone 3: Security and robustness (2–3 weeks)
+- [x] Valid signature required; WHQL required by default, with an advanced option to accept valid non-WHQL signatures.
+- [ ] Tests on Windows 10 and 11 VMs and non-destructive tests on 2–3 real computers (documented in `TESTING.md`). Real driver installations are tested only in VMs.
+- [ ] Failure tests (network cut, invalid signature, reboot during installation) (documented in `TESTING.md`).
+- [x] Review of the pipe ACL and input validation.
 
-### Hito 4: Instalador y beta (2 semanas)
-- [x] MSI con WiX que registre servicio y UI.
-- [ ] Firma de código del instalador y binarios.
-- [ ] Beta cerrada con pocos usuarios y recogida de feedback.
+### Milestone 4: Installer and beta (2 weeks)
+- [x] MSI with WiX that registers the service and the UI.
+- [ ] Code signing of the installer and binaries.
+- [ ] Closed beta with a few users and feedback collection.
 
-## 6. Definición de "hecho" para el MVP
+## 6. Definition of "done" for the MVP
 
-- Todos los criterios de aceptación cumplidos.
-- Probado en Windows 10 y 11 en VM; cualquier prueba de instalación real se hace solo en VM, nunca en el equipo principal de desarrollo.
-- Sin warnings en `Release`; tests unitarios en verde.
-- Instalador firmado que instala y desinstala sin dejar restos.
-- Documentación mínima de usuario (instalar, escanear, actualizar, deshacer).
+- All acceptance criteria met.
+- Tested on Windows 10 and 11 in VMs; any real installation test is done only in a VM, never on the main development computer.
+- No warnings in `Release`; unit tests green.
+- A signed installer that installs and uninstalls without leaving leftovers.
+- Minimal user documentation (install, scan, update, undo).
 
-## 7. Riesgos del MVP
+## 7. MVP risks
 
-| Riesgo | Impacto | Mitigación |
+| Risk | Impact | Mitigation |
 |---|---|---|
-| Windows Update ofrece pocos drivers útiles | Alto | Validar en el Hito 0; si es pobre, adelantar fuentes OEM |
-| Driver que causa pantallazo azul | Alto | Punto de restauración, rollback, instalación una a una, pruebas en VM |
-| Falsos positivos de antivirus | Medio | Firma de código, instalador firmado |
-| Complejidad de COM/WUA en .NET | Medio | Prototipo temprano; aislar tras `IUpdateSource` |
-| Falta de variedad de hardware para pruebas | Medio | VMs con snapshots y beta con voluntarios |
+| Windows Update offers few useful drivers | High | Validate in Milestone 0; if poor, bring OEM sources forward |
+| A driver causes a blue screen | High | Restore point, rollback, one-by-one installation, VM tests |
+| False positives from antivirus software | Medium | Code signing, signed installer |
+| COM/WUA complexity in .NET | Medium | Early prototype; isolate behind `IUpdateSource` |
+| Lack of hardware variety for testing | Medium | VMs with snapshots and a beta with volunteers |
 
-## 8. Después del MVP
+## 8. After the MVP
 
-1. Backend con catálogo propio y listas de drivers problemáticos.
-2. Fuentes OEM y de fabricantes (previa revisión de licencias).
-3. Autoactualización y canales stable/beta.
-4. Cuentas, licencias y telemetría opcional.
-5. Versión para empresas con consola de gestión.
+1. Backend with its own catalog and lists of problematic drivers.
+2. OEM and manufacturer sources (after license review).
+3. Self-update and stable/beta channels.
+4. Accounts, licenses, and optional telemetry.
+5. Enterprise version with a management console.
 
-El estado de cada validación manual se registra en `TESTING.md`; el historial de implementación está en `SPRINT_LOG.md`.
+Manual validation status is recorded in `TESTING.md`; the implementation history is in `SPRINT_LOG.md`.

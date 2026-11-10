@@ -1,236 +1,240 @@
-# Arquitectura de DriverUpdater
+# DriverUpdater architecture
 
-Guía de la **arquitectura implementada**: componentes, dependencias, flujos y puntos de extensión. No es el registro de requisitos ni el historial de cambios.
+This is a guide to the **implemented architecture**: components, dependencies, flows, and extension points. It is not the requirements register or the change history.
 
-- `MVP.md` es la fuente de verdad para alcance y criterios de aceptación.
-- `DESIGN.md` conserva decisiones técnicas duraderas y cuestiones abiertas.
-- `AGENTS.md` define convenciones y reglas de trabajo.
-- `TESTING.md` contiene procedimientos de pruebas manuales y resultados de VM.
-- `SPRINT_LOG.md` es histórico; sus notas reflejan el estado al cierre de cada sprint.
+- `MVP.md` is the source of truth for scope and acceptance criteria.
+- `DESIGN.md` keeps lasting technical decisions and open questions.
+- `AGENTS.md` defines conventions and working rules.
+- `TESTING.md` contains manual test procedures, the rationale for the automated test suites, and VM results.
+- `SPRINT_LOG.md` is historical; its notes reflect the state at the close of each sprint.
 
-## 1. Qué es
+## 1. What it is
 
-Aplicación para Windows 10/11 que busca actualizaciones de drivers oficiales (Windows Update) y las instala de forma segura: solo drivers firmados, con punto de restauración previo y registro de operaciones.
+An application for Windows 10/11 that searches for official driver updates (Windows Update) and installs them safely: signed drivers only, with a restore point beforehand and an operations log.
 
-Está dividida en dos procesos que hablan entre sí:
+It is split into two processes that talk to each other:
 
-- **Servicio** (`Agent.Service`): corre como Windows Service con cuenta SYSTEM. Es el único que toca el sistema: WMI, Windows Update, `pnputil`, puntos de restauración y firmas.
-- **UI** (`Ui.Wpf`): aplicación WPF sin privilegios de administrador. Solo muestra información y envía órdenes al servicio.
+- **Service** (`Agent.Service`): runs as a Windows service under the SYSTEM account. It is the only component that touches the system: WMI, Windows Update, `pnputil`, restore points, and signatures.
+- **UI** (`Ui.Wpf`): a WPF application without administrator privileges. It only displays information and sends commands to the service.
 
-La comunicación es **gRPC sobre un named pipe local** (`\\.\pipe\DriverUpdater`).
+Communication is **gRPC over a local named pipe** (`\\.\pipe\DriverUpdater`).
 
 ```
 ┌──────────────────────────┐   gRPC / named pipe    ┌──────────────────────────────┐
-│ Ui.Wpf (usuario)         │ ─────────────────────▶ │ Agent.Service (SYSTEM)       │
-│ MVVM, sin privilegios    │ ◀───────────────────── │ gRPC server + cola + tareas  │
+│ Ui.Wpf (user)            │ ─────────────────────▶ │ Agent.Service (SYSTEM)       │
+│ MVVM, no privileges      │ ◀───────────────────── │ gRPC server + queue + tasks  │
 └──────────────────────────┘                        └──────────────┬───────────────┘
-        │ usa                                                     │ usa
+        │ uses                                                    │ uses
         ▼                                                         ▼
-  Agent.Ipc (contrato .proto + canal cliente)            Agent.Drivers (WMI, WUA, pnputil,
-                                                         firmas, restore points, SQLite)
+  Agent.Ipc (.proto contract + client channel)           Agent.Drivers (WMI, WUA, pnputil,
+                                                         signatures, restore points, SQLite)
                                                                   │
                                                                   ▼
-                                                              Core (modelos e interfaces)
+                                                              Core (models and interfaces)
 ```
 
-## 2. Proyectos
+## 2. Projects
 
-| Proyecto | Responsabilidad | Depende de |
+| Project | Responsibility | Depends on |
 |---|---|---|
-| `src/Core` | Modelos (`InstalledDriver`, `DriverUpdate`, `AppSettings`…), interfaces (`IDriverInventory`, `IUpdateSource`, `IDriverInstaller`, `ISettingsStore`…) y lógica pura: `VersionComparer`, `DriverMatcher`, `OemSupportCatalog`. **Sin dependencias de Windows.** | nada |
-| `src/Agent.Drivers` | Implementaciones que tocan Windows: inventario WMI, Windows Update (COM), instalación vía WUA, puntos de restauración, verificación de firma (WinVerifyTrust), historial en SQLite. | `Core` |
-| `src/Agent.Ipc` | Contrato gRPC (`Protos/driveragent.proto`) y `DriverAgentChannel`, la fábrica del canal cliente sobre el named pipe. Lo comparten servicio y UI. | nada |
-| `src/Agent.Service` | Servidor gRPC, cola de operaciones, comprobación programada, ajustes persistentes, ACL del pipe. | `Core`, `Agent.Drivers`, `Agent.Ipc` |
-| `src/Ui.Wpf` | Interfaz WPF en MVVM (CommunityToolkit.Mvvm). Cliente del servicio. | `Core`, `Agent.Ipc` |
-| `src/Cli` | Herramienta de diagnóstico sin UI (`scan`, `updates`). Usa `Agent.Drivers` directamente, sin servicio. | `Core`, `Agent.Drivers` |
-| `tests/Core.Tests` | Tests unitarios de la lógica pura. | `Core` |
-| `tests/Agent.Drivers.Tests` | Tests de las implementaciones; los de integración van marcados con `[Trait("Category","Integration")]`. | `Agent.Drivers` |
-| `tests/Agent.Service.Tests` | Tests del servicio: levantan un host gRPC real sobre pipe con dobles de las interfaces. | `Agent.Service` |
-| `installer/` | Instalador MSI (WiX v4), script de build y guía de prueba. | — |
+| `src/Core` | Models (`InstalledDriver`, `DriverUpdate`, `AppSettings`…), interfaces (`IDriverInventory`, `IUpdateSource`, `IDriverInstaller`, `ISettingsStore`…), and pure logic: `VersionComparer`, `DriverMatcher`, `OemSupportCatalog`. **No Windows dependencies.** | nothing |
+| `src/Agent.Drivers` | Implementations that touch Windows: WMI inventory, Windows Update (COM), installation via WUA, restore points, signature verification (WinVerifyTrust), SQLite history. | `Core` |
+| `src/Agent.Ipc` | gRPC contract (`Protos/driveragent.proto`) and `DriverAgentChannel`, the client channel factory over the named pipe. Shared by the service and the UI. | nothing |
+| `src/Agent.Service` | gRPC server, operations queue, scheduled check, persistent settings, pipe ACL. | `Core`, `Agent.Drivers`, `Agent.Ipc` |
+| `src/Ui.Wpf` | WPF interface in MVVM (CommunityToolkit.Mvvm). Client of the service. | `Core`, `Agent.Ipc` |
+| `src/Cli` | Diagnostic tool without UI (`scan`, `updates`). Uses `Agent.Drivers` directly, without the service. | `Core`, `Agent.Drivers` |
+| `tests/Core.Tests` | Unit tests for the pure logic. | `Core` |
+| `tests/Agent.Drivers.Tests` | Tests for the implementations; integration tests are marked with `[Trait("Category","Integration")]`. | `Agent.Drivers` |
+| `tests/Agent.Service.Tests` | Service tests: they start a real gRPC host over a pipe with doubles of the interfaces. | `Agent.Service` |
+| `tests/Integration.Tests` | Component integration tests: real settings store, SQLite history, and operations queue, with no doubles. Rationale in `TESTING.md`, section 4. | `Core`, `Agent.Drivers`, `Agent.Service` |
+| `installer/` | MSI installer (WiX v4), build script, and test guide. | — |
 
-`Core` es el centro: no sabe nada de Windows ni de gRPC, y todo lo demás depende de él. Así la lógica se prueba sin máquina Windows.
+`Core` is the center: it knows nothing about Windows or gRPC, and everything else depends on it. This way the logic can be tested without a Windows machine.
 
-## 3. Servicio (`Agent.Service`)
+## 3. Service (`Agent.Service`)
 
-### Arranque (`Program.cs`)
+### Startup (`Program.cs`)
 
-1. Configura Kestrel para escuchar en el named pipe `DriverUpdater`, con HTTP/2 y gRPC puro.
-2. Aplica la ACL del pipe (`NamedPipeSecurityFactory`): solo usuarios locales interactivos pueden conectarse.
-3. Registra las dependencias en DI:
+1. Configures Kestrel to listen on the named pipe `DriverUpdater`, with HTTP/2 and plain gRPC.
+2. Applies the pipe ACL (`NamedPipeSecurityFactory`): only local interactive users can connect.
+3. Registers the dependencies in DI:
    - `IOperationQueue` → `OperationQueue` (singleton).
    - `ISettingsStore` → `JsonSettingsStore`.
-   - `ScheduledCheckState` (singleton) y `ScheduledCheckService` (servicio en segundo plano).
-   - Las implementaciones de `Agent.Drivers` mediante `AddDriverServices()`.
-4. Mapea `DriverAgentGrpcService`.
+   - `ScheduledCheckState` (singleton) and `ScheduledCheckService` (background service).
+   - The `Agent.Drivers` implementations through `AddDriverServices()`.
+4. Maps `DriverAgentGrpcService`.
 
-### Piezas principales
+### Main components
 
-- **`DriverAgentGrpcService`**: implementa todos los RPC. Traduce mensajes gRPC a modelos de `Core` y viceversa (`GrpcMappers`). Cada operación que toca el sistema se encola.
-- **`OperationQueue`**: serializa las operaciones con un semáforo. Una búsqueda y una instalación nunca se solapan. Expone el estado (`OperationState`): operación en curso, porcentaje, fase, último escaneo, pendientes en cola.
-- **`ScheduledCheckService`**: cada 15 minutos mira si toca comprobar. Según `CheckIntervalHours` (0, 24 o 168) busca actualizaciones pasando por la **misma cola** que la UI, y guarda el resultado en `ScheduledCheckState` (memoria). No arranca con Windows: solo corre mientras el servicio esté en marcha.
-- **`JsonSettingsStore`**: lee y escribe `%ProgramData%\DriverUpdater\config.json`. Escritura atómica (fichero temporal + reemplazo). Si el fichero está dañado usa valores por defecto. Normaliza y valida antes de guardar (`AppSettings.Normalize`).
+- **`DriverAgentGrpcService`**: implements all the RPCs. It translates gRPC messages to `Core` models and back (`GrpcMappers`). Every operation that touches the system goes through the queue.
+- **`OperationQueue`**: serializes operations with a semaphore. A search and an installation never overlap. It exposes the state (`OperationState`): operation in progress, percentage, phase, last scan, and operations waiting in the queue.
+- **`ScheduledCheckService`**: every 15 minutes it checks whether a check is due. Based on `CheckIntervalHours` (0, 24, or 168) it searches for updates through the **same queue** as the UI, and stores the result in `ScheduledCheckState` (memory). It does not start with Windows: it only runs while the service is running.
+- **`JsonSettingsStore`**: reads and writes `%ProgramData%\DriverUpdater\config.json`. Writes are atomic (temporary file + replacement). If the file is corrupt, it uses default values. It normalizes and validates before saving (`AppSettings.Normalize`).
 
-### RPC expuestos
+### Exposed RPCs
 
-| RPC | Qué hace |
+| RPC | What it does |
 |---|---|
-| `Scan` | Inventario de drivers instalados (WMI). |
-| `CheckUpdates` | Stream con las actualizaciones disponibles. Filtra las excluidas por el usuario. |
-| `Install` | Stream de progreso de instalación. Rechaza las excluidas. Crea punto de restauración antes. |
-| `Rollback` | Revierte una operación registrada en el historial. |
-| `GetHistory` | Registro de operaciones (SQLite). |
-| `GetStatus` | Estado de la cola, último escaneo, reinicio pendiente (memoria del servicio o marca de Windows en el registro) y resultado de la última comprobación programada. |
-| `GetSettings` / `UpdateSettings` | Lee y guarda los ajustes persistentes. |
-| `GetMotherboard` | Fabricante y modelo de la placa (`Win32_BaseBoard`). |
+| `Scan` | Inventory of installed drivers (WMI). |
+| `CheckUpdates` | Stream with the available updates. Filters out the ones the user excluded. |
+| `Install` | Progress stream for the installation. Rejects excluded updates. Creates a restore point first. |
+| `Rollback` | Reverts an operation recorded in the history. |
+| `GetHistory` | Operations log (SQLite). |
+| `GetStatus` | Queue state, last scan, pending reboot (service memory or a Windows flag in the registry), and the result of the last scheduled check. |
+| `GetSettings` / `UpdateSettings` | Reads and saves the persistent settings. |
+| `GetMotherboard` | Motherboard manufacturer and model (`Win32_BaseBoard`). |
 
-## 4. Interfaz (`Ui.Wpf`)
+## 4. User interface (`Ui.Wpf`)
 
-### Estructura MVVM
+### MVVM structure
 
-- **`App.xaml.cs`**: arranque y DI. Registra `DriverAgentService` y los ViewModels como singleton.
-- **`ShellWindow`** + **`ShellViewModel`**: ventana principal. Navegación entre páginas (`AppPage`), estado de conexión (`IsConnected`, `IsConnecting`) y sondeo del servicio cada 5 segundos. Si no hay conexión, muestra la pantalla de reintento.
-- **Páginas**: `DashboardViewModel`/`DashboardView` (inventario agrupado por clase), `UpdatesViewModel`/`UpdatesView` (buscar, seleccionar, instalar, excluir), `HistoryViewModel`/`HistoryView`, `SettingsViewModel`/`SettingsView`.
-- **`DriverAgentService`**: única puerta de la UI hacia el servicio. Envuelve el cliente gRPC, gestiona el canal y controla el servicio de Windows (`ServiceController`) para arrancarlo bajo demanda.
+- **`App.xaml.cs`**: startup and DI. Registers `DriverAgentService` and the ViewModels as singletons.
+- **`ShellWindow`** + **`ShellViewModel`**: main window. Navigation between pages (`AppPage`), connection state (`IsConnected`, `IsConnecting`), and polling of the service every 5 seconds. If there is no connection, it shows the retry screen.
+- **Pages**: `DashboardViewModel`/`DashboardView` (inventory grouped by class), `UpdatesViewModel`/`UpdatesView` (search, select, install, exclude), `HistoryViewModel`/`HistoryView`, `SettingsViewModel`/`SettingsView`.
+- **`DriverAgentService`**: the UI's only gateway to the service. It wraps the gRPC client, manages the channel, and controls the Windows service (`ServiceController`) to start it on demand.
 
-### Flujo de conexión
+### Connection flow
 
 1. `ShellViewModel.InitializeAsync` → `ConnectOrStartAsync`.
-2. Intenta conectar. Si falla, arranca el servicio con `ServiceController` y reintenta hasta 5 segundos (el servicio figura como "Running" antes de tener el pipe listo).
-3. Si conecta, carga la página activa y empieza el sondeo.
+2. It tries to connect. If that fails, it starts the service with `ServiceController` and retries for up to 5 seconds (the service shows as "Running" before its pipe is ready).
+3. If it connects, it loads the active page and starts polling.
 
-El servicio **no** arranca con Windows: el instalador lo registra en modo manual (`Start="demand"`) y concede a usuarios interactivos el permiso de iniciarlo y detenerlo (`sc sdset`).
+The service **does not** start with Windows: the installer registers it in manual mode (`Start="demand"`) and grants interactive users permission to start and stop it (`sc sdset`).
 
-### Estilos y recursos
+### Styles and resources
 
-- `Resources/Colors.xaml`: paleta (tokens de color y tipografía).
-- `Resources/Styles.xaml`: estilos de botones, tarjetas, expanders y animaciones. Incluye `Icons.xaml` mediante `MergedDictionaries`.
-- `Resources/Icons.xaml`: geometrías SVG como `Geometry`.
+- `Resources/Colors.xaml`: palette (color and typography tokens).
+- `Resources/Styles.xaml`: styles for buttons, cards, expanders, and animations. Includes `Icons.xaml` through `MergedDictionaries`.
+- `Resources/Icons.xaml`: SVG geometries as `Geometry`.
 
-## 5. Flujos de datos clave
+## 5. Key data flows
 
-### Buscar actualizaciones (pantalla Actualizaciones)
+### Search for updates (Updates page)
 
 ```
 UpdatesViewModel.CheckUpdatesAsync
-  → DriverAgentService.CheckUpdatesAsync (stream gRPC)
+  → DriverAgentService.CheckUpdatesAsync (gRPC stream)
     → DriverAgentGrpcService.CheckUpdates
       → OperationQueue.EnqueueAsync
         → IDriverInventory.GetInstalledDriversAsync   (WMI)
         → IUpdateSource.FindUpdatesAsync               (WUA)
-        → filtro de exclusiones (AppSettings)
-  ← DriverUpdateMsg por cada actualización
+        → exclusion filter (AppSettings)
+  ← DriverUpdateMsg for each update
 ```
 
-### Instalar
+### Install
 
 ```
 UpdatesViewModel.InstallSelectedAsync
-  → Install (stream de progreso)
+  → Install (progress stream)
     → OperationQueue
-      → IDriverInstaller (WuaDriverInstaller), que:
-          · intenta verificar las rutas recibidas con ISignatureVerifier / WinVerifyTrust
-          · crea el punto de restauración por controlador y aborta si falla
-          · instala vía WUA
+      → IDriverInstaller (WuaDriverInstaller), which:
+          · tries to verify the received paths with ISignatureVerifier / WinVerifyTrust
+          · creates a restore point per driver and aborts if it fails
+          · installs via WUA
       → IOperationHistory.RecordAsync (SQLite)
-  ← InstallProgressMsg (fase, porcentaje, resultado)
+  ← InstallProgressMsg (phase, percentage, result)
 ```
 
-### Excluir una actualización
+### Exclude an update
 
 ```
 UpdatesViewModel.ExcludeAsync
-  → GetSettings → añade el hardware ID → UpdateSettings
-  → la lista se actualiza; las siguientes búsquedas ya no la muestran
+  → GetSettings → adds the hardware ID → UpdateSettings
+  → the list is updated; later searches no longer show it
 ```
 
-### Comprobación programada e indicador en la aplicación
+### Scheduled check and in-app indicator
 
 ```
-ScheduledCheckService (cada 15 min)
-  → si toca: EnqueueAsync(buscar actualizaciones)
-  → ScheduledCheckState.Record(hora, pendientes)
-GetStatus devuelve esos datos
-ShellViewModel.PollStatusAsync → UpdatesBadge (solo para una comprobación nueva)
+ScheduledCheckService (every 15 min)
+  → if due: EnqueueAsync(search for updates)
+  → ScheduledCheckState.Record(time, pending count)
+GetStatus returns that data
+ShellViewModel.PollStatusAsync → UpdatesBadge (only for a new check)
 ```
 
-La comprobación programada no muestra notificaciones de escritorio. Solo actualiza el indicador de la pestaña Actualizaciones.
+The scheduled check shows no desktop notifications. It only updates the indicator on the Updates tab.
 
-### Instalación y verificación
+### Installation and verification
 
-El instalador descarga mediante WUA, verifica las rutas devueltas por el ejecutor y solo después crea un punto de restauración e invoca la instalación nativa. `WuaDriverInstaller` aborta y registra un fallo si la descarga correcta no incluye archivos verificables. Como `DefaultWuaExecutor` aún devuelve una lista de rutas vacía, la instalación real mediante ese adaptador falla de forma segura hasta que se resuelva cómo obtener y verificar los archivos. No se debe afirmar que cada paquete se verifica efectivamente ni habilitar la instalación por este recorrido hasta cerrar esta brecha.
+The installer downloads through WUA, verifies the paths returned by the executor, and only then creates a restore point and invokes the native installation. `WuaDriverInstaller` aborts and records a failure if the successful download does not include verifiable files. Because `DefaultWuaExecutor` still returns an empty list of paths, real installation through that adapter fails safely until the way to obtain and verify the files is resolved. Do not claim that each package is actually verified, and do not enable installation through this path until this gap is closed.
 
-El caso está pendiente de validación aislada; consulta `TESTING.md` para las restricciones de pruebas en VM. La política de producto sigue siendo exigir firma válida y, por defecto, WHQL (`OnlyWhql = true`).
+This case is pending isolated validation; see `TESTING.md` for the restrictions on VM testing. Product policy still requires a valid signature and, by default, WHQL (`OnlyWhql = true`).
 
-### Soporte de la placa (fase A)
+### Motherboard support (phase A)
 
 ```
 DashboardViewModel → GetMotherboard → Win32_BaseBoard
-OemSupportCatalog.Find(fabricante, modelo) → búsqueda oficial HTTPS del modelo
-El usuario elige el producto/revisión en el sitio OEM y abre sus descargas.
-La aplicación solo abre el navegador; no descarga ni instala desde esa página.
+OemSupportCatalog.Find(manufacturer, model) → official HTTPS search for the model
+The user chooses the product/revision on the OEM site and opens its downloads.
+The application only opens the browser; it does not download or install from that page.
 ```
 
-## 6. Almacenamiento
+## 6. Storage
 
-| Dato | Dónde | Quién escribe |
+| Data | Where | Who writes it |
 |---|---|---|
-| Ajustes | `%ProgramData%\DriverUpdater\config.json` | Servicio (`JsonSettingsStore`) |
-| Historial de operaciones | `%ProgramData%\DriverUpdater\history.db` (SQLite) | Servicio |
-| Logs del servicio | `%ProgramData%\DriverUpdater\logs\service-*.log` | Servicio (Serilog) |
-| Logs de la UI | `%ProgramData%\DriverUpdater\logs\ui-*.log` | UI (Serilog) |
+| Settings | `%ProgramData%\DriverUpdater\config.json` | Service (`JsonSettingsStore`) |
+| Operations history | `%ProgramData%\DriverUpdater\history.db` (SQLite) | Service |
+| Service logs | `%ProgramData%\DriverUpdater\logs\service-*.log` | Service (Serilog) |
+| UI logs | `%ProgramData%\DriverUpdater\logs\ui-*.log` | UI (Serilog) |
 
-La UI nunca escribe en `%ProgramData%`: pide los cambios al servicio.
+The UI never writes to `%ProgramData%`: it asks the service to make the changes.
 
-## 7. Seguridad (resumen)
+## 7. Security (summary)
 
-Las reglas de trabajo están en `AGENTS.md`; `DESIGN.md` conserva las decisiones de seguridad. Las que definen la arquitectura:
+The working rules are in `AGENTS.md`; `DESIGN.md` keeps the security decisions. The ones that define the architecture:
 
-- El privilegio vive en el servicio. La UI nunca se ejecuta elevada.
-- El pipe solo acepta usuarios locales. La ACL se configura al crear el pipe.
-- La política exige firma válida y, por defecto, WHQL. Véase la limitación del flujo de verificación descrita arriba: el adaptador WUA actual no devuelve rutas de archivos.
-- Siempre hay punto de restauración antes de instalar. Si no se puede crear, no se instala.
-- Las búsquedas de soporte se generan solo para fabricantes conocidos y usan HTTPS en sus dominios oficiales. El modelo WMI se codifica como parámetro de búsqueda; no se supone la revisión de la placa.
-- El producto consulta Windows Update mediante WUA; el botón de soporte OEM abre en el navegador una búsqueda HTTPS del modelo en el sitio oficial. No hay backend propio ni telemetría del proyecto.
+- Privilege lives in the service. The UI never runs elevated.
+- The pipe only accepts local users. The ACL is set when the pipe is created.
+- Policy requires a valid signature and, by default, WHQL. See the limitation of the verification flow described above: the current WUA adapter does not return file paths.
+- There is always a restore point before installing. If it cannot be created, nothing is installed.
+- Support searches are generated only for known manufacturers and use HTTPS on their official domains. The WMI model is encoded as a search parameter; the motherboard revision is not assumed.
+- The product queries Windows Update through WUA; the OEM support button opens an HTTPS model search on the official site in the browser. There is no project backend and no project telemetry.
 
-## 8. Cómo extender
+## 8. How to extend
 
-### Añadir un RPC nuevo
+### Add a new RPC
 
-1. Define el mensaje y el `rpc` en `src/Agent.Ipc/Protos/driveragent.proto`.
-2. Implementa el método en `DriverAgentGrpcService` (si toca el sistema, pásalo por `OperationQueue`).
-3. Si necesita lógica de dominio, añade la interfaz en `Core/Interfaces` y la implementación en `Agent.Drivers`.
-4. Añade el método envoltorio en `Ui.Wpf/Services/DriverAgentService.cs`.
-5. Añade tests en `tests/Agent.Service.Tests` (con el harness, ver §9).
+1. Define the message and the `rpc` in `src/Agent.Ipc/Protos/driveragent.proto`.
+2. Implement the method in `DriverAgentGrpcService` (if it touches the system, run it through `OperationQueue`).
+3. If it needs domain logic, add the interface in `Core/Interfaces` and the implementation in `Agent.Drivers`.
+4. Add the wrapper method in `Ui.Wpf/Services/DriverAgentService.cs`.
+5. Add tests in `tests/Agent.Service.Tests` (using the harness, see §9).
 
-### Añadir una página a la UI
+### Add a page to the UI
 
-1. Crea `ViewModels/XxxViewModel.cs` heredando de `PageViewModelBase` y regístralo en `App.xaml.cs`.
-2. Crea `Views/XxxView.xaml` (UserControl) y su `DataTemplate` en `ShellWindow.xaml`.
-3. Añade el valor a `AppPage` y el `NavItem` en la barra lateral.
+1. Create `ViewModels/XxxViewModel.cs` inheriting from `PageViewModelBase` and register it in `App.xaml.cs`.
+2. Create `Views/XxxView.xaml` (UserControl) and its `DataTemplate` in `ShellWindow.xaml`.
+3. Add the value to `AppPage` and the `NavItem` in the sidebar.
 
-### Añadir una fuente de drivers
+### Add an update source
 
-Implementa `IUpdateSource` en `Agent.Drivers` y registrarla en `ServiceCollectionExtensions`. Fuentes OEM (fase B) están pendientes de la revisión de licencias (decisiones pendientes en `DESIGN.md`).
+Implement `IUpdateSource` in `Agent.Drivers` and register it in `ServiceCollectionExtensions`. OEM sources (phase B) are pending a license review (open decisions in `DESIGN.md`).
 
-## 9. Pruebas
+## 9. Tests
 
-- **`Core.Tests`**: lógica pura, rápidos, sin Windows.
-- **`Agent.Service.Tests`**: `AgentHarness` levanta un host gRPC real sobre un pipe con los dobles de `Agent.Drivers` (NSubstitute). **Cada nueva dependencia del servicio debe registrarse en los dos harness** (`AgentHarness` y el de la ACL del pipe), o todos los RPC fallan con `Exception was thrown by handler`. Los dobles de ajustes y placa están en `SettingsStubs`.
-- **`Agent.Drivers.Tests`**: tests de integración marcados con `[Trait("Category","Integration")]`.
-- **UI**: no tiene tests automáticos. Se prueba en una VM con cuenta estándar.
+- **`Core.Tests`**: pure logic, fast, no Windows.
+- **`Integration.Tests`**: real components (settings file, SQLite history, operations queue) working together, with no doubles. Its purpose and the reasons for each test are documented in `TESTING.md`, section 4.
+- **`Agent.Service.Tests`**: `AgentHarness` starts a real gRPC host over a pipe with the `Agent.Drivers` doubles (NSubstitute). **Every new service dependency must be registered in both harnesses** (`AgentHarness` and the pipe ACL one), or every RPC fails with `Exception was thrown by handler`. The settings and motherboard doubles are in `SettingsStubs`.
+- **`Agent.Drivers.Tests`**: integration tests marked with `[Trait("Category","Integration")]`.
+- **UI**: has no automated tests. It is tested in a VM with a standard account.
 
-El CI (`.github/workflows/ci.yml`) compila y ejecuta los tests en `windows-latest`. Si un test falla, cada test fallido aparece como anotación en el run.
+To run only the tests that do not depend on Windows-specific components, filter out the integration category: `dotnet test --filter "Category!=Integration"`.
 
-## 10. Build, instalador y release
+CI (`.github/workflows/ci.yml`) builds and runs the tests on `windows-latest`. If a test fails, each failed test appears as an annotation on the run.
 
-- `installer/build.ps1 -Version X.Y.Z`: publica el servicio y la UI como single-file autocontenidos (`win-x64`) y genera el MSI con WiX.
-- `IncludeNativeLibrariesForSelfExtract=true` es necesario en el servicio: sin él, SQLite no encuentra su DLL nativa.
-- CI: el job `build-installer` genera el MSI en cada push a `master`. `release.yml` crea la release al subir un tag `v*`.
+## 10. Build, installer, and release
 
-## 11. Trampas conocidas
+- `installer/build.ps1 -Version X.Y.Z`: publishes the service and the UI as self-contained single files (`win-x64`) and generates the MSI with WiX.
+- `IncludeNativeLibrariesForSelfExtract=true` is required for the service: without it, SQLite cannot find its native DLL.
+- CI: the `build-installer` job generates the MSI on each push to `master`. `release.yml` creates the release when a `v*` tag is pushed.
 
-- **XAML**: `StaticResource` solo ve las claves de su propio diccionario y de los `MergedDictionaries`. Las duraciones de `Storyboard` dentro de estilos deben ser literales (`0:0:0.15`), no `DynamicResource`: rompe el sellado de los estilos al cargar la ventana.
-- **Naming**: `.editorconfig` exige `_camelCase` para todos los campos privados, también los `static readonly`. Las advertencias cuentan como error en CI.
-- **ACL del servicio**: `sc sdset` reemplaza toda la ACL. Si solo concedes permisos a usuarios interactivos, deja también la consulta de estado (`CCLCSWRPWPDTLOCRRC`) o la UI no podrá leer el estado.
-- **Windows Update**: un mismo driver puede aparecer varias veces en `Win32_PnPSignedDriver` (una por instancia del dispositivo). No es un error.
-- **Puntos de restauración**: si la Restauración del sistema está desactivada, la instalación falla. En la VM: `Enable-ComputerRestore -Drive "C:\"`.
+## 11. Known pitfalls
+
+- **XAML**: `StaticResource` only sees the keys of its own dictionary and of its `MergedDictionaries`. `Storyboard` durations inside styles must be literals (`0:0:0.15`), not `DynamicResource`: it breaks the sealing of the styles when the window loads.
+- **Naming**: `.editorconfig` requires `_camelCase` for all private fields, including `static readonly` ones. Warnings count as errors in CI.
+- **Service ACL**: `sc sdset` replaces the whole ACL. If you only grant permissions to interactive users, also keep the status query right (`CCLCSWRPWPDTLOCRRC`), or the UI will not be able to read the status.
+- **Windows Update**: the same driver can appear several times in `Win32_PnPSignedDriver` (once per device instance). This is not an error.
+- **Restore points**: if System Restore is disabled, installation fails. In the VM: `Enable-ComputerRestore -Drive "C:\"`.

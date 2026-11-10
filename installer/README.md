@@ -1,51 +1,41 @@
-# Instalador (MSI · WiX 4.0.5)
+# Installer (MSI · WiX 4.0.5)
 
-Estado: el workflow instala WiX 4.0.5 y la extensión Util 4.0.5; la compilación del MSI de esta revisión debe confirmarse en CI y probarse en una VM Windows 10/11 antes de distribuirla. WiX 7 no es compatible con esta configuración y requiere aceptar por separado su EULA OSMF.
+Status: the workflow installs WiX 4.0.5 and the Util 4.0.5 extension. The MSI build for this revision must be confirmed in CI and tested on a Windows 10/11 VM before distribution. WiX 7 is not compatible with this configuration and requires separately accepting its OSMF EULA.
 
-## Qué instala
+## What it installs
 
-| Componente | Dónde | Cómo |
+| Component | Where | How |
 |---|---|---|
-| Servicio `Agent.Service` | `Program Files\DriverUpdater\Agent.Service.exe` | Servicio de Windows `DriverUpdater`, cuenta `LocalSystem`, **arranque bajo demanda** (no se ejecuta al encender el equipo). La UI lo inicia al abrirse; el instalador concede a usuarios interactivos el permiso de iniciar y detener el servicio, pero no de configurarlo |
-| UI `Ui.Wpf` | `Program Files\DriverUpdater\Ui.Wpf.exe` | Acceso directo en el menú Inicio; se ejecuta sin elevación |
+| Service `Agent.Service` | `Program Files\DriverUpdater\Agent.Service.exe` | Windows service `DriverUpdater`, `LocalSystem` account, **on-demand start** (it does not run when the computer turns on). The UI starts it when opened; the installer grants interactive users permission to start and stop the service, but not to configure it |
+| UI `Ui.Wpf` | `Program Files\DriverUpdater\Ui.Wpf.exe` | Start menu shortcut; runs without elevation |
 
-Al desinstalar, el servicio se detiene y se elimina antes de borrar los ficheros.
+When uninstalling, the service is stopped and removed before the files are deleted.
 
-## Compilar
+## Build
 
 ```powershell
 dotnet tool install --global wix --version 4.0.5
 wix extension add -g WixToolset.Util.wixext/4.0.5
-.\installer\build.ps1 -Version 1.0.0      # genera installer\artifacts\DriverUpdater-1.0.0-x64.msi
+.\installer\build.ps1 -Version 1.0.0      # produces installer\artifacts\DriverUpdater-1.0.0-x64.msi
 ```
 
-El build también genera `DriverUpdater-<versión>.cdx.json` (SBOM CycloneDX 1.5)
-y `THIRD-PARTY-NOTICES.txt` en `installer\artifacts`. Ambos, junto con la licencia
-MIT del proyecto y los textos Apache-2.0/BSD-3-Clause que correspondan, se
-incluyen en `Program Files\DriverUpdater` dentro del MSI.
-El SBOM se deriva de las dependencias NuGet resueltas para los ejecutables y de
-los frameworks .NET incluidos. Los avisos NuGet identifican los paquetes y sus
-licencias declaradas; revisa los avisos y licencias de cada paquete antes de
-publicar una versión.
+The build also generates `DriverUpdater-<version>.cdx.json` (CycloneDX 1.5 SBOM) and `THIRD-PARTY-NOTICES.txt` in `installer\artifacts`. Both, together with the project's MIT license and the Apache-2.0 / BSD-3-Clause texts where applicable, are included in `Program Files\DriverUpdater` inside the MSI.
+The SBOM is derived from the NuGet dependencies resolved for the executables and from the .NET frameworks included. The NuGet notices identify the packages and their declared licenses; review the notices and licenses of each package before publishing a release.
 
-## Probar (solo en VM)
+## Test (VM only)
 
 ```powershell
 msiexec /i installer\artifacts\DriverUpdater-1.0.0-x64.msi /l*v install.log
 ```
 
-Comprobar: después de abrir la UI, esta inicia el servicio `DriverUpdater` y conecta ("Servicio activo").
-Al desinstalar de forma interactiva, aparece una opción desmarcada por defecto para borrar
-`%ProgramData%\DriverUpdater` (historial, ajustes y registros). Si no se marca, los datos se conservan;
-la desinstalación silenciosa también los conserva. Las actualizaciones de versión nunca muestran la
-opción ni eliminan los datos. Probar ambos resultados, además de confirmar que se detiene y elimina el
-servicio y los archivos de `Program Files`.
+Check: after opening the UI, it starts the `DriverUpdater` service and connects ("Service active").
+When uninstalling interactively, an option unchecked by default appears to delete `%ProgramData%\DriverUpdater` (history, settings, and logs). If it is not checked, the data is kept; a silent uninstall also keeps it. Version updates never show the option and never delete the data. Test both outcomes, and also confirm that the service is stopped and removed and that the files in `Program Files` are deleted.
 
-## Pendiente
+## Pending
 
-- Revisar la decisión de permiso `RPWP` para `IU` (iniciar/detener el servicio sin elevación) con el equipo de seguridad.
-- Asistente gráfico: añadir la extensión `WixToolset.UI` (ahora la instalación es silenciosa por defecto).
-- Firma de código del MSI y de los `.exe` (`signtool`), requisito del Hito 4.
-- Revisar el SBOM y los avisos generados por versión antes de cada publicación.
-- La limpieza opcional del desinstalador cubre `%ProgramData%\DriverUpdater`; los logs de la CLI guardados en el directorio desde el que se ejecuta quedan fuera de esa carpeta.
-- Actualizaciones automáticas (autoactualización) quedan fuera de este MSI.
+- Review the `RPWP` permission decision for `IU` (start/stop the service without elevation) with the security team.
+- Graphical wizard: add the `WixToolset.UI` extension (currently the installation is silent by default).
+- Code signing of the MSI and the `.exe` files (`signtool`), a Milestone 4 requirement.
+- Review the SBOM and notices generated for each version before every release.
+- The optional cleanup in the uninstaller covers `%ProgramData%\DriverUpdater`; CLI logs saved in the directory the CLI is run from are outside that folder.
+- Automatic updates (self-update) are outside this MSI.

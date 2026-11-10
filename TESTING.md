@@ -1,102 +1,130 @@
-# Plan de pruebas en VM
+# VM test plan
 
-Pruebas manuales que no pueden hacerse en CI: instalación real, UI con cuenta estándar, fallos a mitad de operación y reinicios. Las pruebas automáticas (tests de `tests/`) se ejecutan en el CI; este documento cubre lo que queda.
+Manual tests that cannot be run in CI: real installation, UI with a standard account, failures in the middle of an operation, and reboots. The automated tests (in `tests/`) run in CI; this document covers what remains. Section 4 explains why each automated test suite exists.
 
-Este documento es la fuente de verdad para los procedimientos de validación manual y sus resultados. Referencias: `installer/README.md` (compilar e instalar), `ARCHITECTURE.md` (comportamiento actual), `MVP.md` (criterios de aceptación).
+This document is the source of truth for manual validation procedures and their results. References: `installer/README.md` (build and install), `ARCHITECTURE.md` (current behavior), `MVP.md` (acceptance criteria).
 
-## 0. Preparación (una vez por VM)
+## 0. Preparation (once per VM)
 
-- VM con Windows 10 (22H2) y otra con Windows 11 (24H2). Sin datos personales.
-- Restauración del sistema activa, o la instalación fallará al crear el punto de restauración:
+- A VM with Windows 10 (22H2) and another with Windows 11 (24H2). No personal data.
+- System Restore enabled, or installation will fail when creating the restore point:
   ```powershell
   Enable-ComputerRestore -Drive "C:\"
   ```
-- Dos cuentas: una **administradora** para instalar y una **estándar** para usar la UI.
-- Guardar un **checkpoint "limpio"** tras instalar el MSI y antes de cada escenario. Restaurarlo entre pruebas.
-- Ejecutar el MSI con registro:
+- Two accounts: one **administrator** to install and one **standard** account to use the UI.
+- Save a **clean checkpoint** after installing the MSI and before each scenario. Restore it between tests.
+- Run the MSI with logging:
   ```powershell
   msiexec /i installer\artifacts\DriverUpdater-X.Y.Z-x64.msi /l*v install.log
   ```
 
-## 1. Qué no hacer
+## 1. What not to do
 
-- **No desinstales drivers de red, almacenamiento, pantalla ni chipset en la VM.** Si pierdes la red o el disco, no podrás leer los logs ni restaurar. Si quieres ver actualizaciones, primero comprueba si Windows Update ofrece alguna (la propia app lo muestra). En una VM suele haber pocas o ninguna, y eso ya es un resultado: anótalo.
-- Nunca ejecutes estas pruebas en el equipo de desarrollo (`AGENTS.md`).
-- Si quieres un driver "con actualización" para probar la instalación, prepáralo en la VM con un checkpoint y un dispositivo no crítico, nunca sobre un dispositivo que la VM necesite para arrancar.
+- **Do not uninstall network, storage, display, or chipset drivers in the VM.** If you lose the network or the disk, you will not be able to read the logs or restore. If you want to see updates, first check whether Windows Update offers any (the app itself shows this). A VM usually has few or no updates, and that is a result: record it.
+- Never run these tests on the development computer (`AGENTS.md`).
+- If you want a driver "with an update" to test installation, prepare it in the VM with a checkpoint and a non-critical device, never on a device the VM needs to boot.
 
-## 2. Escenarios
+## 2. Scenarios
 
-Para cada uno: anota la versión del MSI, el checkpoint usado y el resultado esperado frente al observado. Adjunta `install.log` y los `logs\*.log` de `%ProgramData%\DriverUpdater\`.
+For each one: note the MSI version, the checkpoint used, and the expected result versus the observed one. Attach `install.log` and the `logs\*.log` files from `%ProgramData%\DriverUpdater\`.
 
-### 2.1 Arranque y conexión (cuenta estándar)
+### 2.1 Startup and connection (standard account)
 
-1. Instalar con la cuenta administradora. Cerrar sesión.
-2. Entrar con la cuenta estándar y abrir DriverUpdater.
-3. **Esperado:** "Conectando con el servicio" durante unos segundos y después "Servicio activo". No aparece ningún diálogo de error.
-4. Reiniciar la VM. **Esperado:** el servicio **no** está en marcha (`sc query DriverUpdater` → `STOPPED`). Abrir la UI lo arranca.
+1. Install with the administrator account. Sign out.
+2. Sign in with the standard account and open DriverUpdater.
+3. **Expected:** "Connecting to the service" (Conectando con el servicio) for a few seconds, then "Service active" (Servicio activo). No error dialog appears.
+4. Restart the VM. **Expected:** the service is **not** running (`sc query DriverUpdater` → `STOPPED`). Opening the UI starts it.
 
-### 2.2 Corte de red durante la búsqueda
+### 2.2 Network cut during a search
 
-1. Abrir Actualizaciones y pulsar "Buscar".
-2. Mientras busca, desactivar el adaptador: `Disable-NetAdapter -Name "Ethernet" -Confirm:$false`.
-3. **Esperado:** la búsqueda termina con un mensaje de error legible. La UI no se cierra ni muestra excepciones. El servicio sigue respondiendo a `GetStatus` (la UI sigue conectada).
-4. Reactivar el adaptador y buscar de nuevo. **Esperado:** la búsqueda funciona.
+1. Open Updates and press "Search" (Buscar).
+2. While it is searching, disable the adapter: `Disable-NetAdapter -Name "Ethernet" -Confirm:$false`.
+3. **Expected:** the search ends with a readable error message. The UI does not close and does not show exceptions. The service keeps responding to `GetStatus` (the UI stays connected).
+4. Re-enable the adapter and search again. **Expected:** the search works.
 
-### 2.3 Firma inválida o ausente
+### 2.3 Invalid or missing signature
 
-No se puede probar con un driver real sin riesgo. La prueba automática es la de referencia: un `ISignatureVerifier` de prueba que rechaza la firma debe impedir la instalación y registrar el rechazo. Comprobar en la VM solo que, cuando la instalación real se rechaza, la app muestra el motivo y el historial lo recoge.
+This cannot be tested with a real driver without risk. The automated test is the reference: a test `ISignatureVerifier` that rejects the signature must prevent installation and record the rejection. In the VM, check only that, when a real installation is rejected, the app shows the reason and the history records it.
 
-- **Esperado:** no se instala nada, no se modifica el sistema y el historial registra la operación como fallida con el motivo.
+- **Expected:** nothing is installed, the system is not modified, and the history records the operation as failed with the reason.
 
-### 2.4 Reinicio durante la instalación
+### 2.4 Reboot during installation
 
-1. Crear el checkpoint, elegir una actualización y pulsar "Instalar".
-2. Cuando la barra avance (fase de instalación), reiniciar la VM **desde el host** (`Restart-VM -Force`), no desde dentro.
-3. Al arrancar, abrir la UI con la cuenta estándar.
-4. **Esperado:**
-   - La UI conecta y no hay operación en curso (la cola se reinicia vacía).
-   - El historial muestra la operación como interrumpida o fallida, con su punto de restauración.
-   - Si Windows pide reinicio, aparece el aviso "Reinicio pendiente".
-5. Anotar qué drivers quedaron instalados y comprobar que el dispositivo funciona (Administrador de dispositivos, sin signo de exclamación).
+1. Create the checkpoint, choose an update, and press "Install" (Instalar).
+2. When the progress bar advances (installation phase), restart the VM **from the host** (`Restart-VM -Force`), not from inside the VM.
+3. On startup, open the UI with the standard account.
+4. **Expected:**
+   - The UI connects and no operation is in progress (the queue starts empty).
+   - The history shows the operation as interrupted or failed, with its restore point.
+   - If Windows asks for a reboot, the "Pending reboot" (Reinicio pendiente) notice appears.
+5. Note which drivers were installed and check that the device works (Device Manager, no warning icon).
 
-### 2.5 Reinicio pendiente leído del registro
+### 2.5 Pending reboot read from the registry
 
-Prueba de la última funcionalidad (`GetStatus` lee las marcas de Windows). No requiere ninguna actualización.
+Test of the most recent feature (`GetStatus` reads the Windows flags). It does not require any update.
 
-1. Como administrador, crear la marca que Windows deja al pedir reinicio:
+1. As administrator, create the flag Windows leaves when it asks for a reboot:
    ```powershell
    New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending" -Force
    ```
-2. Reiniciar el servicio: `Restart-Service DriverUpdater`. Abrir la UI.
-3. **Esperado:** aparece "Reinicio pendiente" aunque el servicio acabe de arrancar.
-4. Quitar la marca:
+2. Restart the service: `Restart-Service DriverUpdater`. Open the UI.
+3. **Expected:** "Pending reboot" appears even though the service has just started.
+4. Remove the flag:
    ```powershell
    Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"
    ```
-   Reiniciar el servicio otra vez. **Esperado:** el aviso desaparece.
+   Restart the service again. **Expected:** the notice disappears.
 
-### 2.6 Exclusión (U7)
+### 2.6 Exclusion (U7)
 
-1. Con una actualización en la lista, pulsar "Excluir".
-2. **Esperado:** desaparece de la lista. En Ajustes aparece su hardware ID.
-3. Pulsar "Buscar" de nuevo. **Esperado:** no vuelve a aparecer.
-4. Quitar la exclusión en Ajustes, guardar y buscar. **Esperado:** vuelve a aparecer.
+1. With an update in the list, press "Exclude" (Excluir).
+2. **Expected:** it disappears from the list. Settings shows its hardware ID.
+3. Press "Search" again. **Expected:** it does not come back.
+4. Remove the exclusion in Settings, save, and search. **Expected:** it comes back.
 
-### 2.7 Desinstalación
+### 2.7 Uninstallation
 
-1. `msiexec /x` con el MSI original (o desde Programas).
-2. **Esperado:** el servicio se detiene y se elimina (`sc query DriverUpdater` → no existe), no quedan ficheros en `Program Files\DriverUpdater`, y `%ProgramData%\DriverUpdater` se conserva (decisión pendiente, ver `installer/README.md`).
+1. `msiexec /x` with the original MSI (or from Installed apps).
+2. **Expected:** the service is stopped and removed (`sc query DriverUpdater` → does not exist), no files remain in `Program Files\DriverUpdater`, and `%ProgramData%\DriverUpdater` is kept (pending decision, see `installer/README.md`).
 
-## 3. Registro de resultados
+## 3. Result log
 
-Anota cada ejecución únicamente en esta tabla; `MVP.md` enlaza los criterios, no duplica resultados de VM.
+Record each run only in this table; `MVP.md` links to the criteria and does not duplicate VM results.
 
-| Escenario | Windows | MSI | Resultado | Notas |
+| Scenario | Windows | MSI | Result | Notes |
 |---|---|---|---|---|
-| 2.1 Arranque | | | | |
-| 2.2 Corte de red | | | | |
-| 2.3 Firma | | | | |
-| 2.4 Reinicio en instalación | | | | |
-| 2.5 Reinicio pendiente | | | | |
-| 2.6 Exclusión | | | | |
-| 2.7 Desinstalación | | | | |
+| 2.1 Startup | | | | |
+| 2.2 Network cut | | | | |
+| 2.3 Signature | | | | |
+| 2.4 Reboot during installation | | | | |
+| 2.5 Pending reboot | | | | |
+| 2.6 Exclusion | | | | |
+| 2.7 Uninstallation | | | | |
+
+## 4. Automated test suites
+
+This section explains **why** each automated test project exists, what it protects, and what it deliberately does not cover. The projects run in CI on `windows-latest` (`.github/workflows/ci.yml`).
+
+| Project | What it tests | Why it exists |
+|---|---|---|
+| `tests/Core.Tests` | Pure logic: version comparison, hardware ID matching, models. | Fast feedback with no Windows dependency. Bugs in the matching rules are the most likely to cause a wrong driver to be offered, so they are tested exhaustively here. |
+| `tests/Agent.Drivers.Tests` | Implementations that touch Windows: WMI inventory, WUA search, WinVerifyTrust, restore points, installer orchestration, SQLite history. | Verifies the adapters against real Windows behavior. Tests that need real Windows are marked `[Trait("Category","Integration")]`. Installer orchestration is tested with doubles so the safety rules (signature first, restore point mandatory, history always written) can be checked without installing anything. |
+| `tests/Agent.Service.Tests` | The gRPC service over a real named pipe, with doubles for the Windows-facing interfaces. | Verifies that the RPCs, the operations queue, the pipe ACL, and the dependency injection wiring work together. Its harness (`AgentHarness`) exists because a missing service registration only fails at run time, so every new dependency must be added to it. |
+| `tests/Integration.Tests` | Real components working together with no doubles: `JsonSettingsStore` writing a real file, `SqliteOperationHistory` on a real database, and `OperationQueue`. | Doubles hide the behavior that matters for persistence. These tests catch problems such as a broken atomic write, a corrupt settings file that must fall back to defaults, a history query returned in the wrong order, or a queue that does not serialize operations. Every test uses a temporary folder and is marked `[Trait("Category","Integration")]`. |
+
+### Test scope and limits
+
+- **Not covered by automated tests:** the real installation of a driver (manual, in a VM only, section 2), the user interface (manual, section 2), and failures such as network cuts or reboots during installation.
+- **Planned, not yet implemented** (tracked in issue #18):
+  - **End-to-end tests** that start the real service and exercise non-destructive calls (scan, status, settings) through the named pipe. They will never call the installation RPC.
+  - **Performance tests** with time budgets for version comparison, hardware matching, and WMI parsing. They will start as a non-blocking CI job, because CI runner timing is not stable enough to fail builds yet.
+
+### Running a subset
+
+```powershell
+# Everything that does not need Windows-specific components
+dotnet test --filter "Category!=Integration"
+
+# Only the component integration tests
+dotnet test tests/Integration.Tests
+```
