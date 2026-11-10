@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an improvement within the project's scope
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing a feature, check [MVP.md](../../MVP.md). Features listed under "Excluded" are later phases and are discussed separately.
+
+        Changes that affect security or the installation flow need a clear security analysis; please describe it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and privacy impact
+      description: Does this change signature verification, privileges, the named pipe, stored data, or network access? If so, how?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
