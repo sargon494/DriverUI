@@ -1,46 +1,53 @@
 # AGENTS.md
 
-Guía para agentes de IA (y personas) que trabajen en este repositorio.
+Guide for AI agents (and people) working in this repository.
 
-## Proyecto
+## Project
 
-**DriverUpdater**: aplicación para Windows 10/11 que detecta e instala automáticamente actualizaciones de drivers de forma segura (solo drivers firmados, con punto de restauración previo y rollback).
+**DriverUpdater**: a Windows 10/11 application that detects and installs driver updates automatically and safely (signed drivers only, with a restore point beforehand and rollback).
 
-## Documentación y fuente de verdad
+## Documentation and source of truth
 
-- `MVP.md`: alcance, historias de usuario, criterios de aceptación y estado de los hitos.
-- `ARCHITECTURE.md`: arquitectura implementada, proyectos, flujos y puntos de extensión.
-- `DESIGN.md`: decisiones técnicas duraderas y cuestiones de diseño abiertas; no es un diario de implementación.
-- `TESTING.md`: procedimientos de validación manual y resultados de pruebas en VM.
-- `SPRINT_LOG.md`: historial cronológico. Sus notas describen el estado en la fecha del sprint; no prevalecen sobre la documentación actual.
-- `PRIVACY.md`: información pública sobre datos locales y servicios externos.
+- `MVP.md`: scope, user stories, acceptance criteria, and milestone status.
+- `ARCHITECTURE.md`: implemented architecture, projects, flows, and extension points.
+- `DESIGN.md`: lasting technical decisions and open design questions; it is not an implementation diary.
+- `TESTING.md`: manual VM validation procedures, the rationale for the automated test suites, and VM results.
+- `SPRINT_LOG.md`: chronological history. Its notes describe the state on the date of each sprint; they do not override the current documentation.
+- `PRIVACY.md`: public information about local data and external services.
 
-Si dos documentos discrepan, usa el documento dueño del tema indicado arriba y actualiza las referencias relacionadas. Para una tarea, consulta primero `MVP.md` si afecta al alcance y `ARCHITECTURE.md` para entender el comportamiento actual.
+If two documents disagree, use the document that owns the topic listed above and update the related references. Before working on a task, read `MVP.md` if it affects scope and `ARCHITECTURE.md` to understand the current behavior.
+
+## Documentation language
+
+- **All project documentation is written in English.** This repository is open source and must be understandable to any contributor. This covers the Markdown files listed above, the installer guide, and new documentation written in code comments or XML docs.
+- Do not add new documentation in Spanish. If you find Spanish documentation, translate it when you touch that file.
+- Strings shown to the user by the application may stay in Spanish until localization is implemented (see `MVP.md`, which excludes localization from the MVP).
+- Commit messages and pull request descriptions are written in English.
 
 ## Stack
 
-| Capa | Tecnología |
+| Layer | Technology |
 |---|---|
-| Lenguaje | C# 14 / .NET 10 (LTS) |
-| Servicio de agente | Worker Service (servicio de Windows, cuenta SYSTEM) |
-| Acceso a Windows | WMI (`System.Management`), Windows Update Agent (COM), `pnputil`, WinVerifyTrust (P/Invoke) |
-| IPC UI ↔ servicio | gRPC sobre named pipes (transporte nativo de Kestrel) |
-| UI | WPF (MVVM con CommunityToolkit.Mvvm) |
-| Backend (fase posterior) | ASP.NET Core + EF Core + PostgreSQL |
+| Language | C# 14 / .NET 10 (LTS) |
+| Agent service | Worker Service (Windows service, SYSTEM account) |
+| Windows access | WMI (`System.Management`), Windows Update Agent (COM), `pnputil`, WinVerifyTrust (P/Invoke) |
+| UI ↔ service IPC | gRPC over named pipes (Kestrel's native transport) |
+| UI | WPF (MVVM with CommunityToolkit.Mvvm) |
+| Backend (later phase) | ASP.NET Core + EF Core + PostgreSQL |
 | Tests | xUnit, FluentAssertions, NSubstitute |
-| Instalador | WiX (MSI) |
+| Installer | WiX (MSI) |
 
-## Estructura del repositorio
+## Repository structure
 
 ```
 DriverUpdater/
 ├─ src/
-│  ├─ Core/            # modelos, versiones, matching de hardware IDs (sin dependencias de Windows)
-│  ├─ Agent.Drivers/   # WMI, WUA, pnputil, firmas, restore points
-│  ├─ Agent.Service/   # Worker Service y servidor gRPC
-│  ├─ Agent.Ipc/       # contrato gRPC (proto) y fábrica de canal cliente sobre named pipe
-│  ├─ Ui.Wpf/          # interfaz de usuario
-│  ├─ Cli/             # herramienta de pruebas sin UI
+│  ├─ Core/            # models, versions, hardware ID matching (no Windows dependencies)
+│  ├─ Agent.Drivers/   # WMI, WUA, pnputil, signatures, restore points
+│  ├─ Agent.Service/   # Worker Service and gRPC server
+│  ├─ Agent.Ipc/       # gRPC contract (proto) and client channel factory over the named pipe
+│  ├─ Ui.Wpf/          # user interface
+│  ├─ Cli/             # diagnostic tool without UI
 ├─ tests/
 ├─ installer/
 ├─ AGENTS.md
@@ -52,59 +59,60 @@ DriverUpdater/
 └─ PRIVACY.md
 ```
 
-## Comandos
+## Commands
 
 ```powershell
 dotnet restore
 dotnet build -c Release
 dotnet test
-dotnet run --project src/Cli -- scan        # lista drivers instalados
-dotnet run --project src/Cli -- updates     # busca actualizaciones
-dotnet format --verify-no-changes           # comprobar formato
+dotnet run --project src/Cli -- scan        # list installed drivers
+dotnet run --project src/Cli -- updates     # check for updates
+dotnet format --verify-no-changes           # check formatting
 ```
 
-Las operaciones que instalan drivers requieren consola de administrador y **deben probarse en una máquina virtual**, nunca en el equipo principal de desarrollo.
+Operations that install drivers require an administrator console and **must be tested in a virtual machine**, never on the main development machine.
 
-## Convenciones de código
+## Code conventions
 
-- Nullable reference types activado; cero warnings en `Release`.
-- `async/await` de extremo a extremo; todos los métodos asíncronos aceptan `CancellationToken`.
-- Inyección de dependencias con `Microsoft.Extensions.DependencyInjection`; nada de singletons estáticos.
-- Todo acceso a Windows (WMI, COM, pnputil, P/Invoke) se esconde detrás de interfaces definidas en `Core` para poder simular en tests.
-- Registro con `ILogger` (Serilog como sink). Nunca `Console.WriteLine` fuera de `Cli`.
-- Nombres en inglés en el código; documentación y mensajes de commit pueden estar en español.
-- Commits pequeños con mensaje en imperativo (`Add driver inventory service`).
+- Nullable reference types enabled; zero warnings in `Release`.
+- `async/await` end to end; every asynchronous method accepts a `CancellationToken`.
+- Dependency injection with `Microsoft.Extensions.DependencyInjection`; no static singletons.
+- All Windows access (WMI, COM, pnputil, P/Invoke) is hidden behind interfaces defined in `Core` so it can be simulated in tests.
+- Logging with `ILogger` (Serilog as the sink). Never use `Console.WriteLine` outside `Cli`.
+- Names in code are in English.
+- Small commits with imperative messages (`Add driver inventory service`).
 
-## Reglas de seguridad (obligatorias)
+## Security rules (mandatory)
 
-1. **Nunca instalar un driver sin verificar su firma digital** (WinVerifyTrust). Por defecto, solo WHQL / firmados por Microsoft.
-2. **Siempre crear un punto de restauración** antes de instalar. Si falla, abortar la instalación.
-3. La UI **nunca** se ejecuta con privilegios elevados. Todo lo privilegiado pasa por el servicio.
-4. El servicio solo acepta conexiones de la UI local (ACL del named pipe restringida a usuarios interactivos).
-5. No ejecutar comandos construyendo cadenas con entrada externa; usar `ProcessStartInfo.ArgumentList`.
-6. Toda descarga se verifica con hash (SHA-256) y firma antes de ejecutarse.
-7. No guardar secretos en el repositorio. Usar `dotnet user-secrets` o variables de entorno.
-8. Cada instalación deja registro en el log de operaciones (qué, cuándo, versión anterior, resultado).
+1. **Never install a driver without verifying its digital signature** (WinVerifyTrust). By default, only WHQL / Microsoft-signed drivers.
+2. **Always create a restore point** before installing. If it fails, abort the installation.
+3. The UI **must never** run with elevated privileges. Everything privileged goes through the service.
+4. The service only accepts connections from the local UI (named pipe ACL restricted to interactive users).
+5. Do not run commands built by concatenating external input; use `ProcessStartInfo.ArgumentList`.
+6. Every download is verified with a hash (SHA-256) and a signature before it runs.
+7. Do not store secrets in the repository. Use `dotnet user-secrets` or environment variables.
+8. Every installation leaves a record in the operations log (what, when, previous version, result).
 
-Estas reglas expresan requisitos, no certifican que todos los flujos actuales ya los cumplan. La limitación del adaptador WUA en la comprobación de archivos está descrita en `ARCHITECTURE.md` y requiere resolución antes de afirmar que cada paquete se verifica.
+These rules state requirements; they do not certify that every current flow already meets them. The limitation of the WUA adapter in file verification is described in `ARCHITECTURE.md` and must be resolved before claiming that each package is verified.
 
-## Pruebas
+## Testing
 
-- Lógica pura (`Core`): tests unitarios, sin dependencias de Windows.
-- `Agent.Drivers`: tests de integración marcados con `[Trait("Category","Integration")]`, que solo se ejecutan en Windows y en VM.
-- Un cambio que toque instalación, rollback o verificación de firmas **requiere test** o una nota explicando cómo se verificó manualmente.
+- Pure logic (`Core`): unit tests, no Windows dependencies.
+- `Agent.Drivers`: integration tests marked with `[Trait("Category","Integration")]`, which only run on Windows and in a VM.
+- A change that touches installation, rollback, or signature verification **requires a test**, or a note explaining how it was verified manually.
+- The rationale for each automated test project is documented in `TESTING.md`, section 4.
 
-## Qué NO hacer
+## What NOT to do
 
-- No añadir drivers, binarios ni instaladores de terceros al repositorio.
-- No desactivar la verificación de firmas, ni siquiera "temporalmente" o detrás de un flag sin documentar.
-- No introducir telemetría o llamadas de red sin que esté descrita en `DESIGN.md`.
-- No cambiar la arquitectura (por ejemplo, ejecutar la UI como administrador) sin actualizar `DESIGN.md`.
-- No ejecutar código de instalación contra el equipo real del desarrollador.
+- Do not add third-party drivers, binaries, or installers to the repository.
+- Do not disable signature verification, not even "temporarily" or behind an undocumented flag.
+- Do not introduce telemetry or network calls that are not described in `DESIGN.md`.
+- Do not change the architecture (for example, running the UI as administrator) without updating `DESIGN.md`.
+- Do not run installation code against the developer's real machine.
 
-## Cómo trabajar en una tarea
+## How to work on a task
 
-1. Consultar `MVP.md` para el alcance y `ARCHITECTURE.md` para la implementación actual.
-2. Hacer cambios mínimos y enfocados; anotar en `DESIGN.md` solo las decisiones técnicas duraderas.
-3. Compilar, ejecutar tests y `dotnet format` antes de dar la tarea por terminada.
-4. Resumir qué se hizo, qué se probó y qué queda pendiente.
+1. Read `MVP.md` for scope and `ARCHITECTURE.md` for the current implementation.
+2. Make small, focused changes; record in `DESIGN.md` only lasting technical decisions.
+3. Build, run the tests, and run `dotnet format` before considering the task finished.
+4. Summarize what was done, what was tested, and what remains pending.

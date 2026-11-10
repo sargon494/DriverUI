@@ -1,633 +1,633 @@
-# Registro de Sprints — DriverUpdater
+# Sprint Log — DriverUpdater
 
-Este documento registra de forma cronológica y detallada cada sprint ejecutado en el proyecto **DriverUpdater**, con las tareas completadas, decisiones de arquitectura, resultados de pruebas, problemas resueltos y notas esenciales para los siguientes agentes.
+This document chronologically and in detail records each sprint executed in the **DriverUpdater** project, with completed tasks, architecture decisions, test results, resolved issues and essential notes for the following agents.
 
-Es un registro histórico, no una descripción del estado actual. Las tareas y decisiones reflejan lo que se sabía al cerrar cada sprint; para el estado vigente consulta `MVP.md`, `ARCHITECTURE.md`, `DESIGN.md` y `TESTING.md`.
+This is a historical log, not a description of the current state. Tasks and decisions reflect what was known when each sprint closed; for the current state, see `MVP.md`, `ARCHITECTURE.md`, `DESIGN.md` and `TESTING.md`.
 
 ---
 
-## Sprint 0 — Preparación del entorno y estructura base
+## Sprint 0 — Environment preparation and base structure
 
-- **Fecha**: 2026-10-12
-- **Estado**: ✅ Completado
-- **Hito**: Hito 0 (Fundamentos e infraestructura)
+- **Date**: 2026-10-12
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 0 (Foundations and infrastructure)
 
-### Tareas completadas
-- [x] **S0-T1: Verificación e integración de .NET 10 SDK** — SDK .NET 10.0.401 (LTS) verificado en el sistema (`C:\Program Files\dotnet\dotnet.exe`).
-- [x] **S0-T2: Configuración de `global.json`** — Fijada la versión `10.0.401` con `rollForward: "latestFeature"`.
-- [x] **S0-T3: Propiedades compartidas con `Directory.Build.props`** — Habilitado `Nullable: enable`, `ImplicitUsings: enable`, `LangVersion: 14`, `TreatWarningsAsErrors: true`, `AnalysisLevel: latest-recommended` y `EnforceCodeStyleInBuild: true`.
-- [x] **S0-T4: Creación de solución y los 7 proyectos**:
-  - `src/Core` (`net10.0`, biblioteca agnóstica de plataforma sin dependencias de Windows).
-  - `src/Agent.Drivers` (`net10.0-windows`, acceso a subsistemas de Windows: WMI, COM, WinVerifyTrust).
-  - `src/Agent.Service` (`net10.0-windows`, Worker Service para Windows Service en cuenta SYSTEM).
-  - `src/Ui.Wpf` (`net10.0-windows`, interfaz de usuario en WPF con MVVM).
-  - `src/Cli` (`net10.0-windows`, herramienta de diagnóstico y desarrollo por consola).
-  - `tests/Core.Tests` (`net10.0`, tests unitarios con xUnit, FluentAssertions, NSubstitute).
-  - `tests/Agent.Drivers.Tests` (`net10.0-windows`, tests de integración de hardware y subsistemas).
-- [x] **S0-T5: Referencias entre proyectos** — Establecidas conforme a la arquitectura (`Agent.Service` -> `Agent.Drivers`, `Core`; `Ui.Wpf` -> `Core`; `Cli` -> `Agent.Drivers`, `Core`; proyectos de tests referenciando sus respectivos objetivos).
-- [x] **S0-T6: Dependencias y paquetes NuGet esenciales**:
+### Completed tasks
+- [x] **S0-T1: Verification and integration of .NET 10 SDK** — SDK .NET 10.0.401 (LTS) verified on the system (`C:\Program Files\dotnet\dotnet.exe`).
+- [x] **S0-T2: `global.json` configuration** — Version `10.0.401` pinned with `rollForward: "latestFeature"`.
+- [x] **S0-T3: Shared properties with `Directory.Build.props`** — Enabled `Nullable: enable`, `ImplicitUsings: enable`, `LangVersion: 14`, `TreatWarningsAsErrors: true`, `AnalysisLevel: latest-recommended` and `EnforceCodeStyleInBuild: true`.
+- [x] **S0-T4: Solution creation and the 7 projects**:
+  - `src/Core` (`net10.0`, platform-agnostic library with no Windows dependencies).
+  - `src/Agent.Drivers` (`net10.0-windows`, access to Windows subsystems: WMI, COM, WinVerifyTrust).
+  - `src/Agent.Service` (`net10.0-windows`, Worker Service for a Windows Service running under the SYSTEM account).
+  - `src/Ui.Wpf` (`net10.0-windows`, WPF user interface with MVVM).
+  - `src/Cli` (`net10.0-windows`, console diagnostic and development tool).
+  - `tests/Core.Tests` (`net10.0`, unit tests with xUnit, FluentAssertions, NSubstitute).
+  - `tests/Agent.Drivers.Tests` (`net10.0-windows`, hardware and subsystem integration tests).
+- [x] **S0-T5: Project references** — Established according to the architecture (`Agent.Service` -> `Agent.Drivers`, `Core`; `Ui.Wpf` -> `Core`; `Cli` -> `Agent.Drivers`, `Core`; test projects referencing their respective targets).
+- [x] **S0-T6: Essential NuGet dependencies and packages**:
   - `Cli`: `System.CommandLine`, `Serilog.Extensions.Logging`, `Serilog.Sinks.Console` (6.1.1), `Serilog.Sinks.File` (7.0.0).
   - `Agent.Service`: `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.Hosting.WindowsServices`, `Grpc.AspNetCore` (2.76.0), `Serilog.Extensions.Logging`, `Serilog.Sinks.File`.
   - `Agent.Drivers`: `System.Management`, `Microsoft.Data.Sqlite`, `Serilog.Extensions.Logging`, `Serilog.Sinks.File`.
   - `Ui.Wpf`: `CommunityToolkit.Mvvm`, `Serilog.Extensions.Logging`.
-  - `Core.Tests` y `Agent.Drivers.Tests`: `xunit`, `xunit.runner.visualstudio`, `FluentAssertions`, `NSubstitute`, `coverlet.collector`, `Microsoft.NET.Test.Sdk`.
-- [x] **S0-T7: Reglas de estilo y calidad (.editorconfig & .gitignore)**:
-  - `.gitignore` estándar para .NET.
-  - `.editorconfig` con formato, estilo y supresión de `CA1848` (no exigir generadores LoggerMessage para logging convencional) y `CA1707` en proyectos de prueba (permitir nombres de test legibles con guiones bajos).
-- [x] **S0-T8: Verificación completa de compilación y pruebas**:
-  - `dotnet build -c Release` compila con 0 errores y 0 warnings.
-  - `dotnet test` ejecuta suites de prueba en verde.
-  - `dotnet format --verify-no-changes` validado con 0 discrepancias de estilo.
+  - `Core.Tests` and `Agent.Drivers.Tests`: `xunit`, `xunit.runner.visualstudio`, `FluentAssertions`, `NSubstitute`, `coverlet.collector`, `Microsoft.NET.Test.Sdk`.
+- [x] **S0-T7: Style and quality rules (.editorconfig & .gitignore)**:
+  - Standard .NET `.gitignore`.
+  - `.editorconfig` with formatting and style rules, and suppression of `CA1848` (do not require LoggerMessage generators for conventional logging) and `CA1707` in test projects (allow readable test names with underscores).
+- [x] **S0-T8: Full build and test verification**:
+  - `dotnet build -c Release` builds with 0 errors and 0 warnings.
+  - `dotnet test` runs the test suites green.
+  - `dotnet format --verify-no-changes` validated with 0 style discrepancies.
 
-### Decisiones técnicas tomadas
-1. **Versiones de paquetes NuGet**:
-   - `Serilog.Sinks.Console` se ajustó a `6.1.1` (la versión 7.0.0 no existe aún en NuGet).
-   - `Grpc.AspNetCore` se fijó en `2.76.0` para evitar el warning NU1603 (que se convertía en error por `TreatWarningsAsErrors`).
-2. **Convención de tests**:
-   - En `.editorconfig`, se configuró `dotnet_diagnostic.CA1707.severity = none` para `[tests/**.cs]`, permitiendo la convención estándar `Should_Action_When_Condition` en métodos de prueba.
+### Technical decisions made
+1. **NuGet package versions**:
+   - `Serilog.Sinks.Console` was set to `6.1.1` (version 7.0.0 does not exist on NuGet yet).
+   - `Grpc.AspNetCore` was pinned to `2.76.0` to avoid warning NU1603 (which was turned into an error by `TreatWarningsAsErrors`).
+2. **Test convention**:
+   - In `.editorconfig`, `dotnet_diagnostic.CA1707.severity = none` was set for `[tests/**.cs]`, allowing the standard `Should_Action_When_Condition` convention for test methods.
 
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 7 proyectos compilados, 0 warnings, 0 errores.
-- `dotnet test`: 2/2 tests ejecutados y pasados (smoke tests en `Core.Tests` y `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 diferencias detectadas.
+### Tests run
+- `dotnet build -c Release`: 7 projects built, 0 warnings, 0 errors.
+- `dotnet test`: 2/2 tests run and passed (smoke tests in `Core.Tests` and `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 differences detected.
 
-### Notas para el siguiente sprint (Sprint 1)
-- El siguiente sprint es **Sprint 1 — Modelos, interfaces y lógica pura (`Core`)**.
-- Toda la lógica debe ir en `src/Core` sin dependencias de Windows (`net10.0`).
-- Debe incluir modelos: `HardwareId`, `InstalledDriver`, `DriverUpdate`, `InstallResult`, `OperationLogEntry`, `DriverStatus`.
+### Notes for the next sprint (Sprint 1)
+- The next sprint is **Sprint 1 — Models, interfaces and pure logic (`Core`)**.
+- All logic must go in `src/Core` without Windows dependencies (`net10.0`).
+- Must include models: `HardwareId`, `InstalledDriver`, `DriverUpdate`, `InstallResult`, `OperationLogEntry`, `DriverStatus`.
 - Interfaces: `IDriverInventory`, `IUpdateSource`, `ISignatureVerifier`, `IRestorePointService`, `IDriverInstaller`.
-- Servicios de lógica pura: `VersionComparer` (comparador numérico por segmentos) y `DriverMatcher`.
-- Suite completa de tests unitarios en `tests/Core.Tests`.
+- Pure logic services: `VersionComparer` (numeric segment-by-segment comparer) and `DriverMatcher`.
+- Full unit test suite in `tests/Core.Tests`.
 
 ---
 
-## Sprint 1 — Modelos, interfaces y lógica pura (`Core`)
+## Sprint 1 — Models, interfaces and pure logic (`Core`)
 
-- **Fecha**: 2026-10-12
-- **Estado**: ✅ Completado
-- **Hito**: Hito 0 (Lógica de dominio aislada)
+- **Date**: 2026-10-12
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 0 (Isolated domain logic)
 
-### Tareas completadas
-- [x] **S1-T1: Modelo `HardwareId`** (`src/Core/Models/HardwareId.cs`):
-  - Inmutable (`record`), encapsula el identificador PnP (ej: `PCI\VEN_8086&DEV_9A49&REV_03`).
-  - Comparación insensible a mayúsculas/minúsculas (`Matches(HardwareId)` y `Matches(string)`).
-- [x] **S1-T2: Modelo `InstalledDriver` y `DriverStatus`** (`src/Core/Models/`):
-  - `InstalledDriver`: dispositivo, fabricante, versión, fecha, inf, hardware IDs, estado y clase.
+### Completed tasks
+- [x] **S1-T1: `HardwareId` model** (`src/Core/Models/HardwareId.cs`):
+  - Immutable (`record`), encapsulates the PnP identifier (e.g. `PCI\VEN_8086&DEV_9A49&REV_03`).
+  - Case-insensitive comparison (`Matches(HardwareId)` and `Matches(string)`).
+- [x] **S1-T2: `InstalledDriver` and `DriverStatus` models** (`src/Core/Models/`):
+  - `InstalledDriver`: device, manufacturer, version, date, inf, hardware IDs, status and class.
   - `DriverStatus`: Ok, Error, Degraded, Unknown.
-- [x] **S1-T3: Modelo `DriverUpdate`** (`src/Core/Models/DriverUpdate.cs`):
-  - Id, título, descripción, versión nueva/actual, hardware ID coincidente, tamaño en bytes, obligatoriedad y fecha de lanzamiento.
-- [x] **S1-T4: Modelo `InstallResult`** (`src/Core/Models/InstallResult.cs`):
-  - Éxito, mensaje de error, flag de reinicio requerido, versiones previa y aplicada, timestamp.
-- [x] **S1-T5: Modelo `OperationLogEntry`** (`src/Core/Models/OperationLogEntry.cs`):
-  - Registro de auditoría para operaciones (Install, Rollback, Scan).
-- [x] **S1-T6: Modelos adicionales e interfaces del dominio**:
-  - `SignatureVerificationResult` (`src/Core/Models/SignatureVerificationResult.cs`): validez, firmante, motivo de fallo, flag WHQL.
-  - `InstallProgress` y `InstallPhase` (`src/Core/Models/InstallProgress.cs`): fases completas (Downloading, Verifying, CreatingRestorePoint, Installing, Validating, Complete, Failed, RollingBack).
+- [x] **S1-T3: `DriverUpdate` model** (`src/Core/Models/DriverUpdate.cs`):
+  - Id, title, description, new/current version, matching hardware ID, size in bytes, mandatory flag and release date.
+- [x] **S1-T4: `InstallResult` model** (`src/Core/Models/InstallResult.cs`):
+  - Success, error message, restart-required flag, previous and applied versions, timestamp.
+- [x] **S1-T5: `OperationLogEntry` model** (`src/Core/Models/OperationLogEntry.cs`):
+  - Audit record for operations (Install, Rollback, Scan).
+- [x] **S1-T6: Additional models and domain interfaces**:
+  - `SignatureVerificationResult` (`src/Core/Models/SignatureVerificationResult.cs`): validity, signer, failure reason, WHQL flag.
+  - `InstallProgress` and `InstallPhase` (`src/Core/Models/InstallProgress.cs`): full phases (Downloading, Verifying, CreatingRestorePoint, Installing, Validating, Complete, Failed, RollingBack).
   - `IDriverInventory` (`src/Core/Interfaces/IDriverInventory.cs`): `GetInstalledDriversAsync(ct)`.
   - `IUpdateSource` (`src/Core/Interfaces/IUpdateSource.cs`): `IAsyncEnumerable<DriverUpdate> FindUpdatesAsync(installed, ct)`.
   - `ISignatureVerifier` (`src/Core/Interfaces/ISignatureVerifier.cs`): `VerifyAsync(filePath, ct)`.
   - `IRestorePointService` (`src/Core/Interfaces/IRestorePointService.cs`): `CreateRestorePointAsync(description, ct)`.
-  - `IDriverInstaller` (`src/Core/Interfaces/IDriverInstaller.cs`): `InstallAsync(update, progress, ct)` y `RollbackAsync(operationId, ct)`.
+  - `IDriverInstaller` (`src/Core/Interfaces/IDriverInstaller.cs`): `InstallAsync(update, progress, ct)` and `RollbackAsync(operationId, ct)`.
   - `IOperationHistory` (`src/Core/Interfaces/IOperationHistory.cs`): `RecordAsync`, `GetAllAsync`, `GetByIdAsync`.
-- [x] **S1-T7: Servicio `VersionComparer`** (`src/Core/Services/VersionComparer.cs`):
-  - Comparador numérico por segmentos (`ulong`) para versiones tipo `major.minor.build.revision`.
-  - Soporta segmentos faltantes como cero (ej: `"10.0"` == `"10.0.0.0"`).
-  - Implementa `IComparer<string>` para ordenación con LINQ.
-  - Validador sintáctico `IsValid(version)`.
-  - Manejo robusto de errores (`ArgumentNullException`, `ArgumentException`, `FormatException`).
-- [x] **S1-T8: Servicio `DriverMatcher`** (`src/Core/Services/DriverMatcher.cs`):
-  - `FindBestMatch`: evalúa candidatos, cruza hardware IDs con el dispositivo de forma case-insensitive, descarta versiones inferiores o iguales y selecciona la más alta (desempatando por fecha de lanzamiento).
-  - `FindAllMatches`: resolución por lotes para colecciones de dispositivos.
-- [x] **S1-T9: Batería exhaustiva de tests unitarios** (`tests/Core.Tests/`):
-  - `VersionComparerTests`: 10 casos de prueba con InlineData cubriendo pares numéricos, ceros omitidos, formatos no válidos, ordenamiento y excepciones.
-  - `DriverMatcherTests`: 8 tests unitarios cubriendo selección óptima, versiones obsoletas, cruce de hardware IDs, desempate por fecha y batch matching.
-  - `HardwareIdTests`: 5 tests verificando igualdad case-insensitive, validación de nulos y representación string.
+- [x] **S1-T7: `VersionComparer` service** (`src/Core/Services/VersionComparer.cs`):
+  - Numeric segment-by-segment comparer (`ulong`) for versions of the form `major.minor.build.revision`.
+  - Supports missing segments as zero (e.g. `"10.0"` == `"10.0.0.0"`).
+  - Implements `IComparer<string>` for ordering with LINQ.
+  - Syntactic validator `IsValid(version)`.
+  - Robust error handling (`ArgumentNullException`, `ArgumentException`, `FormatException`).
+- [x] **S1-T8: `DriverMatcher` service** (`src/Core/Services/DriverMatcher.cs`):
+  - `FindBestMatch`: evaluates candidates, matches hardware IDs against the device case-insensitively, discards equal or lower versions and selects the highest one (breaking ties by release date).
+  - `FindAllMatches`: batch resolution for device collections.
+- [x] **S1-T9: Exhaustive unit test battery** (`tests/Core.Tests/`):
+  - `VersionComparerTests`: 10 test cases with InlineData covering numeric pairs, omitted zeros, invalid formats, ordering and exceptions.
+  - `DriverMatcherTests`: 8 unit tests covering optimal selection, outdated versions, hardware ID matching, tie-breaking by date and batch matching.
+  - `HardwareIdTests`: 5 tests verifying case-insensitive equality, null validation and string representation.
 
-### Decisiones técnicas tomadas
-1. **Representación de versiones de drivers**:
-   - `VersionComparer` analiza segmentos numéricos usando `ulong` para evitar overflow en builds largas de fabricantes, rellenando con `0UL` los segmentos ausentes cuando se comparan cadenas con diferente cantidad de puntos.
-2. **Desempate en DriverMatcher**:
-   - Cuando dos actualizaciones candidatas válidas tienen exactamente la misma versión numérica, se prioriza la de fecha de lanzamiento (`ReleaseDate`) más reciente.
-3. **Persistencia e inversión de dependencias**:
-   - Se definió `IOperationHistory` dentro de `Core.Interfaces` para permitir que el servicio y las pruebas dependan de la abstracción, sin acoplar `Core` a SQLite ni a Windows.
+### Technical decisions made
+1. **Driver version representation**:
+   - `VersionComparer` parses numeric segments using `ulong` to avoid overflow in long manufacturer builds, padding missing segments with `0UL` when comparing strings with a different number of dots.
+2. **Tie-breaking in `DriverMatcher`**:
+   - When two valid candidate updates have exactly the same numeric version, the one with the most recent release date (`ReleaseDate`) is prioritized.
+3. **Persistence and dependency inversion**:
+   - `IOperationHistory` was defined in `Core.Interfaces` so that the service and the tests depend on the abstraction, without coupling `Core` to SQLite or Windows.
 
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 7 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: 40/40 tests pasados (39 tests en `Core.Tests`, 1 en `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
+### Tests run
+- `dotnet build -c Release`: 7 projects built, 0 warnings, 0 errors.
+- `dotnet test -c Release`: 40/40 tests passed (39 tests in `Core.Tests`, 1 in `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 format discrepancies.
 
-### Notas para el siguiente sprint (Sprint 2)
-- El siguiente sprint es **Sprint 2 — Inventario de drivers con WMI (`Agent.Drivers`)**.
-- Objetivo: Implementar `WmiDriverInventory` consultando `Win32_PnPSignedDriver` en WMI (`System.Management`).
-- Mapear DeviceID, DeviceName, Manufacturer, DriverVersion, DriverDate, InfName, HardwareID, Status y DeviceClass.
-- Registrar `WmiDriverInventory` como singleton en `ServiceCollectionExtensions.AddDriverServices()`.
-- Implementar el comando `scan` en `src/Cli` con tabla formateada por consola y logging con Serilog.
-- Verificar ejecución de `dotnet run --project src/Cli -- scan` en el equipo de desarrollo.
+### Notes for the next sprint (Sprint 2)
+- The next sprint is **Sprint 2 — WMI driver inventory (`Agent.Drivers`)**.
+- Goal: Implement `WmiDriverInventory` querying `Win32_PnPSignedDriver` in WMI (`System.Management`).
+- Map DeviceID, DeviceName, Manufacturer, DriverVersion, DriverDate, InfName, HardwareID, Status and DeviceClass.
+- Register `WmiDriverInventory` as a singleton in `ServiceCollectionExtensions.AddDriverServices()`.
+- Implement the `scan` command in `src/Cli` with a console-formatted table and logging with Serilog.
+- Verify execution of `dotnet run --project src/Cli -- scan` on the development machine.
 
 ---
 
-## Sprint 2 — Inventario de drivers con WMI (`Agent.Drivers`)
+## Sprint 2 — WMI driver inventory (`Agent.Drivers`)
 
-- **Fecha**: 2026-10-12
-- **Estado**: ✅ Completado
-- **Hito**: Hito 0 (Inventario real en Windows)
+- **Date**: 2026-10-12
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 0 (Real inventory on Windows)
 
-### Tareas completadas
+### Completed tasks
 - [x] **S2-T1: `WmiDriverInventory`** (`src/Agent.Drivers/Inventory/WmiDriverInventory.cs`):
-  - Implementación completa de `IDriverInventory` sobre WMI (`Win32_PnPSignedDriver`).
-  - Mapeo de `DeviceID`, `DeviceName` (con fallback a `Description` y `Caption`), `Manufacturer`, `DriverVersion`, `InfName`, `DeviceClass`, `DriverDate` (usando `ManagementDateTimeConverter`) y `HardwareID`.
-  - Normalización de estados PnP a `DriverStatus` (Ok, Error, Degraded, Unknown).
-  - Consulta ejecutada en background thread (`Task.Run`) con soporte de `CancellationToken` y `ConfigureAwait(false)`.
-- [x] **S2-T2: Contenedor DI en `Agent.Drivers`** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
-  - Extensión `AddDriverServices` para registrar `WmiDriverInventory` como singleton de `IDriverInventory`.
-- [x] **S2-T3: Comando `scan` en la CLI** (`src/Cli/Program.cs`):
-  - Comando `dotnet run --project src/Cli -- scan` mediante `System.CommandLine`.
-  - Muestra tabla formateada con columnas: Dispositivo, Fabricante, Versión, Fecha y Estado.
-  - Ordenado por clase de dispositivo y nombre.
-  - Temporizador de ejecución (`Stopwatch`).
-- [x] **S2-T4: Logging con Serilog**:
-  - Sink de archivo rotatorio diario en `logs/cli-.log` con formato invariante.
-  - Registro de inicio y finalización con conteo total de controladores detectados.
-- [x] **S2-T5: Tests de integración**:
-  - `tests/Agent.Drivers.Tests/WmiDriverInventoryTests.cs` con tests marcados como `[Trait("Category", "Integration")]`:
-    - Verifica recuperación de drivers reales con campos requeridos en Windows.
-    - Verifica propagación de `OperationCanceledException`.
+  - Full implementation of `IDriverInventory` over WMI (`Win32_PnPSignedDriver`).
+  - Mapping of `DeviceID`, `DeviceName` (with fallback to `Description` and `Caption`), `Manufacturer`, `DriverVersion`, `InfName`, `DeviceClass`, `DriverDate` (using `ManagementDateTimeConverter`) and `HardwareID`.
+  - Normalization of PnP states to `DriverStatus` (Ok, Error, Degraded, Unknown).
+  - Query executed on a background thread (`Task.Run`) with `CancellationToken` support and `ConfigureAwait(false)`.
+- [x] **S2-T2: DI container in `Agent.Drivers`** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - `AddDriverServices` extension to register `WmiDriverInventory` as a singleton of `IDriverInventory`.
+- [x] **S2-T3: `scan` command in the CLI** (`src/Cli/Program.cs`):
+  - Command `dotnet run --project src/Cli -- scan` via `System.CommandLine`.
+  - Displays a console-formatted table with columns: Device, Manufacturer, Version, Date and Status.
+  - Sorted by device class and name.
+  - Execution timer (`Stopwatch`).
+- [x] **S2-T4: Logging with Serilog**:
+  - Daily rolling file sink at `logs/cli-.log` with invariant format.
+  - Start and end logging with the total count of drivers detected.
+- [x] **S2-T5: Integration tests**:
+  - `tests/Agent.Drivers.Tests/WmiDriverInventoryTests.cs` with tests marked `[Trait("Category", "Integration")]`:
+    - Verifies retrieval of real drivers with the required fields on Windows.
+    - Verifies propagation of `OperationCanceledException`.
 
-### Decisiones técnicas tomadas
+### Technical decisions made
 1. **System.CommandLine**:
-   - Se empleó `System.CommandLine 2.0.0-beta4.22272.1` por estabilidad de API con `SetHandler(async (context) => ...)`, pasando `context.GetCancellationToken()`.
-2. **Robustez ante campos opcionales de WMI**:
-   - `DriverDate` contempla fallos de formateo WMI intentando `DateTime.TryParse` antes de fallback a `DateTime.MinValue`.
-   - `DeviceName` utiliza encadenamiento coalescente de `DeviceName`, `Description` y `Caption` para evitar nombres vacíos.
-   - Colección de hardware IDs incluye tanto el `HardwareID` primario como el `DeviceID` para maximizar coincidencias con catálogos de actualización.
+   - `System.CommandLine 2.0.0-beta4.22272.1` was used for API stability with `SetHandler(async (context) => ...)`, passing `context.GetCancellationToken()`.
+2. **Robustness against optional WMI fields**:
+   - `DriverDate` handles WMI formatting failures by trying `DateTime.TryParse` before falling back to `DateTime.MinValue`.
+   - `DeviceName` uses null-coalescing chaining of `DeviceName`, `Description` and `Caption` to avoid empty names.
+   - The hardware ID collection includes both the primary `HardwareID` and the `DeviceID` to maximize matches with update catalogs.
 
-### Pruebas ejecutadas
+### Tests run
 - `dotnet run --project src/Cli -- scan`:
-  - **Resultado**: 185 controladores reales listados en la máquina en **1.50 segundos** (criterio: < 30 segundos).
+  - **Result**: 185 real drivers listed on the machine in **1.50 seconds** (criterion: < 30 seconds).
 - `dotnet test -c Release`:
-  - **Resultado**: 42/42 tests pasados (39 unitarios en `Core.Tests`, 3 en `Agent.Drivers.Tests`).
+  - **Result**: 42/42 tests passed (39 unit tests in `Core.Tests`, 3 in `Agent.Drivers.Tests`).
 - `dotnet format --verify-no-changes`:
-  - **Resultado**: 0 discrepancias de estilo y formato.
-- Log verificado en `logs/cli-20261012.log`.
+  - **Result**: 0 style and format discrepancies.
+- Log verified in `logs/cli-20261012.log`.
 
-### Notas para el siguiente sprint (Sprint 3)
-- El siguiente sprint es **Sprint 3 — Búsqueda de actualizaciones con WUA**.
-- Objetivo: Implementar `IUpdateSource` usando Windows Update Agent (`Microsoft.Update.Session` COM).
-- Criterio de búsqueda: `"IsInstalled=0 AND Type='Driver'"`.
-- Cruzar resultados con los drivers instalados usando `DriverMatcher` por hardware ID.
-- Agregar comando `updates` a la CLI (`dotnet run --project src/Cli -- updates`).
-- **Hito 0 — Decisión go/no-go**: Evaluar la disponibilidad y riqueza de actualizaciones ofrecidas por Windows Update.
+### Notes for the next sprint (Sprint 3)
+- The next sprint is **Sprint 3 — Update search with WUA (`Agent.Drivers`)**.
+- Goal: Implement `IUpdateSource` using the Windows Update Agent (`Microsoft.Update.Session` COM).
+- Search criterion: `"IsInstalled=0 AND Type='Driver'"`.
+- Cross-reference the results with the installed drivers using `DriverMatcher` by hardware ID.
+- Add the `updates` command to the CLI (`dotnet run --project src/Cli -- updates`).
+- **Milestone 0 — Go/no-go decision**: Evaluate the availability and richness of the updates offered by Windows Update.
 
 ---
 
-## Infraestructura CI/CD — GitHub Actions
+## Infrastructure CI/CD — GitHub Actions
 
-- **Fecha**: 2026-10-12
-- **Estado**: ✅ Configurado y validado
-- **Workflows añadidos**:
+- **Date**: 2026-10-12
+- **Status**: ✅ Configured and validated
+- **Workflows added**:
   1. `.github/workflows/ci.yml`:
-     - Disparadores: `push` a ramas principales (`main`, `master`) y `pull_request`.
+     - Triggers: `push` to main branches (`main`, `master`) and `pull_request`.
      - Runner: `windows-latest`.
-     - Pasos: Setup .NET 10.0.x, `dotnet format --verify-no-changes`, `dotnet restore`, `dotnet build -c Release --no-restore` y `dotnet test -c Release --no-build` con reporte de cobertura `XPlat Code Coverage`.
+     - Steps: Set up .NET 10.0.x, `dotnet format --verify-no-changes`, `dotnet restore`, `dotnet build -c Release --no-restore` and `dotnet test -c Release --no-build` with an `XPlat Code Coverage` coverage report.
   2. `.github/workflows/release.yml`:
-     - Disparadores: Tags de versión `v*` (ej: `v1.0.0`) o ejecución manual vía `workflow_dispatch`.
+     - Triggers: version tags `v*` (e.g. `v1.0.0`) or manual execution via `workflow_dispatch`.
      - Runner: `windows-latest`.
-     - Pasos: Validación de formato y tests, publicación de paquetes win-x64 (`Cli`, `Agent.Service`, `Ui.Wpf`), compresión de artefactos `.zip` y creación automática de GitHub Release con `softprops/action-gh-release@v2`.
-- **Verificación local**:
-  - Compilación y pruebas validadas con 0 advertencias y 0 errores.
-  - Empaquetado y ejecución de artefactos publicado verificado con éxito (`dist/cli/Cli.exe`).
-  - `.gitignore` actualizado con exclusión de `dist/`.
+     - Steps: Format and test validation, publishing of win-x64 packages (`Cli`, `Agent.Service`, `Ui.Wpf`), compression of `.zip` artifacts and automatic creation of a GitHub Release with `softprops/action-gh-release@v2`.
+- **Local verification**:
+  - Build and tests validated with 0 warnings and 0 errors.
+  - Packaging and execution of the published artifact verified successfully (`dist/cli/Cli.exe`).
+  - `.gitignore` updated to exclude `dist/`.
 
 ---
 
-## Sprint 3 — Búsqueda de actualizaciones con WUA (`Agent.Drivers`)
+## Sprint 3 — Update search with WUA (`Agent.Drivers`)
 
-- **Fecha**: 2026-10-13
-- **Estado**: ✅ Completado
-- **Hito**: Hito 0 (Búsqueda de actualizaciones via Windows Update)
+- **Date**: 2026-10-13
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 0 (Update search via Windows Update)
 
-### Tareas completadas
+### Completed tasks
 - [x] **S3-T1: `WuaUpdateSource`** (`src/Agent.Drivers/Updates/WuaUpdateSource.cs`):
-  - Implementación completa de `IUpdateSource` sobre Windows Update Agent (COM).
-  - Creación de `Microsoft.Update.Session` vía `Type.GetTypeFromProgID` + `Activator.CreateInstance`.
-  - Criterio de búsqueda: `"IsInstalled=0 AND Type='Driver'"`.
-  - Mapeo de propiedades COM: `UpdateID`, `Title`, `Description`, `MaxDownloadSize`, `IsMandatory`, `LastDeploymentChangeTime`, `DriverHardwareID`.
-  - Extracción de versión del título WUA mediante parsing de segmentos `"Fabricante - Categoría - Versión"` con fallback a tokens sueltos, validados con `VersionComparer.IsValid()`.
-  - Cruce de hardware IDs con el inventario instalado para obtener `CurrentVersion` y `DeviceName`.
-  - Búsqueda COM ejecutada en background thread (`Task.Run`) con soporte de `CancellationToken`.
-  - Liberación correcta de objetos COM con `Marshal.ReleaseComObject` en bloques `finally`.
-  - Manejo de `COMException` y `RuntimeBinderException` para actualizaciones sin `IWindowsDriverUpdate`.
-- [x] **S3-T2: Registro en DI** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
-  - `WuaUpdateSource` registrado como singleton de `IUpdateSource`.
-- [x] **S3-T3: Comando `updates` en la CLI** (`src/Cli/Program.cs`):
-  - Comando `dotnet run --project src/Cli -- updates`.
-  - Flujo: escaneo de inventario → búsqueda WUA → tabla formateada con columnas: Dispositivo, Versión actual, Versión nueva, Tamaño y Título.
-  - Formato de tamaño humano (B, KB, MB).
-  - Mensaje verde de confirmación cuando no hay actualizaciones pendientes.
+  - Full implementation of `IUpdateSource` over the Windows Update Agent (COM).
+  - Creation of `Microsoft.Update.Session` via `Type.GetTypeFromProgID` + `Activator.CreateInstance`.
+  - Search criterion: `"IsInstalled=0 AND Type='Driver'"`.
+  - Mapping of COM properties: `UpdateID`, `Title`, `Description`, `MaxDownloadSize`, `IsMandatory`, `LastDeploymentChangeTime`, `DriverHardwareID`.
+  - Extraction of the version from the WUA title by parsing `"Manufacturer - Category - Version"` segments, with fallback to loose tokens, validated with `VersionComparer.IsValid()`.
+  - Cross-referencing hardware IDs with the installed inventory to obtain `CurrentVersion` and `DeviceName`.
+  - WUA search executed on a background thread (`Task.Run`) with `CancellationToken` support.
+  - Correct release of COM objects with `Marshal.ReleaseComObject` in `finally` blocks.
+  - Handling of `COMException` and `RuntimeBinderException` for updates without `IWindowsDriverUpdate`.
+- [x] **S3-T2: DI registration** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - `WuaUpdateSource` registered as a singleton of `IUpdateSource`.
+- [x] **S3-T3: `updates` command in the CLI** (`src/Cli/Program.cs`):
+  - Command `dotnet run --project src/Cli -- updates`.
+  - Flow: inventory scan → WUA search → formatted table with columns: Device, Current version, New version, Size and Title.
+  - Human-readable size format (B, KB, MB).
+  - Green confirmation message when there are no pending updates.
 - [x] **S3-T4: Tests** (`tests/Agent.Drivers.Tests/WuaUpdateSourceTests.cs`):
-  - Test de integración: `FindUpdatesAsync_Should_Return_Without_Throwing` — búsqueda real contra WUA con validación de campos requeridos.
-  - Test de integración: `FindUpdatesAsync_Should_Propagate_Cancellation` — verificación de cancelación.
-  - Test unitario: `FindUpdatesAsync_Should_Throw_When_InstalledDrivers_Is_Null`.
-  - 6 tests con `[Theory]` para `ExtractVersionFromTitle` con formatos estándar de WUA.
-  - 3 tests con `[Theory]` para entradas vacías/nulas.
-  - Tests de fallback y caso sin versión.
-- [x] **S3-T5: Configuración y calidad**:
-  - `InternalsVisibleTo` añadido a `Agent.Drivers.csproj` para permitir tests de métodos internos.
-  - `.editorconfig` corregido: regla de nombres separada para `const` (PascalCase) vs campos de instancia (`_camelCase`).
+  - Integration test: `FindUpdatesAsync_Should_Return_Without_Throwing` — real search against WUA with validation of required fields.
+  - Integration test: `FindUpdatesAsync_Should_Propagate_Cancellation` — cancellation verification.
+  - Unit test: `FindUpdatesAsync_Should_Throw_When_InstalledDrivers_Is_Null`.
+  - 6 tests with `[Theory]` for `ExtractVersionFromTitle` with standard WUA formats.
+  - 3 tests with `[Theory]` for empty/null inputs.
+  - Fallback tests and the no-version case.
+- [x] **S3-T5: Configuration and quality**:
+  - `InternalsVisibleTo` added to `Agent.Drivers.csproj` to allow tests of internal methods.
+  - `.editorconfig` fixed: separate naming rule for `const` (PascalCase) versus instance fields (`_camelCase`).
 
-### Decisiones técnicas tomadas
-1. **COM interop con `dynamic`**:
-   - Se usa `dynamic` en lugar de interop tipado porque WUA no tiene un assembly de interop oficial para .NET moderno. `dynamic` con `Type.GetTypeFromProgID` es la forma estándar y mantenida.
-2. **Extracción de versión del título**:
-   - Los títulos WUA de drivers siguen el patrón "Fabricante - Categoría - Versión". Se extrae iterando segmentos desde el final y validando con `VersionComparer.IsValid()`. Como fallback, se buscan tokens sueltos tipo versión.
-3. **Manejo de `RuntimeBinderException`**:
-   - Se añadió `Microsoft.CSharp.RuntimeBinder` para capturar la excepción cuando una actualización no implementa `IWindowsDriverUpdate` y no expone `DriverHardwareID`.
-4. **Convención de naming para constantes**:
-   - Se separó la regla de naming en `.editorconfig`: campos de instancia privados usan `_camelCase`, campos `const` usan `PascalCase`. Esto sigue las convenciones estándar de C#.
+### Technical decisions made
+1. **COM interop with `dynamic`**:
+   - `dynamic` is used instead of typed interop because WUA has no official interop assembly for modern .NET. `dynamic` with `Type.GetTypeFromProgID` is the standard, maintained approach.
+2. **Version extraction from the title**:
+   - WUA driver titles follow the pattern "Manufacturer - Category - Version". The extraction iterates over the segments from the end and validates them with `VersionComparer.IsValid()`. As a fallback, loose version-like tokens are searched.
+3. **Handling of `RuntimeBinderException`**:
+   - `Microsoft.CSharp.RuntimeBinder` was added to catch the exception when an update does not implement `IWindowsDriverUpdate` and does not expose `DriverHardwareID`.
+4. **Naming convention for constants**:
+   - The naming rule in `.editorconfig` was split: private instance fields use `_camelCase`, `const` fields use `PascalCase`. This follows the standard C# conventions.
 
-### Pruebas ejecutadas
+### Tests run
 - `dotnet run --project src/Cli -- updates`:
-  - **Resultado**: 1 actualización de driver real encontrada (Intel Extension 2.1.10103.18) en **6.31 segundos**.
-  - 185 controladores escaneados en el inventario.
+  - **Result**: 1 real driver update found (Intel Extension 2.1.10103.18) in **6.31 seconds**.
+  - 185 drivers scanned in the inventory.
 - `dotnet build -c Release`:
-  - **Resultado**: 7 proyectos compilados, 0 advertencias, 0 errores.
+  - **Result**: 7 projects built, 0 warnings, 0 errors.
 - `dotnet test -c Release`:
-  - **Resultado**: 56/56 tests pasados (39 en `Core.Tests`, 17 en `Agent.Drivers.Tests`).
+  - **Result**: 56/56 tests passed (39 in `Core.Tests`, 17 in `Agent.Drivers.Tests`).
 - `dotnet format --verify-no-changes`:
-  - **Resultado**: 0 discrepancias de formato.
+  - **Result**: 0 format discrepancies.
 
-### Hito 0 — Decisión go/no-go
-- ✅ **GO**: Windows Update Agent devuelve actualizaciones de drivers reales (1 encontrada en el equipo de desarrollo). La fuente es funcional y la integración COM es estable.
-- La cantidad de actualizaciones variará según el equipo y su estado. El criterio `Type='Driver'` filtra correctamente.
+### Milestone 0 — Go/no-go decision
+- ✅ **GO**: The Windows Update Agent returns real driver updates (1 found on the development machine). The source is functional and the COM integration is stable.
+- The number of updates will vary depending on the machine and its state. The `Type='Driver'` criterion filters correctly.
 
-### Notas para el siguiente sprint (Sprint 4A)
-- Se procedió a completar el backend en **Sprint 4A**.
-
----
-
-## Sprint 4A — Implementaciones Core del Backend (`Agent.Drivers`)
-
-- **Fecha**: 2026-10-13
-- **Estado**: ✅ Completado
-- **Hito**: Hito 1 (Backend funcional de extremo a extremo)
-
-### Tareas completadas
-- [x] **S4-T1: `SqliteOperationHistory` — Persistencia en SQLite** (`src/Agent.Drivers/History/SqliteOperationHistory.cs`):
-  - Implementación completa de `IOperationHistory` usando `Microsoft.Data.Sqlite`.
-  - Creación automática de directorio y tabla de persistencia (`CREATE TABLE IF NOT EXISTS operations`).
-  - Esquema estricto: `Id` (INTEGER PK AUTOINCREMENT), `OperationType`, `UpdateId`, `DeviceName`, `HardwareId`, `DriverTitle`, `PreviousVersion`, `NewVersion`, `Success`, `ErrorMessage`, `Timestamp` (ISO 8601).
-  - Operaciones asíncronas con soporte de cancelación (`CancellationToken`).
-  - Ruta de base de datos configurable con valor por defecto en `%ProgramData%\DriverUpdater\history.db`.
-  - Suite de pruebas unitarias (`tests/Agent.Drivers.Tests/SqliteOperationHistoryTests.cs`): inserción, consulta global, consulta por ID, manejo de valores nulos y validación de argumentos.
-- [x] **S4-T2: `WinTrustSignatureVerifier` — Verificación de firma digital** (`src/Agent.Drivers/Security/`):
-  - `NativeMethods.cs`: P/Invoke a `wintrust.dll!WinVerifyTrust` con acción `WINTRUST_ACTION_GENERIC_VERIFY_V2`.
-  - Mapeo de estructuras `WintrustData`, `WintrustFileInfo` con liberación manual de memoria no administrada (`Marshal.StringToCoTaskMemUni` / `FreeCoTaskMem`).
-  - Extracción y validación de certificados y distinción de firmas WHQL / Microsoft.
-  - Mapeo de códigos HRESULT nativos: `TRUST_E_NOSIGNATURE`, `TRUST_E_EXPLICIT_DISTRUST`, `TRUST_E_SUBJECT_NOT_TRUSTED`, `CRYPT_E_SECURITY_SETTINGS`, `CERT_E_EXPIRED`, `CERT_E_REVOKED`, `TRUST_E_BAD_DIGEST`.
-  - Tests en `tests/Agent.Drivers.Tests/WinTrustSignatureVerifierTests.cs`: archivos inexistentes, archivos sin firma y verificación real de binarios firmados del sistema Windows (`kernel32.dll`).
-- [x] **S4-T3: `WmiRestorePointService` — Puntos de restauración de Windows** (`src/Agent.Drivers/Restore/WmiRestorePointService.cs`):
-  - Implementación de `IRestorePointService` mediante invocación WMI a `root\default:SystemRestore.CreateRestorePoint`.
-  - Parámetros: `RestorePointType = 10` (`DEVICE_DRIVER_INSTALL`), `EventType = 100` (`BEGIN_SYSTEM_CHANGE`).
-  - Manejo seguro de `ManagementException`, `UnauthorizedAccessException` y retorno booleano garantizado.
-- [x] **S4-T4: `WuaDriverInstaller` — Orquestación de instalación y rollback** (`src/Agent.Drivers/Install/`):
-  - Abstracción desacoplada `IWuaExecutor` y ejecutor COM `DefaultWuaExecutor` para descargas e instalaciones seguras.
-  - Cumplimiento estricto de las reglas de seguridad de `AGENTS.md`:
-    1. **Regla 1**: Aborta de inmediato si la firma digital no es válida o de confianza.
-    2. **Regla 2**: Aborta de inmediato si falla la creación del punto de restauración del sistema previo a la instalación.
-    3. **Regla 5**: Ejecución de comandos del sistema (`pnputil`) mediante `ProcessStartInfo.ArgumentList` sin concatenación de cadenas externas para evitar inyecciones.
-    4. **Regla 8**: Registro exhaustivo y garantizado de cada operación (éxito o fallo) en `IOperationHistory`.
-  - Notificación de progreso en 8 fases (`InstallProgress`): Downloading (10-25%), Verifying (30-45%), CreatingRestorePoint (50-65%), Installing (70-85%), Validating (90%), Complete (100%) o Failed.
-  - Implementación de `RollbackAsync` consultando el historial y revirtiendo el controlador de forma segura.
-  - Tests unitarios exhaustivos con dobles de prueba (`tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs`): flujo exitoso, aborto por firma inválida, aborto por fallo en restore point, aborto por fallo de red, y reversión con rollback.
-- [x] **S4-T5: Registro en contenedor de inyección de dependencias** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
-  - Registro de las 6 interfaces del dominio: `IDriverInventory`, `IUpdateSource`, `ISignatureVerifier`, `IRestorePointService`, `IOperationHistory` y `IDriverInstaller`.
-  - Soporte para ruta configurable de base de datos SQLite en `AddDriverServices(databasePath)`.
-- [x] **S4-T6: Ampliación de comandos CLI** (`src/Cli/Program.cs`):
-  - `log`: consulta y presenta en tabla el historial de operaciones de auditoría.
-  - `install <updateId>`: ejecuta el flujo de instalación con reporte de progreso en consola y advertencia de elevación de privilegios.
-  - `rollback <operationId>`: revierte una instalación previa según su identificador en el registro.
-- [x] **S4-T7: Verificación completa de calidad**:
-  - Compilación Release: 0 advertencias, 0 errores en los 7 proyectos.
-  - Pruebas automatizadas: 72 tests superados (39 en `Core.Tests`, 33 en `Agent.Drivers.Tests`).
-  - Verificación de formato: `dotnet format --verify-no-changes` validado con código 0.
-
-### Decisiones técnicas tomadas
-1. **Desacoplamiento de `IWuaExecutor`**:
-   - Para permitir pruebas unitarias exhaustivas del flujo de seguridad sin requerir privilegios administrativos ni invocar APIs COM reales durante la ejecución de CI/CD, se separó la interacción COM en la interfaz interna `IWuaExecutor`.
-2. **Acceso a tipos internos para NSubstitute**:
-   - Se configuró `<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />` en `Agent.Drivers.csproj` para que el generador de proxies dinámicos de Castle/NSubstitute pueda instanciar dobles sobre interfaces internas sin comprometer el encapsulamiento público.
-3. **Persistencia SQLite**:
-   - Se utilizó `Microsoft.Data.Sqlite` con `ISO 8601` (`"O"`) en `InvariantCulture` para los campos de marca temporal, asegurando portabilidad de fechas independientemente de la configuración regional del sistema operativo.
-4. **Seguridad en rollback**:
-   - `pnputil.exe` se ejecuta a través de `ProcessStartInfo.ArgumentList`, pasando los identificadores de hardware como argumentos discretos para cumplir la regla 5 de seguridad contra inyección de comandos.
-
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 7 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: 72/72 tests pasados (39 en `Core.Tests`, 33 en `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
-- `dotnet run --project src/Cli -- log`: ejecución correcta en consola consultando base de datos SQLite.
-- `dotnet run --project src/Cli -- --help`: comandos `scan`, `updates`, `log`, `install`, `rollback` verificados.
-
-### Notas para el siguiente sprint (Sprint 4B o Sprint 5)
-- El backend (`Core` + `Agent.Drivers`) está **100% completo, probado y verificado**.
-- Los siguientes pasos en el MVP son:
-  1. **Sprint 4B — Servicio de Windows (`Agent.Service`)**: Implementar Worker Service con gRPC sobre Named Pipes para comunicar la UI no privilegiada con el servicio SYSTEM.
-  2. **Sprint 5 — Interfaz de usuario WPF (`Ui.Wpf`)**: Desarrollar la interfaz visual en MVVM (con CommunityToolkit.Mvvm) consumiendo el servicio gRPC o la capa de abstracción.
+### Notes for the next sprint (Sprint 4A)
+- Work proceeded to complete the backend in **Sprint 4A**.
 
 ---
 
-## Sprint 4B — Servicio de Windows con gRPC sobre Named Pipes (`Agent.Service` + `Agent.Ipc`)
+## Sprint 4A — Core Backend Implementations (`Agent.Drivers`)
 
-- **Fecha**: 2026-10-19
-- **Estado**: ✅ Completado
-- **Hito**: Hito 2 (Servicio + UI — parte IPC y servicio)
+- **Date**: 2026-10-13
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 1 (End-to-end functional backend)
 
-### Tareas completadas
-- [x] **S4B-T1: Proyecto `Agent.Ipc` — contrato IPC compartido** (`src/Agent.Ipc`):
-  - `Protos/driveragent.proto` con el servicio `DriverAgent`: `Scan`, `CheckUpdates` (streaming), `Install` (streaming de progreso), `Rollback`, `GetHistory` y `GetStatus`. Codegen `GrpcServices="Both"`, namespace C# `Agent.Ipc.Grpc`.
-  - `DriverAgentChannel.CreateChannel()`: fábrica de canal gRPC sobre named pipe usando `SocketsHttpHandler.ConnectCallback` con `NamedPipeClientStream` (cliente para UI y tests).
-  - Constante `DefaultPipeName = "DriverUpdater"` (equivale a `\\.\pipe\DriverUpdater`, según la arquitectura documentada en `ARCHITECTURE.md`).
-  - Referencia a `Grpc.AspNetCore 2.76.0` + `Grpc.Tools 2.76.0` explícito (los targets de `Grpc.Tools` no se importan como dependencia transitiva en este entorno; ver Decisiones).
-- [x] **S4B-T2: `OperationQueue` — cola de operaciones** (`src/Agent.Service/Operations/`):
-  - `IOperationQueue` / `OperationQueue`: exclusión mutua con `SemaphoreSlim(1,1)`; garantiza **una operación privilegiada a la vez** (instalaciones, rollbacks y búsquedas de WUA; la sesión COM no debe atenderlas en paralelo).
-  - Cancelable: el token de la llamada gRPC interrumpe tanto la espera en cola como la operación en ejecución; la cola siempre queda libre (`finally`).
-  - Estado observable inmutable (`OperationState`: `OperationInProgress`, `CurrentUpdateId`, `PercentComplete`, `Phase`, `PendingReboot`, `LastScanUtc`, `QueuedOperations`) intercambiado de forma thread-safe.
-  - Latch `PendingReboot` que persiste hasta el reinicio del servicio (natural tras reiniciar el equipo).
-  - Contador de operaciones en cola para la UI (`QueuedOperations`).
-- [x] **S4B-T3: `DriverAgentGrpcService` — servidor gRPC** (`src/Agent.Service/Grpc/`):
-  - `Scan`: inventario WMI mapeado a `InstalledDriverMsg`; actualiza `LastScanUtc`.
-  - `CheckUpdates`: serializado por la cola durante la detección en WUA; desacopla la transmisión de actualizaciones de la cola para que clientes lentos no bloqueen operaciones posteriores.
-  - `Install`: recibe **solo `update_ids`**; el servicio re-resuelve cada ID contra Windows Update en el instante de instalar (evita instalar metadatos anticuados o manipulados por el cliente). Instala secuencialmente, transmite las 8 fases de `InstallProgress` en **tiempo real** mediante `Channel<T>` y un mensaje final `Finished` por driver con resultado individual (`Success`, `ErrorMessage`, `RebootRequired`). IDs desconocidos o excepciones inesperadas generan resultado de fallo individual sin abortar el lote.
-  - `Rollback`: valida estrictamente el formato del ID de operación (entero positivo sin signo `ulong`, ≤32 caracteres) y delega en `IDriverInstaller.RollbackAsync` vía la cola.
-  - `GetHistory`: aplica `limit` (entradas más recientes) sobre `IOperationHistory.GetAllAsync`.
-  - `GetStatus`: estado de la cola, `PendingReboot` y `LastScanUtc` para la UI.
-  - Progreso notificado en tiempo real con `InlineProgress` hacia un `Channel<InstallProgress>` con lector en tarea dedicada hacia el stream gRPC; el stream nunca sufre escrituras concurrentes.
-  - Validación de entrada: IDs no vacíos, longitud acotada, deduplicación case-insensitive; peticiones inválidas → `RpcException(InvalidArgument)`.
-- [x] **S4B-T4: Seguridad IPC** (`src/Agent.Service/Ipc/`):
-  - `NamedPipeSecurityFactory`: ACL del pipe con control completo para SYSTEM (`S-1-5-18`) y Administradores (`S-1-5-32-544`), y permisos `ReadWrite` para usuarios interactivos (`S-1-5-4`), impidiendo `WRITE_DAC`/`WRITE_OWNER` a usuarios interactivos no privilegiados (cumpliendo la regla 4 de AGENTS.md, "solo usuarios interactivos locales").
-  - `CurrentUserOnly = false` en `NamedPipeTransportOptions`: la opción por defecto es incompatible con una ACL explícita y además bloquearía a los usuarios interactivos (el servicio corre como SYSTEM).
-  - `NamedPipeStreamFactory`: hook `CreateNamedPipeServerStream` que normaliza `PipeOptions.FirstPipeInstance` (solo en la primera instancia real del pool) y crea cada instancia con la ACL del contexto. Sin él, el creador por defecto marca varias instancias con `FirstPipeInstance` y el bind falla con `Access Denied`.
-  - `Program.cs`: `AddWindowsService("DriverUpdater")`, Serilog con fichero rotatorio en `%ProgramData%\DriverUpdater\logs\service-.log`, Kestrel `ListenNamedPipe` con `HttpProtocols.Http2`, `MapGrpcService<DriverAgentGrpcService>()`. Ejecutable como servicio de Windows o en consola para diagnóstico.
-- [x] **S4B-T5: Proyecto de tests `Agent.Service.Tests`** (`tests/Agent.Service.Tests`):
-  - `OperationQueueTests` (5+5 tests): ejecución y resultado, serialización estricta, cancelación en espera y en ejecución, liberación ante excepciones, estado (progreso, latch de reinicio, último escaneo, argumentos).
-  - `GrpcMappersTests`: mapeo completo de modelos Core ↔ mensajes proto, normalización de fechas a UTC (Kind Utc/Local/Unspecified) y mapeo exhaustivo de enums.
-  - `NamedPipeSecurityFactoryTests`: verificación de las 3 reglas de la ACL (SIDs, derechos y tipo).
-  - `NamedPipeStreamFactoryTests`: normalización de `FirstPipeInstance`.
-  - `DriverAgentGrpcServiceTests`: **integración IPC real** — servidor ASP.NET Core in-process sobre named pipe único por test + cliente real por `DriverAgentChannel`, con dominio simulado (NSubstitute): Scan, CheckUpdates (streaming desacoplado), Install (progreso en tiempo real con Channel, lote secuencial, tolerancia a fallos y excepciones inesperadas, IDs desconocidos, rechazo de peticiones vacías), Rollback (mapeo y validación estricta ulong), GetHistory (con y sin límite), `GetStatus` (estado y reinicio pendiente), **serialización de instalaciones concurrentes**, **liberación de la cola al cancelar el cliente** y **aplicación real de la ACL configurada** (captura vía hook).
-- [x] **S4B-T6: Verificación end-to-end del binario real**:
-  - Arranque en modo consola del binario publicado: servicio en marcha y `\\.\pipe\DriverUpdater` visible en el sistema.
-  - Cliente real (Agente.Ipc) contra el servicio en vivo: `GetStatus` OK, `Scan` OK (266 controladores reales inventariados vía WMI a través del servicio), `GetHistory` OK.
+### Completed tasks
+- [x] **S4-T1: `SqliteOperationHistory` — Persistence in SQLite** (`src/Agent.Drivers/History/SqliteOperationHistory.cs`):
+  - Full implementation of `IOperationHistory` using `Microsoft.Data.Sqlite`.
+  - Automatic creation of the directory and the persistence table (`CREATE TABLE IF NOT EXISTS operations`).
+  - Strict schema: `Id` (INTEGER PK AUTOINCREMENT), `OperationType`, `UpdateId`, `DeviceName`, `HardwareId`, `DriverTitle`, `PreviousVersion`, `NewVersion`, `Success`, `ErrorMessage`, `Timestamp` (ISO 8601).
+  - Asynchronous operations with cancellation support (`CancellationToken`).
+  - Configurable database path with a default value of `%ProgramData%\DriverUpdater\history.db`.
+  - Unit test suite (`tests/Agent.Drivers.Tests/SqliteOperationHistoryTests.cs`): insertion, global query, query by ID, null value handling and argument validation.
+- [x] **S4-T2: `WinTrustSignatureVerifier` — Digital signature verification** (`src/Agent.Drivers/Security/`):
+  - `NativeMethods.cs`: P/Invoke to `wintrust.dll!WinVerifyTrust` with the action `WINTRUST_ACTION_GENERIC_VERIFY_V2`.
+  - Mapping of the `WintrustData` and `WintrustFileInfo` structures with manual release of unmanaged memory (`Marshal.StringToCoTaskMemUni` / `FreeCoTaskMem`).
+  - Extraction and validation of certificates and distinction of WHQL / Microsoft signatures.
+  - Mapping of native HRESULT codes: `TRUST_E_NOSIGNATURE`, `TRUST_E_EXPLICIT_DISTRUST`, `TRUST_E_SUBJECT_NOT_TRUSTED`, `CRYPT_E_SECURITY_SETTINGS`, `CERT_E_EXPIRED`, `CERT_E_REVOKED`, `TRUST_E_BAD_DIGEST`.
+  - Tests in `tests/Agent.Drivers.Tests/WinTrustSignatureVerifierTests.cs`: nonexistent files, unsigned files and real verification of signed Windows system binaries (`kernel32.dll`).
+- [x] **S4-T3: `WmiRestorePointService` — Windows restore points** (`src/Agent.Drivers/Restore/WmiRestorePointService.cs`):
+  - Implementation of `IRestorePointService` via WMI invocation of `root\default:SystemRestore.CreateRestorePoint`.
+  - Parameters: `RestorePointType = 10` (`DEVICE_DRIVER_INSTALL`), `EventType = 100` (`BEGIN_SYSTEM_CHANGE`).
+  - Safe handling of `ManagementException` and `UnauthorizedAccessException`, with a guaranteed boolean return.
+- [x] **S4-T4: `WuaDriverInstaller` — Installation and rollback orchestration** (`src/Agent.Drivers/Install/`):
+  - Decoupled abstraction `IWuaExecutor` and COM executor `DefaultWuaExecutor` for safe downloads and installations.
+  - Strict compliance with the security rules of `AGENTS.md`:
+    1. **Rule 1**: Abort immediately if the digital signature is not valid or trusted.
+    2. **Rule 2**: Abort immediately if creating the system restore point before installation fails.
+    3. **Rule 5**: System commands (`pnputil`) are executed via `ProcessStartInfo.ArgumentList` without concatenating external strings, to prevent injection.
+    4. **Rule 8**: Exhaustive and guaranteed recording of every operation (success or failure) in `IOperationHistory`.
+  - Progress notification in 8 phases (`InstallProgress`): Downloading (10-25%), Verifying (30-45%), CreatingRestorePoint (50-65%), Installing (70-85%), Validating (90%), Complete (100%) or Failed.
+  - Implementation of `RollbackAsync` that queries the history and safely reverts the driver.
+  - Exhaustive unit tests with test doubles (`tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs`): successful flow, abort on invalid signature, abort on restore point failure, abort on network failure, and rollback reversion.
+- [x] **S4-T5: Registration in the dependency injection container** (`src/Agent.Drivers/DependencyInjection/ServiceCollectionExtensions.cs`):
+  - Registration of the 6 domain interfaces: `IDriverInventory`, `IUpdateSource`, `ISignatureVerifier`, `IRestorePointService`, `IOperationHistory` and `IDriverInstaller`.
+  - Support for a configurable SQLite database path in `AddDriverServices(databasePath)`.
+- [x] **S4-T6: CLI command expansion** (`src/Cli/Program.cs`):
+  - `log`: queries and presents the audit operation history in a table.
+  - `install <updateId>`: runs the installation flow with progress reporting in the console and a privilege elevation warning.
+  - `rollback <operationId>`: reverts a previous installation by its identifier in the log.
+- [x] **S4-T7: Full quality verification**:
+  - Release build: 0 warnings, 0 errors across the 7 projects.
+  - Automated tests: 72 tests passed (39 in `Core.Tests`, 33 in `Agent.Drivers.Tests`).
+  - Format verification: `dotnet format --verify-no-changes` passed with exit code 0.
 
-### Decisiones técnicas tomadas
-1. **Nuevo proyecto `Agent.Ipc`**:
-   - El contrato gRPC y la fábrica de canal cliente viven en un proyecto compartido (`GrpcServices="Both"`) para que `Agent.Service` implemente el servidor y la futura UI consuma el cliente sin referenciar el ensamblado del servicio. Actualizada la estructura de `AGENTS.md` y `DESIGN.md` §4.6/§5 en consecuencia. La UI arrastrará dependencias de servidor de `Grpc.AspNetCore` en el publish; si pesa demasiado, se dividirá en contratos cliente/servidor en una fase posterior.
-2. **Transporte de named pipes nativo de Kestrel** (incluido en el framework .NET 10 como `Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes`):
-   - `ListenNamedPipe` + `HttpProtocols.Http2` en claro (gRPC puro; sin HTTP/1.1 en el pipe). No hace falta `UseNamedPipes` explícito: el transporte se registra automáticamente.
-   - Cliente gRPC: `GrpcChannel.ForAddress("http://localhost")` con `SocketsHttpHandler.ConnectCallback` que devuelve un `NamedPipeClientStream` (dirección simbólica; el transporte real es el pipe).
-3. **Peculiaridades del transporte y ACL restringida**:
-   - `NamedPipeTransportOptions.CurrentUserOnly` viene activa por defecto y es **incompatible** con `PipeSecurity` explícita (`ArgumentException` en `NamedPipeServerStreamAcl.Create`); además bloquearía a los usuarios interactivos porque el servicio corre como SYSTEM → se desactiva y la restricción se aplica con la ACL.
-   - El creador por defecto marca varias instancias del pool con `PipeOptions.FirstPipeInstance`; la segunda instancia falla con `Access Denied` ("pipe already in use"). Resuelto con `NamedPipeStreamFactory`, que elimina la flag salvo en la primera instancia real.
-   - Seguridad de la ACL: SYSTEM y Administradores tienen `FullControl`, mientras que las sesiones interactivas (`S-1-5-4`) tienen `ReadWrite`. Se restringe `WRITE_DAC` y `WRITE_OWNER` para prevenir que un usuario interactivo sin privilegios modifique la seguridad del pipe.
-4. **Re-resolución y tolerancia a fallos en `Install`**:
-   - Por seguridad y consistencia con la CLI, la instalación solo acepta IDs; el servidor consulta el inventario y Windows Update, y empareja por `UpdateId`. Un ID que ya no existe o una excepción inesperada durante la instalación produce un resultado individual de fallo (`Finished` con `Success=false`), sin interrumpir el resto de actualizaciones del lote.
-5. **Streaming de progreso en tiempo real con Channel**:
-   - `InlineProgress` escribe a un `Channel<InstallProgress>` desacoplado, leído concurrentemente por una tarea asíncrona hacia `responseStream.WriteAsync`. Esto entrega los eventos de progreso en tiempo real a la UI a medida que se ejecutan las fases, manteniendo la seguridad de escritura concurrente de gRPC y drenando limpiamente al finalizar o fallar.
-6. **Cancelación segura y auditoría obligatoria (Regla 8 de AGENTS.md)**:
-   - Una cancelación en `WuaDriverInstaller` durante las fases previas a la instalación nativa registra de forma obligatoria el fallo en el historial persistente de SQLite utilizando `CancellationToken.None` (para evitar que la cancelación interrumpa el guardado) antes de re-lanzar la excepción. La fase de instalación nativa con WUA no se interrumpe para evitar estados inconsistentes en el sistema operativo.
-6. **`Grpc.Tools` explícito**:
-   - Los targets de `Grpc.Tools` (codegen proto) solo se importan si el paquete se referencia directamente; `Grpc.AspNetCore` no lo propaga en este entorno. Referenciado con `PrivateAssets="All"` en `Agent.Ipc`.
-7. **Supresión de `CA1711`**:
-   - En `.editorconfig`, con justificación, para `IOperationQueue`/`OperationQueue`: la "cola de operaciones" del diseño (MVP.md Hito 2) es genuinamente una cola serializada de una entrada.
-8. **`global.json` ajustado al SDK instalado**:
-   - El entorno pasó de tener el SDK 10.0.401 a 10.0.302; `global.json` actualizado a `10.0.302` (`rollForward: latestFeature`) para restaurar la compilación.
+### Technical decisions made
+1. **Decoupling of `IWuaExecutor`**:
+   - To allow exhaustive unit testing of the security flow without requiring administrative privileges or invoking real COM APIs during CI/CD execution, the COM interaction was separated into the internal interface `IWuaExecutor`.
+2. **Access to internal types for NSubstitute**:
+   - `<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />` was configured in `Agent.Drivers.csproj` so the Castle/NSubstitute dynamic proxy generator can create doubles over internal interfaces without compromising public encapsulation.
+3. **SQLite persistence**:
+   - `Microsoft.Data.Sqlite` was used with `ISO 8601` (`"O"`) in `InvariantCulture` for the timestamp fields, ensuring date portability regardless of the operating system's regional settings.
+4. **Security in rollback**:
+   - `pnputil.exe` runs through `ProcessStartInfo.ArgumentList`, passing the hardware identifiers as discrete arguments to comply with security rule 5 against command injection.
 
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: **133/133 tests pasados** (39 en `Core.Tests`, 53 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
-- E2E del binario real: servicio iniciado en consola, pipe `\\.\pipe\DriverUpdater` publicado, cliente real con `Scan` de 266 controladores reales, `GetStatus` y `GetHistory` verificados.
+### Tests run
+- `dotnet build -c Release`: 7 projects built, 0 warnings, 0 errors.
+- `dotnet test -c Release`: 72/72 tests passed (39 in `Core.Tests`, 33 in `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 format discrepancies.
+- `dotnet run --project src/Cli -- log`: executed successfully in the console, querying the SQLite database.
+- `dotnet run --project src/Cli -- --help`: commands `scan`, `updates`, `log`, `install` and `rollback` verified.
 
-### Notas para el siguiente sprint (Sprint 5)
-- El canal IPC completo (servicio + contrato + cliente) está operativo y probado. Quedan para completar el Hito 2:
-  1. **Sprint 5 — UI WPF (`Ui.Wpf`)**: MVVM con CommunityToolkit.Mvvm consumiendo `Agent.Ipc` (pantallas: inicio/escaneo, actualizaciones, historial, ajustes). Referenciar `Agent.Ipc` desde `Ui.Wpf`. Contemplar en UX la cancelación diferida de la fase de instalación nativa (*"Cancelando... esperando a que finalice el controlador en curso"*).
-  2. **Ajustes y exclusiones (U7)**: `config.json` en `%ProgramData%\DriverUpdater\`, RPCs `GetSettings`/`UpdateSettings` en el proto y aplicación de exclusiones en `CheckUpdates`/`Install`.
-  3. **Comprobación programada y notificaciones (U8)**: planificador en el servicio (sin polling), notificación toast si hay novedades y aviso de reinicio pendiente.
-  4. **Instalación del servicio de Windows**: registrar el binario como servicio (`sc create` o WiX en el Hito 4). Probar en VM (nunca en el equipo de desarrollo con operaciones reales).
-  5. **Validación E2E de la ACL en VM con cuenta estándar (reserva de auditoría)**: Verificar en VM que un usuario local interactivo sin privilegios administrativos puede conectar y realizar operaciones I/O en el pipe (`ReadWrite`), y certificar que cualquier intento de alterar la ACL/DACL es denegado con `Access Denied`.
+### Notes for the next sprint (Sprint 4B or Sprint 5)
+- The backend (`Core` + `Agent.Drivers`) is **100% complete, tested and verified**.
+- The next steps in the MVP are:
+  1. **Sprint 4B — Windows Service (`Agent.Service`)**: Implement a Worker Service with gRPC over Named Pipes to let the unprivileged UI communicate with the SYSTEM service.
+  2. **Sprint 5 — WPF user interface (`Ui.Wpf`)**: Develop the visual interface in MVVM (with CommunityToolkit.Mvvm) consuming the gRPC service or the abstraction layer.
 
 ---
 
-## Sprint 5 — Interfaz de Usuario Moderna WPF (`Ui.Wpf`)
+## Sprint 4B — Windows Service with gRPC over Named Pipes (`Agent.Service` + `Agent.Ipc`)
 
-- **Fecha**: 2026-10-19
-- **Estado**: ✅ Completado
-- **Hito**: Hito 2 (Servicio + UI — parte UI WPF)
+- **Date**: 2026-10-19
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 2 (Service + UI — IPC and service part)
 
-### Tareas completadas
-- [x] **S5-T1: Sistema de diseño y tokens visuales premium** (`src/Ui.Wpf/Resources/`):
-  - `Colors.xaml`: paleta oscura profesional (*dark theme* de alto contraste y legibilidad), gradientes sutiles con estética *glassmorphism* (`CardGlowGradient`), jerarquía tipográfica con Segoe UI Variable y colores semánticos (`AccentCyan #0ea5e9`, `SuccessGreen #10b981`, `WarningAmber #f59e0b`, `ErrorRose #f43f5e`).
-  - `Styles.xaml`: estilos base para `Button` (primario con acento, secundario con borde sutil, peligro para cancelación/rollback), `TextBox` con foco acentuado, `CheckBox` estilizado, `DataGrid` y tarjetas con `DropShadowEffect`.
-  - `Icons.xaml`: librería de geometrías vectoriales limpias (Dashboard, Updates, History, Settings, Check, Cross, Shield, Warning, Refresh, Arrow, etc.).
-  - `Converters/Converters.cs`: conversores de datos para XAML (visibilidad booleana y negada, formateo de bytes legibles, duraciones, estado de operaciones a colores/iconos, e insignias numéricas de contador).
-- [x] **S5-T2: Componentes y ventana contenedora (Shell)** (`src/Ui.Wpf/Views/` y `ViewModels/`):
-  - `NavItem`: UserControl reutilizable para los botones de navegación de la barra lateral, con soporte declarativo para `Geometry` de icono, etiqueta, estado activo y contador de insignias (*badge count*).
-  - `ShellWindow.xaml` / `.xaml.cs`: ventana *frameless* con controles integrados (minimizar, maximizar/restaurar, cerrar), soporte para arrastre mediante `DragMove`, indicador en vivo del estado de conexión IPC hacia el servicio Windows, y *breadcrumb* contextual.
-  - Enrutamiento dinámico de vistas mediante `DataTemplate` que mapea cada `PageViewModelBase` (`DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel`, `SettingsViewModel`) a su vista correspondiente sin acoplamiento estricto.
-- [x] **S5-T3: Pantalla de Inicio / Dashboard** (`src/Ui.Wpf/Views/DashboardView.xaml` y `DashboardViewModel.cs`):
-  - 4 tarjetas estadísticas (Total controladores, Operativos, Con advertencia/error, y Estado global).
-  - Indicador de estado de salud general del equipo con pill dinámico.
-  - Buscador reactivo en tiempo real que filtra por nombre de dispositivo, fabricante, identificador o clase.
-  - Tabla de controladores con versiones monoespaciadas, clase de dispositivo y badges de estado.
-  - Botón de refresco manual que invoca el RPC `Scan` y actualiza la fecha del último escaneo.
-- [x] **S5-T4: Pantalla de Actualizaciones disponibles** (`src/Ui.Wpf/Views/UpdatesView.xaml` y `UpdatesViewModel.cs`):
-  - Listado de actualizaciones encontradas con selector individual o por lotes (*Seleccionar todo* / *Deseleccionar todo*).
-  - Comparativa de versión actual instalada frente a la versión nueva recomendada.
-  - Tamaño de descarga formateado y badge de "Requiere reinicio" cuando procede.
-  - Barra de progreso global y reporte de fase en tiempo real por cada controlador (`Downloading`, `Verifying`, `CreatingRestorePoint`, `Installing`, etc.) consumiendo el stream gRPC de `Install`.
-  - **Experiencia de cancelación diferida (`ARCHITECTURE.md`, flujo IPC)**: al pulsar "Cancelar", la UI activa el estado *"Cancelando... esperando a que finalice el controlador en curso"* para respetar la fase nativa de WUA en ejecución y asegurar la estabilidad del sistema operativo.
-- [x] **S5-T5: Pantalla de Historial y Rollback** (`src/Ui.Wpf/Views/HistoryView.xaml` y `HistoryViewModel.cs`):
-  - Tabla de auditoría con fecha ISO formateada, dispositivo, versiones previa y aplicada, tipo de operación y resultado.
-  - Buscador para filtrar eventos por nombre de dispositivo o ID.
-  - Selección de entrada y ejecución de `Rollback` directo mediante el RPC correspondiente, con feedback visual de progreso y resultado.
-- [x] **S5-T6: Pantalla de Ajustes** (`src/Ui.Wpf/Views/SettingsView.xaml` y `SettingsViewModel.cs`):
-  - Selector de frecuencia de comprobación automática con stepper de días.
-  - Conmutador de directiva de seguridad WHQL (solo controladores firmados por Microsoft/WHQL) con aviso de seguridad cuando se desactiva.
-  - Gestión interactiva de lista de exclusiones de hardware (añadir y eliminar identificadores).
-- [x] **S5-T7: Servicio cliente IPC y arranque con Inyección de Dependencias** (`src/Ui.Wpf/Services/DriverAgentService.cs` y `App.xaml.cs`):
-  - `DriverAgentService`: cliente gRPC tipado que consume `DriverAgentChannel` de `Agent.Ipc`, expone métodos asíncronos y streams `IAsyncEnumerable`, y gestiona reconexiones transparentes.
-  - `App.xaml.cs`: configuración de Serilog con archivo rotativo en `%ProgramData%\DriverUpdater\logs\ui-.log`, registro de dependencias (`DriverAgentService`, ViewModels y ShellWindow), y arranque no bloqueante que conecta al servicio en segundo plano.
-  - Cumplimiento de la **Regla 3 de AGENTS.md**: la UI se ejecuta íntegramente como usuario interactivo estándar sin requerir elevación de privilegios (`requestedExecutionLevel asInvoker`).
-- [x] **S5-T8: Calidad, Icono y Eliminación de Código Obsoleto**:
-  - Reemplazo y eliminación definitiva de `MainWindow.xaml` y `MainWindow.xaml.cs` obsoletos.
-  - Creación de icono nativo de aplicación `src/Ui.Wpf/Resources/icon.ico`.
-- [x] **S5-T9: Corrección de renderizado de `ProgressBarSlim` e interactividad inmediata**:
-  - Corrección del contrato de plantilla de WPF en `Styles.xaml`: incorporación de `PART_Track` junto a `PART_Indicator` para que WPF pueda calcular el ancho efectivo (`indicatorLength = percent * trackLength`). Sin `PART_Track`, WPF bails out en `SetProgressBarIndicatorLength()` dejando el ancho del indicador en 0.
-  - Implementación de `IndeterminateBar` con animación de opacidad continua (`0.25` a `1.0`) para estados indeterminados (`IsIndeterminate="True"` en búsquedas y escaneos), evitando colisiones de precedencia entre el valor de ancho local de WPF y los triggers de alineación.
-  - Inicialización inmediata de `IsInstalling = true`, `Percent = 0` y `PhaseLabel = "Iniciando instalación..."` en `UpdatesViewModel.cs` al pulsar "Instalar seleccionadas", eliminando el retraso visual hasta el primer paquete gRPC.
-  - Añadido de insignia visual de éxito (`BadgeSuccess`) al finalizar la instalación.
+### Completed tasks
+- [x] **S4B-T1: `Agent.Ipc` project — shared IPC contract** (`src/Agent.Ipc`):
+  - `Protos/driveragent.proto` with the `DriverAgent` service: `Scan`, `CheckUpdates` (streaming), `Install` (progress streaming), `Rollback`, `GetHistory` and `GetStatus`. Codegen `GrpcServices="Both"`, C# namespace `Agent.Ipc.Grpc`.
+  - `DriverAgentChannel.CreateChannel()`: gRPC channel factory over a named pipe using `SocketsHttpHandler.ConnectCallback` with `NamedPipeClientStream` (client for the UI and tests).
+  - Constant `DefaultPipeName = "DriverUpdater"` (equivalent to `\\.\pipe\DriverUpdater`, per the architecture documented in `ARCHITECTURE.md`).
+  - Explicit reference to `Grpc.AspNetCore 2.76.0` + `Grpc.Tools 2.76.0` (the `Grpc.Tools` targets are not imported as a transitive dependency in this environment; see Decisions).
+- [x] **S4B-T2: `OperationQueue` — operation queue** (`src/Agent.Service/Operations/`):
+  - `IOperationQueue` / `OperationQueue`: mutual exclusion with `SemaphoreSlim(1,1)`; guarantees **one privileged operation at a time** (installations, rollbacks and WUA searches; the COM session must not serve them in parallel).
+  - Cancellable: the gRPC call token interrupts both the wait in the queue and the running operation; the queue is always released (`finally`).
+  - Immutable observable state (`OperationState`: `OperationInProgress`, `CurrentUpdateId`, `PercentComplete`, `Phase`, `PendingReboot`, `LastScanUtc`, `QueuedOperations`) swapped in a thread-safe manner.
+  - `PendingReboot` latch that persists until the service restarts (natural after restarting the computer).
+  - Counter of queued operations for the UI (`QueuedOperations`).
+- [x] **S4B-T3: `DriverAgentGrpcService` — gRPC server** (`src/Agent.Service/Grpc/`):
+  - `Scan`: WMI inventory mapped to `InstalledDriverMsg`; updates `LastScanUtc`.
+  - `CheckUpdates`: serialized by the queue during WUA detection; decouples the streaming of updates from the queue so that slow clients do not block subsequent operations.
+  - `Install`: receives **only `update_ids`**; the service re-resolves each ID against Windows Update at the moment of installation (avoids installing outdated or client-tampered metadata). Installs sequentially, streams the 8 `InstallProgress` phases in **real time** via `Channel<T>`, and a final `Finished` message per driver with an individual result (`Success`, `ErrorMessage`, `RebootRequired`). Unknown IDs or unexpected exceptions produce an individual failure result without aborting the batch.
+  - `Rollback`: strictly validates the format of the operation ID (positive unsigned integer `ulong`, ≤32 characters) and delegates to `IDriverInstaller.RollbackAsync` via the queue.
+  - `GetHistory`: applies `limit` (most recent entries) over `IOperationHistory.GetAllAsync`.
+  - `GetStatus`: queue state, `PendingReboot` and `LastScanUtc` for the UI.
+  - Progress reported in real time with `InlineProgress` to a `Channel<InstallProgress>`, read by a dedicated task toward the gRPC stream; the stream never suffers concurrent writes.
+  - Input validation: non-empty IDs, bounded length, case-insensitive deduplication; invalid requests → `RpcException(InvalidArgument)`.
+- [x] **S4B-T4: IPC security** (`src/Agent.Service/Ipc/`):
+  - `NamedPipeSecurityFactory`: pipe ACL with full control for SYSTEM (`S-1-5-18`) and Administrators (`S-1-5-32-544`), and `ReadWrite` permissions for interactive users (`S-1-5-4`), preventing `WRITE_DAC`/`WRITE_OWNER` for unprivileged interactive users (complying with rule 4 of AGENTS.md, "local interactive users only").
+  - `CurrentUserOnly = false` in `NamedPipeTransportOptions`: the default option is incompatible with an explicit ACL and would also block interactive users (the service runs as SYSTEM).
+  - `NamedPipeStreamFactory`: `CreateNamedPipeServerStream` hook that normalizes `PipeOptions.FirstPipeInstance` (only on the first real instance of the pool) and creates each instance with the context's ACL. Without it, the default creator marks several instances with `FirstPipeInstance` and binding fails with `Access Denied`.
+  - `Program.cs`: `AddWindowsService("DriverUpdater")`, Serilog with a rolling file at `%ProgramData%\DriverUpdater\logs\service-.log`, Kestrel `ListenNamedPipe` with `HttpProtocols.Http2`, `MapGrpcService<DriverAgentGrpcService>()`. Runnable as a Windows service or from the console for diagnostics.
+- [x] **S4B-T5: Test project `Agent.Service.Tests`** (`tests/Agent.Service.Tests`):
+  - `OperationQueueTests` (5+5 tests): execution and result, strict serialization, cancellation while waiting and while running, release on exceptions, state (progress, restart latch, last scan, arguments).
+  - `GrpcMappersTests`: full mapping of Core models ↔ proto messages, date normalization to UTC (Kind Utc/Local/Unspecified) and exhaustive enum mapping.
+  - `NamedPipeSecurityFactoryTests`: verification of the 3 ACL rules (SIDs, rights and type).
+  - `NamedPipeStreamFactoryTests`: `FirstPipeInstance` normalization.
+  - `DriverAgentGrpcServiceTests`: **real IPC integration** — in-process ASP.NET Core server on a unique named pipe per test + real client via `DriverAgentChannel`, with a simulated domain (NSubstitute): Scan, CheckUpdates (decoupled streaming), Install (real-time progress with Channel, sequential batch, fault tolerance and unexpected exceptions, unknown IDs, rejection of empty requests), Rollback (mapping and strict `ulong` validation), GetHistory (with and without limit), `GetStatus` (state and pending reboot), **serialization of concurrent installations**, **queue release when the client cancels** and **real application of the configured ACL** (captured via hook).
+- [x] **S4B-T6: End-to-end verification of the real binary**:
+  - Console-mode start of the published binary: service running and `\\.\pipe\DriverUpdater` visible on the system.
+  - Real client (Agent.Ipc) against the live service: `GetStatus` OK, `Scan` OK (266 real drivers inventoried via WMI through the service), `GetHistory` OK.
 
-### Decisiones técnicas tomadas
-1. **Consumo no privilegiado sobre gRPC (Reglas 3 y 4 de AGENTS.md)**:
-   - La aplicación `Ui.Wpf` no utiliza elevación de privilegios administrativa. Toda operación privilegiada (escaneo de hardware, descarga, punto de restauración, instalación y rollback) se delega a través del cliente gRPC sobre el named pipe `\\.\pipe\DriverUpdater`.
-2. **Experiencia de cancelación diferida (`ARCHITECTURE.md`, flujo IPC)**:
-   - Siguiendo las directrices de diseño para evitar corrupciones en el subsistema de controladores durante la fase nativa de WUA o PnPUtil, la UI refleja de forma explícita el estado *"Cancelando... esperando a que finalice el controlador en curso"* y desactiva nuevos intentos hasta que el RPC de instalación completa su ciclo seguro.
-3. **Navegación declarativa por ViewModel**:
-   - En lugar de usar `Frame` y `Page` de WPF clásico, se empleó un `ContentControl` en `ShellWindow` con `DataTemplate` implícitos vinculados a `DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel` y `SettingsViewModel`.
-4. **Ciclo de vida y reconexión**:
-   - `ShellViewModel` sondea el estado del servicio cada 5 segundos mediante un temporizador ligero que ejecuta `GetStatusAsync`. Si el servicio se detiene o reinicia, la UI actualiza inmediatamente el indicador a "Desconectado" con opción de reintento, volviendo a habilitar las acciones automáticamente al restablecerse la conexión.
-5. **Icono de aplicación embebido**:
-   - Se generó el recurso `Resources/icon.ico` configurado en `Ui.Wpf.csproj` para asegurar la apariencia nativa en la barra de tareas y el explorador de Windows.
+### Technical decisions made
+1. **New `Agent.Ipc` project**:
+   - The gRPC contract and the client channel factory live in a shared project (`GrpcServices="Both"`) so that `Agent.Service` implements the server and the future UI consumes the client without referencing the service assembly. `AGENTS.md` and `DESIGN.md` §4.6/§5 were updated accordingly. The UI will pull in `Grpc.AspNetCore` server dependencies at publish; if that proves too heavy, it will be split into client/server contracts in a later phase.
+2. **Kestrel's native named pipe transport** (included in the .NET 10 framework as `Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes`):
+   - `ListenNamedPipe` + `HttpProtocols.Http2` in cleartext (pure gRPC; no HTTP/1.1 over the pipe). No explicit `UseNamedPipes` is needed: the transport is registered automatically.
+   - gRPC client: `GrpcChannel.ForAddress("http://localhost")` with `SocketsHttpHandler.ConnectCallback` returning a `NamedPipeClientStream` (symbolic address; the real transport is the pipe).
+3. **Transport peculiarities and restricted ACL**:
+   - `NamedPipeTransportOptions.CurrentUserOnly` is enabled by default and is **incompatible** with an explicit `PipeSecurity` (`ArgumentException` in `NamedPipeServerStreamAcl.Create`); it would also block interactive users because the service runs as SYSTEM → it is disabled and the restriction is applied through the ACL.
+   - The default creator marks several pool instances with `PipeOptions.FirstPipeInstance`; the second instance fails with `Access Denied` ("pipe already in use"). Resolved with `NamedPipeStreamFactory`, which removes the flag except on the first real instance.
+   - ACL security: SYSTEM and Administrators have `FullControl`, while interactive sessions (`S-1-5-4`) have `ReadWrite`. `WRITE_DAC` and `WRITE_OWNER` are restricted to prevent an unprivileged interactive user from modifying the pipe's security.
+4. **Re-resolution and fault tolerance in `Install`**:
+   - For security and consistency with the CLI, installation only accepts IDs; the server queries the inventory and Windows Update, and matches by `UpdateId`. An ID that no longer exists, or an unexpected exception during installation, produces an individual failure result (`Finished` with `Success=false`) without interrupting the rest of the batch's updates.
+5. **Real-time progress streaming with Channel**:
+   - `InlineProgress` writes to a decoupled `Channel<InstallProgress>`, read concurrently by an asynchronous task toward `responseStream.WriteAsync`. This delivers progress events to the UI in real time as the phases run, maintains gRPC's concurrent-write safety and drains cleanly on completion or failure.
+6. **Safe cancellation and mandatory auditing (Rule 8 of AGENTS.md)**:
+   - A cancellation in `WuaDriverInstaller` during the phases before native installation mandatorily records the failure in the persistent SQLite history, using `CancellationToken.None` (so that cancellation does not interrupt the save), before re-throwing the exception. The native WUA installation phase is not interrupted, to avoid inconsistent states in the operating system.
+6. **Explicit `Grpc.Tools`**:
+   - The `Grpc.Tools` targets (proto codegen) are only imported if the package is referenced directly; `Grpc.AspNetCore` does not propagate them in this environment. Referenced with `PrivateAssets="All"` in `Agent.Ipc`.
+7. **Suppression of `CA1711`**:
+   - In `.editorconfig`, with justification, for `IOperationQueue`/`OperationQueue`: the "operation queue" of the design (MVP.md Milestone 2) is genuinely a serialized queue of one entry.
+8. **`global.json` adjusted to the installed SDK**:
+   - The environment went from having SDK 10.0.401 to 10.0.302; `global.json` was updated to `10.0.302` (`rollForward: latestFeature`) to restore the build.
 
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test`: **133/133 tests superados** (39 en `Core.Tests`, 53 en `Agent.Service.Tests`, 41 en `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 discrepancias de formato en todo el repositorio.
+### Tests run
+- `dotnet build -c Release`: 9 projects built, 0 warnings, 0 errors.
+- `dotnet test -c Release`: **133/133 tests passed** (39 in `Core.Tests`, 53 in `Agent.Service.Tests`, 41 in `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 format discrepancies.
+- E2E of the real binary: service started in the console, pipe `\\.\pipe\DriverUpdater` published, real client with `Scan` of 266 real drivers, `GetStatus` and `GetHistory` verified.
 
-### Notas para el siguiente sprint
-- El Hito 2 (Servicio + UI) tiene la UI WPF y el servicio IPC implementados. Quedan las tareas complementarias del Hito 2 completadas en el Sprint 6.
-
----
-
-## Sprint 6 — Ajustes Persistentes, Comprobación Programada y Soporte OEM Fase A
-
-- **Fecha**: 2026-10-26
-- **Estado**: ✅ Completado
-- **Hito**: Hito 2 (Cierre de U7, U8 y soporte de placa base)
-
-### Tareas completadas
-- [x] **S6-T1: Ajustes persistentes y exclusiones (U7)** (`src/Core/Models/AppSettings.cs`, `src/Agent.Service/Settings/JsonSettingsStore.cs`):
-  - Modelo `AppSettings`: lista de hardware IDs excluidos (`ExcludedHardwareIds`), intervalo de comprobación (`CheckIntervalHours`), sanitización y normalización con `Normalize()`.
-  - `JsonSettingsStore`: persistencia en `%ProgramData%\DriverUpdater\config.json` con escritura atómica (archivo temporal + move con overwrite) y recuperación ante corrupción con valores por defecto.
-- [x] **S6-T2: Contrato IPC para Ajustes y Exclusiones** (`src/Agent.Ipc/Protos/driveragent.proto`):
-  - RPCs `GetSettings` y `UpdateSettings` con mensaje `SettingsMsg`.
-  - Aplicación de exclusiones en el servicio: `CheckUpdates` omite actualizaciones excluidas y `Install` las rechaza con mensaje explícito.
-- [x] **S6-T3: Comprobación programada en segundo plano (U8)** (`src/Agent.Service/Scheduling/`):
-  - `ScheduledCheckService`: `BackgroundService` que evalúa periódicamente (cada 15 min) si corresponde comprobar actualizaciones según el intervalo configurado (24 o 168 horas), reutilizando la cola serializada `IOperationQueue`.
-  - `ScheduledCheckState`: estado singleton en memoria que preserva la última comprobación y las actualizaciones pendientes.
-  - Decisión arquitectónica: sin notificaciones de escritorio emergentes (toasts); el resultado se expone pasivamente vía `GetStatus` y alimenta la insignia (badge) en la UI.
-- [x] **S6-T4: Soporte OEM de la placa base — Fase A** (`src/Core/Services/OemSupportCatalog.cs`, `src/Agent.Drivers/Inventory/WmiMotherboardInfoProvider.cs`):
-  - Detección de fabricante y modelo de placa base mediante WMI (`Win32_BaseBoard`).
-  - RPC `GetMotherboard` en gRPC.
-  - Catálogo seguro `OemSupportCatalog` con URLs HTTPS oficiales (Gigabyte, ASUS, MSI, ASRock) que la UI abre en el navegador sin descargas automáticas (Fase A).
-- [x] **S6-T5: Detección de reinicio pendiente en el registro de Windows**:
-  - `GetStatus` consulta claves de registro de Windows (`RebootPending` en CBS y `RebootRequired` en Windows Update) para detectar reinicios pendientes tras reinicios del servicio.
-- [x] **S6-T6: Empaquetador WiX v4 y CI/CD**:
-  - Proyecto `installer/Installer.wixproj` con `Package.wxs` y script de publicación `build.ps1`.
-  - Workflows de GitHub Actions para compilación, tests y generación de instalador MSI.
+### Notes for the next sprint (Sprint 5)
+- The full IPC channel (service + contract + client) is operational and tested. Remaining to complete Milestone 2:
+  1. **Sprint 5 — WPF UI (`Ui.Wpf`)**: MVVM with CommunityToolkit.Mvvm consuming `Agent.Ipc` (screens: home/scan, updates, history, settings). Reference `Agent.Ipc` from `Ui.Wpf`. Consider in the UX the deferred cancellation of the native installation phase (*"Cancelando... esperando a que finalice el controlador en curso"* (Cancelling... waiting for the current driver to finish)).
+  2. **Settings and exclusions (U7)**: `config.json` in `%ProgramData%\DriverUpdater\`, `GetSettings`/`UpdateSettings` RPCs in the proto, and application of exclusions in `CheckUpdates`/`Install`.
+  3. **Scheduled check and notifications (U8)**: scheduler in the service (no polling), a toast notification if there is news, and a pending-reboot warning.
+  4. **Windows service installation**: register the binary as a service (`sc create` or WiX in Milestone 4). Test in a VM (never on the development machine with real operations).
+  5. **E2E validation of the ACL in a VM with a standard account (audit reserve)**: Verify in a VM that an unprivileged local interactive user without administrative rights can connect and perform I/O operations on the pipe (`ReadWrite`), and certify that any attempt to alter the pipe's ACL/DACL is denied with `Access Denied`.
 
 ---
 
-## Sprint 7 — Seguridad, Robustez y Directiva WHQL (Cierre Hito 3)
+## Sprint 5 — Modern WPF User Interface (`Ui.Wpf`)
 
-- **Fecha**: 2026-11-07
-- **Estado**: ✅ Completado
-- **Hito**: Hito 3 (Seguridad y robustez del subsistema de controladores)
+- **Date**: 2026-10-19
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 2 (Service + UI — WPF UI part)
 
-### Tareas completadas
-- [x] **S7-T1: Directiva WHQL en el modelo de ajustes (`AppSettings`)** (`src/Core/Models/AppSettings.cs`):
-  - Añadida propiedad `OnlyWhql` (booleano, por defecto `true`) para exigir controladores certificados por Microsoft/WHQL.
-  - Preservación en `Normalize()` y tests unitarios en `tests/Core.Tests/AppSettingsTests.cs`.
-- [x] **S7-T2: Integración de la Directiva WHQL en el contrato gRPC y la UI** (`src/Agent.Ipc/Protos/driveragent.proto`, `src/Ui.Wpf/ViewModels/SettingsViewModel.cs`):
-  - Añadido campo `bool only_whql = 4;` al mensaje `SettingsMsg`.
-  - Mapeo en `DriverAgentGrpcService.GetSettings` y `UpdateSettings`.
-  - Sincronización en `SettingsViewModel.cs` para cargar y persistir la opción configurada por el usuario en `SettingsView.xaml`.
-- [x] **S7-T3: Detección criptográfica avanzada de WHQL** (`src/Agent.Drivers/Security/WinTrustSignatureVerifier.cs`):
-  - Inspección exhaustiva de certificados Authenticode: comprobación de firmantes/emisores Microsoft ("Microsoft Windows Hardware Compatibility Publisher", "Microsoft Windows Driver Publisher", "Windows Hardware", "Windows Compatibility").
-  - Inspección de extensiones EKU buscando los identificadores OID de certificación de hardware de Windows (`1.3.6.1.4.1.311.10.3.5`, `1.3.6.1.4.1.311.10.3.5.1`, `1.3.6.1.4.1.311.10.3.39`, `1.3.6.1.4.1.311.10.3.4.1`).
-- [x] **S7-T4: Cumplimiento y rechazo estricto de controladores no-WHQL** (`src/Core/Interfaces/IDriverInstaller.cs`, `src/Agent.Drivers/Install/WuaDriverInstaller.cs`):
-  - Sobrecarga en `IDriverInstaller` con parámetro `onlyWhql`.
-  - En `WuaDriverInstaller`: durante la fase `Verifying`, si `onlyWhql` está activado y el archivo no posee certificación WHQL (`!sigResult.IsWhql`), la instalación se aborta inmediatamente por seguridad, registrando el motivo en auditoría SQLite (`IOperationHistory`) sin crear punto de restauración ni alterar el sistema.
-  - Si el usuario desactiva la directiva (`onlyWhql == false`), se admiten controladores con firma Authenticode válida no-WHQL.
-  - Tests unitarios en `tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs` (aborto ante no-WHQL con directiva activa y éxito con directiva desactivada).
-- [x] **S7-T5: Endurecimiento de entradas y resiliencia en el servicio** (`src/Agent.Service/`):
-  - `DriverAgentGrpcService`: límite máximo de 50 actualizaciones por lote en `Install` (prevención de DoS).
-  - `DriverAgentGrpcService`: acotación de límite en `GetHistory` (máx. 1000 registros).
-  - `JsonSettingsStore`: límite de tamaño máximo de lectura de `config.json` (1 MB) para prevenir agotamiento de recursos ante manipulación.
-  - Resiliencia ante resultados nulos del instalador.
-- [x] **S7-T6: Batería completa de pruebas de regresión y seguridad**:
-  - 151/151 pruebas unitarias e integración en verde (52 en `Core.Tests`, 56 en `Agent.Service.Tests`, 43 en `Agent.Drivers.Tests`).
-  - Verificación de formato `dotnet format --verify-no-changes` con 0 incidencias.
+### Completed tasks
+- [x] **S5-T1: Design system and premium visual tokens** (`src/Ui.Wpf/Resources/`):
+  - `Colors.xaml`: professional dark palette (high-contrast dark theme for legibility), subtle gradients with *glassmorphism* aesthetics (`CardGlowGradient`), typographic hierarchy with Segoe UI Variable and semantic colors (`AccentCyan #0ea5e9`, `SuccessGreen #10b981`, `WarningAmber #f59e0b`, `ErrorRose #f43f5e`).
+  - `Styles.xaml`: base styles for `Button` (primary with accent, secondary with subtle border, danger for cancellation/rollback), `TextBox` with accented focus, styled `CheckBox`, `DataGrid` and cards with `DropShadowEffect`.
+  - `Icons.xaml`: library of clean vector geometries (Dashboard, Updates, History, Settings, Check, Cross, Shield, Warning, Refresh, Arrow, etc.).
+  - `Converters/Converters.cs`: data converters for XAML (boolean and negated visibility, human-readable byte formatting, durations, operation state to colors/icons, and numeric counter badges).
+- [x] **S5-T2: Components and container window (Shell)** (`src/Ui.Wpf/Views/` and `ViewModels/`):
+  - `NavItem`: reusable UserControl for the sidebar navigation buttons, with declarative support for icon `Geometry`, label, active state and badge count.
+  - `ShellWindow.xaml` / `.xaml.cs`: frameless window with built-in controls (minimize, maximize/restore, close), drag support via `DragMove`, a live indicator of the IPC connection status to the Windows service, and a contextual *breadcrumb*.
+  - Dynamic view routing via `DataTemplate` that maps each `PageViewModelBase` (`DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel`, `SettingsViewModel`) to its corresponding view without strict coupling.
+- [x] **S5-T3: Home / Dashboard screen** (`src/Ui.Wpf/Views/DashboardView.xaml` and `DashboardViewModel.cs`):
+  - 4 statistic cards (Total drivers, Operational, With warning/error, and Global status).
+  - General device health indicator with a dynamic pill.
+  - Real-time reactive search that filters by device name, manufacturer, identifier or class.
+  - Driver table with monospaced versions, device class and status badges.
+  - Manual refresh button that invokes the `Scan` RPC and updates the last-scan date.
+- [x] **S5-T4: Available updates screen** (`src/Ui.Wpf/Views/UpdatesView.xaml` and `UpdatesViewModel.cs`):
+  - List of updates found with an individual or batch selector (*Seleccionar todo* (Select all) / *Deseleccionar todo* (Deselect all)).
+  - Comparison of the currently installed version against the new recommended version.
+  - Formatted download size and a "Requiere reinicio" (Restart required) badge when applicable.
+  - Global progress bar and real-time phase report for each driver (`Downloading`, `Verifying`, `CreatingRestorePoint`, `Installing`, etc.) consuming the gRPC stream of `Install`.
+  - **Deferred cancellation experience (`ARCHITECTURE.md`, IPC flow)**: when pressing "Cancelar" (Cancel), the UI activates the state *"Cancelando... esperando a que finalice el controlador en curso"* to respect the native WUA phase in progress and ensure operating system stability.
+- [x] **S5-T5: History and Rollback screen** (`src/Ui.Wpf/Views/HistoryView.xaml` and `HistoryViewModel.cs`):
+  - Audit table with formatted ISO date, device, previous and applied versions, operation type and result.
+  - Search to filter events by device name or ID.
+  - Selection of an entry and direct `Rollback` execution via the corresponding RPC, with visual progress and result feedback.
+- [x] **S5-T6: Settings screen** (`src/Ui.Wpf/Views/SettingsView.xaml` and `SettingsViewModel.cs`):
+  - Automatic check frequency selector with a day stepper.
+  - WHQL security policy toggle (only Microsoft/WHQL-signed drivers) with a security warning when disabled.
+  - Interactive management of the hardware exclusion list (add and remove identifiers).
+- [x] **S5-T7: IPC client service and Dependency Injection startup** (`src/Ui.Wpf/Services/DriverAgentService.cs` and `App.xaml.cs`):
+  - `DriverAgentService`: typed gRPC client consuming `DriverAgentChannel` from `Agent.Ipc`, exposing asynchronous methods and `IAsyncEnumerable` streams, and handling transparent reconnections.
+  - `App.xaml.cs`: Serilog configuration with a rolling file at `%ProgramData%\DriverUpdater\logs\ui-.log`, dependency registration (`DriverAgentService`, ViewModels and ShellWindow), and non-blocking startup that connects to the service in the background.
+  - Compliance with **Rule 3 of AGENTS.md**: the UI runs entirely as a standard interactive user without requiring privilege elevation (`requestedExecutionLevel asInvoker`).
+- [x] **S5-T8: Quality, icon and removal of obsolete code**:
+  - Replacement and permanent removal of the obsolete `MainWindow.xaml` and `MainWindow.xaml.cs`.
+  - Creation of the native application icon `src/Ui.Wpf/Resources/icon.ico`.
+- [x] **S5-T9: `ProgressBarSlim` rendering fix and immediate interactivity**:
+  - Fix of the WPF template contract in `Styles.xaml`: added `PART_Track` alongside `PART_Indicator` so WPF can compute the effective width (`indicatorLength = percent * trackLength`). Without `PART_Track`, WPF bails out in `SetProgressBarIndicatorLength()`, leaving the indicator width at 0.
+  - Implementation of `IndeterminateBar` with a continuous opacity animation (`0.25` to `1.0`) for indeterminate states (`IsIndeterminate="True"` in searches and scans), avoiding precedence collisions between WPF's local width value and the alignment triggers.
+  - Immediate initialization of `IsInstalling = true`, `Percent = 0` and `PhaseLabel = "Iniciando instalación..."` (Starting installation...) in `UpdatesViewModel.cs` when pressing "Instalar seleccionadas" (Install selected), removing the visual delay until the first gRPC package.
+  - Added a success visual badge (`BadgeSuccess`) when the installation completes.
 
-### Decisiones técnicas tomadas
-1. **Compatibilidad hacia atrás en `IDriverInstaller`**:
-   - Se añadió el método `InstallAsync(update, progress, onlyWhql, ct)` con implementación predeterminada en la interfaz que delega en el método original de 3 parámetros.
-   - En `DriverAgentGrpcService`, cuando `onlyWhql` es `true` (comportamiento estándar), se invoca la sobrecarga de 3 parámetros, garantizando que todos los tests y dobles de prueba existentes sigan funcionando sin requerir adaptaciones masivas.
-2. **Reconocimiento WHQL mediante OIDs y Publishers**:
-   - Para no depender únicamente de cadenas de texto en el CN del sujeto (que varían entre ediciones de Windows y catálogos), se incorporó la lectura de las extensiones EKU del certificado buscando los OIDs estándar de compatibilidad de hardware de Microsoft.
-3. **Persistencia y UI desacoplada**:
-   - La UI ya tenía la interfaz visual (`CheckBox OnlyWhql`) en `SettingsView.xaml`. Al añadir el campo al contrato gRPC y al modelo `AppSettings`, la configuración se conecta de forma reactiva con el servicio sin necesidad de permisos elevados en la aplicación WPF.
+### Technical decisions made
+1. **Unprivileged consumption over gRPC (Rules 3 and 4 of AGENTS.md)**:
+   - The `Ui.Wpf` application uses no administrative privilege elevation. Every privileged operation (hardware scan, download, restore point, installation and rollback) is delegated through the gRPC client over the named pipe `\\.\pipe\DriverUpdater`.
+2. **Deferred cancellation experience (`ARCHITECTURE.md`, IPC flow)**:
+   - Following the design guidelines to avoid corruption of the driver subsystem during the native WUA or PnPUtil phase, the UI explicitly shows the state *"Cancelando... esperando a que finalice el controlador en curso"* and disables new attempts until the installation RPC completes its safe cycle.
+3. **Declarative navigation by ViewModel**:
+   - Instead of classic WPF `Frame` and `Page`, a `ContentControl` in `ShellWindow` was used, with implicit `DataTemplate`s bound to `DashboardViewModel`, `UpdatesViewModel`, `HistoryViewModel` and `SettingsViewModel`.
+4. **Lifecycle and reconnection**:
+   - `ShellViewModel` polls the service state every 5 seconds via a lightweight timer that runs `GetStatusAsync`. If the service stops or restarts, the UI immediately sets the indicator to "Desconectado" (Disconnected) with a retry option, and re-enables actions automatically when the connection is restored.
+5. **Embedded application icon**:
+   - The `Resources/icon.ico` resource was generated and configured in `Ui.Wpf.csproj` to ensure a native appearance in the taskbar and Windows Explorer.
 
-### Pruebas ejecutadas
-- `dotnet build -c Release`: 9 proyectos compilados, 0 advertencias, 0 errores.
-- `dotnet test -c Release`: **151/151 tests pasados** (52 en `Core.Tests`, 56 en `Agent.Service.Tests`, 43 en `Agent.Drivers.Tests`).
-- `dotnet format --verify-no-changes`: 0 discrepancias de formato.
+### Tests run
+- `dotnet build -c Release`: 9 projects built, 0 warnings, 0 errors.
+- `dotnet test`: **133/133 tests passed** (39 in `Core.Tests`, 53 in `Agent.Service.Tests`, 41 in `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 format discrepancies across the whole repository.
+
+### Notes for the next sprint
+- Milestone 2 (Service + UI) has the WPF UI and the IPC service implemented. The complementary Milestone 2 tasks are completed in Sprint 6.
 
 ---
 
-## Sprint 8 — Documentación comunitaria y cumplimiento de distribución
+## Sprint 6 — Persistent Settings, Scheduled Check and OEM Support Phase A
 
-- **Fecha**: 2026-11-07
-- **Estado**: 🟡 Implementado; compilación MSI pendiente de validar con WiX
-- **Hito**: Preparación de documentación y artefactos de distribución
+- **Date**: 2026-10-26
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 2 (Closure of U7, U8 and motherboard support)
 
-### Tareas completadas
-- [x] **S8-T1: Declaración de licencia del proyecto** (`LICENSE`):
-  - Añadido el texto estándar de MIT con titular `Sargon494`.
-  - Se mantiene la intención de distribuir el proyecto como software libre/open source; no se añadieron restricciones comerciales. La propuesta de restringir la venta se descartó.
-- [x] **S8-T2: Nota de privacidad y tratamiento local** (`PRIVACY.md`):
-  - Documentados el inventario de hardware/controladores, configuración, exclusiones, historial SQLite y registros que la aplicación conserva localmente.
-  - Explicados Windows Update Agent, GitHub Pages y los enlaces a sitios de terceros, distinguiendo los tratamientos que controla el proyecto de los servicios externos.
-  - Documentado que la desinstalación no borra `%ProgramData%\DriverUpdater` y cómo eliminar los datos locales.
-- [x] **S8-T3: Ajuste de afirmaciones públicas de seguridad y privacidad** (`README.md`, `docs/index.html`, `docs/styles.css`):
-  - Sustituidas afirmaciones absolutas de seguridad por descripciones de los controles existentes y sus límites (firma, punto de restauración y rollback).
-  - Aclarada la independencia respecto a Microsoft y fabricantes, y la ausencia de afiliación.
-  - Eliminada la descarga de fuentes tipográficas desde Google Fonts; la web usa fuentes locales/de sistema.
-  - Añadidos enlaces a la licencia y a la nota de privacidad.
-- [x] **S8-T4: Generación de SBOM y avisos de terceros** (`installer/Generate-ComplianceArtifacts.ps1`):
-  - Añadido un generador PowerShell de CycloneDX 1.5 a partir de las dependencias NuGet resueltas para los ejecutables de servicio y UI, sus hashes SHA-256 y frameworks .NET autocontenidos.
-  - Genera un listado de paquetes, versiones, licencias declaradas, autores, copyright, enlaces de proyecto y un grafo de dependencias. Falla explícitamente ante manifiestos, licencias o avisos del runtime ausentes o no contemplados.
-  - Incluye los textos MIT, Apache-2.0 y BSD-3-Clause aplicables, además de `LICENSE.txt` y `ThirdPartyNotices.txt` del runtime .NET.
-- [x] **S8-T5: Integración de los documentos en el MSI** (`installer/build.ps1`, `installer/DriverUpdater.wxs`, `installer/README.md`, `installer/licenses/`):
-  - El build genera el SBOM y `THIRD-PARTY-NOTICES.txt` antes de invocar WiX.
-  - El MSI instala en `Program Files\DriverUpdater` la licencia del proyecto, los avisos, los textos Apache/BSD aplicables y el SBOM de la versión.
-  - Documentados el flujo y la necesidad de revisar los avisos para cada publicación.
+### Completed tasks
+- [x] **S6-T1: Persistent settings and exclusions (U7)** (`src/Core/Models/AppSettings.cs`, `src/Agent.Service/Settings/JsonSettingsStore.cs`):
+  - `AppSettings` model: list of excluded hardware IDs (`ExcludedHardwareIds`), check interval (`CheckIntervalHours`), sanitization and normalization with `Normalize()`.
+  - `JsonSettingsStore`: persistence in `%ProgramData%\DriverUpdater\config.json` with atomic writes (temporary file + move with overwrite) and recovery from corruption with default values.
+- [x] **S6-T2: IPC contract for Settings and Exclusions** (`src/Agent.Ipc/Protos/driveragent.proto`):
+  - `GetSettings` and `UpdateSettings` RPCs with the `SettingsMsg` message.
+  - Application of exclusions in the service: `CheckUpdates` omits excluded updates and `Install` rejects them with an explicit message.
+- [x] **S6-T3: Background scheduled check (U8)** (`src/Agent.Service/Scheduling/`):
+  - `ScheduledCheckService`: `BackgroundService` that periodically (every 15 min) evaluates whether an update check is due according to the configured interval (24 or 168 hours), reusing the serialized `IOperationQueue`.
+  - `ScheduledCheckState`: in-memory singleton state that preserves the last check and the pending updates.
+  - Architectural decision: no pop-up desktop notifications (toasts); the result is exposed passively via `GetStatus` and feeds the badge in the UI.
+- [x] **S6-T4: Motherboard OEM support — Phase A** (`src/Core/Services/OemSupportCatalog.cs`, `src/Agent.Drivers/Inventory/WmiMotherboardInfoProvider.cs`):
+  - Detection of the motherboard manufacturer and model via WMI (`Win32_BaseBoard`).
+  - `GetMotherboard` RPC in gRPC.
+  - Secure `OemSupportCatalog` catalog with official HTTPS URLs (Gigabyte, ASUS, MSI, ASRock) that the UI opens in the browser without automatic downloads (Phase A).
+- [x] **S6-T5: Pending reboot detection in the Windows registry**:
+  - `GetStatus` queries Windows registry keys (`RebootPending` in CBS and `RebootRequired` in Windows Update) to detect pending reboots after service restarts.
+- [x] **S6-T6: WiX v4 packager and CI/CD**:
+  - Project `installer/Installer.wixproj` with `Package.wxs` and the publish script `build.ps1`.
+  - GitHub Actions workflows for build, tests and MSI installer generation.
 
-### Validación ejecutada
-- Publicación autocontenida de `Agent.Service` y `Ui.Wpf` para `win-x64` completada.
-- Generación de los artefactos de ejemplo `installer/artifacts/DriverUpdater-1.0.0.cdx.json` y `installer/artifacts/THIRD-PARTY-NOTICES.txt`: 65 paquetes NuGet y 3 frameworks .NET; el SBOM contiene 70 componentes y 71 entradas de dependencia, sin referencias sin resolver.
-- Verificados los textos de licencia MIT, Apache-2.0 y BSD-3-Clause en los avisos generados.
-- Sintaxis PowerShell y XML WiX comprobadas; `git diff --check` sin errores.
-- **MSI no compilado ni probado**: WiX no estaba instalado en el entorno. Probar en VM al disponer de WiX.
+---
 
-### Limitaciones y seguimiento
-- El SBOM automatizado inventaría los paquetes NuGet con activos de ejecución resueltos para estos proyectos y los frameworks que figuran en sus runtimeconfig. No sustituye una auditoría legal de las dependencias, del contenido final del MSI ni de los avisos de cada distribución.
-- Revisar el SBOM y `THIRD-PARTY-NOTICES.txt` generados en cada versión antes de publicar, y validar que las versiones de runtime/avisos usados por el build son los mismos que se incluyen en el paquete.
-- La revisión documental no constituye asesoramiento jurídico ni una certificación de cumplimiento.
+## Sprint 7 — Security, Robustness and WHQL Policy (Milestone 3 Closure)
 
-## Sprint 9 — Calidad y limpieza opcional al desinstalar
+- **Date**: 2026-11-07
+- **Status**: ✅ Completed
+- **Milestone**: Milestone 3 (Security and robustness of the driver subsystem)
 
-- **Fecha**: 2026-11-07
-- **Estado**: 🟡 Implementado; validación del flujo real pendiente en VM
-- **Hito**: Robustez y experiencia de desinstalación
+### Completed tasks
+- [x] **S7-T1: WHQL policy in the settings model (`AppSettings`)** (`src/Core/Models/AppSettings.cs`):
+  - Added the `OnlyWhql` property (boolean, default `true`) to require drivers certified by Microsoft/WHQL.
+  - Preservation in `Normalize()` and unit tests in `tests/Core.Tests/AppSettingsTests.cs`.
+- [x] **S7-T2: WHQL policy integration in the gRPC contract and the UI** (`src/Agent.Ipc/Protos/driveragent.proto`, `src/Ui.Wpf/ViewModels/SettingsViewModel.cs`):
+  - Added field `bool only_whql = 4;` to the `SettingsMsg` message.
+  - Mapping in `DriverAgentGrpcService.GetSettings` and `UpdateSettings`.
+  - Synchronization in `SettingsViewModel.cs` to load and persist the option configured by the user in `SettingsView.xaml`.
+- [x] **S7-T3: Advanced cryptographic WHQL detection** (`src/Agent.Drivers/Security/WinTrustSignatureVerifier.cs`):
+  - Exhaustive inspection of Authenticode certificates: checks for Microsoft signers/issuers ("Microsoft Windows Hardware Compatibility Publisher", "Microsoft Windows Driver Publisher", "Windows Hardware", "Windows Compatibility").
+  - Inspection of EKU extensions looking for the Windows hardware certification OID identifiers (`1.3.6.1.4.1.311.10.3.5`, `1.3.6.1.4.1.311.10.3.5.1`, `1.3.6.1.4.1.311.10.3.39`, `1.3.6.1.4.1.311.10.3.4.1`).
+- [x] **S7-T4: Compliance and strict rejection of non-WHQL drivers** (`src/Core/Interfaces/IDriverInstaller.cs`, `src/Agent.Drivers/Install/WuaDriverInstaller.cs`):
+  - Overload in `IDriverInstaller` with an `onlyWhql` parameter.
+  - In `WuaDriverInstaller`: during the `Verifying` phase, if `onlyWhql` is enabled and the file lacks WHQL certification (`!sigResult.IsWhql`), installation is aborted immediately for security, recording the reason in the SQLite audit (`IOperationHistory`) without creating a restore point or altering the system.
+  - If the user disables the policy (`onlyWhql == false`), drivers with a valid non-WHQL Authenticode signature are accepted.
+  - Unit tests in `tests/Agent.Drivers.Tests/WuaDriverInstallerTests.cs` (abort on non-WHQL with the policy enabled, and success with the policy disabled).
+- [x] **S7-T5: Input hardening and resilience in the service** (`src/Agent.Service/`):
+  - `DriverAgentGrpcService`: maximum limit of 50 updates per batch in `Install` (DoS prevention).
+  - `DriverAgentGrpcService`: bounded limit in `GetHistory` (max. 1000 records).
+  - `JsonSettingsStore`: maximum read size limit for `config.json` (1 MB) to prevent resource exhaustion from tampering.
+  - Resilience against null installer results.
+- [x] **S7-T6: Full regression and security test suite**:
+  - 151/151 unit and integration tests green (52 in `Core.Tests`, 56 in `Agent.Service.Tests`, 43 in `Agent.Drivers.Tests`).
+  - Format verification `dotnet format --verify-no-changes` with 0 issues.
 
-### Tareas completadas
-- [x] **S9-T1: Opción interactiva para borrar datos locales** (`installer/DriverUpdater.wxs`):
-  - Añadido un diálogo de desinstalación con una casilla desmarcada por defecto para eliminar `%ProgramData%\DriverUpdater`.
-  - La limpieza solo se ejecuta en una desinstalación interactiva cuando se selecciona expresamente; las desinstalaciones silenciosas y las actualizaciones conservan los datos.
-  - Documentados el alcance de la limpieza y los registros de CLI que pueden quedar fuera de esa carpeta.
-- [x] **S9-T2: Fallos de instalación explícitos y dependencias WiX** (`installer/DriverUpdater.wxs`, `installer/build.ps1`, `installer/README.md`):
-  - Un fallo al aplicar la ACL del servicio ahora detiene la instalación en lugar de ignorarse.
-  - El build comprueba la extensión `WixToolset.Util.wixext` y se corrigió el uso del comando EULA, incompatible con WiX 4.
-  - Documentada la versión WiX 4.0.5 y la extensión necesaria.
-- [x] **S9-T3: Información de privacidad actualizada** (`PRIVACY.md`, `README.md`, `installer/README.md`):
-  - Explicado cuándo se conservan o eliminan los datos locales al desinstalar y qué datos quedan fuera de la limpieza del MSI.
+### Technical decisions made
+1. **Backward compatibility in `IDriverInstaller`**:
+   - The method `InstallAsync(update, progress, onlyWhql, ct)` was added with a default implementation in the interface that delegates to the original 3-parameter method.
+   - In `DriverAgentGrpcService`, when `onlyWhql` is `true` (standard behavior), the 3-parameter overload is invoked, ensuring that all existing tests and test doubles keep working without massive adaptations.
+2. **WHQL recognition via OIDs and Publishers**:
+   - To avoid relying solely on text strings in the subject CN (which vary between Windows editions and catalogs), reading of the certificate's EKU extensions was added, looking for Microsoft's standard hardware compatibility OIDs.
+3. **Decoupled persistence and UI**:
+   - The UI already had the visual control (`CheckBox OnlyWhql`) in `SettingsView.xaml`. By adding the field to the gRPC contract and the `AppSettings` model, the setting connects reactively to the service without requiring elevated permissions in the WPF app.
 
-### Validación ejecutada
-- Build del MSI `DriverUpdater-1.0.1-x64.msi` completado con WiX 4.0.5.
-- Inspeccionadas las tablas del MSI generado: diálogo, condición de secuencia, acción de limpieza y propiedad del directorio de datos presentes.
-- `dotnet test -c Release`: 151/151 pruebas pasaron.
-- `dotnet format --verify-no-changes` y `git diff --check` completados sin errores.
+### Tests run
+- `dotnet build -c Release`: 9 projects built, 0 warnings, 0 errors.
+- `dotnet test -c Release`: **151/151 tests passed** (52 in `Core.Tests`, 56 in `Agent.Service.Tests`, 43 in `Agent.Drivers.Tests`).
+- `dotnet format --verify-no-changes`: 0 format discrepancies.
 
-### Limitaciones y seguimiento
-- Pendiente probar en una VM la desinstalación interactiva con la casilla marcada y desmarcada, la desinstalación silenciosa y una actualización. No se ejecutó el MSI en el equipo de desarrollo.
-- La limpieza solo cubre `%ProgramData%\DriverUpdater`; los logs de CLI guardados en otra ruta no se eliminan.
+---
+
+## Sprint 8 — Community Documentation and Distribution Compliance
+
+- **Date**: 2026-11-07
+- **Status**: 🟡 Implemented; MSI build pending WiX validation
+- **Milestone**: Preparation of documentation and distribution artifacts
+
+### Completed tasks
+- [x] **S8-T1: Project license declaration** (`LICENSE`):
+  - Added the standard MIT text with copyright holder `Sargon494`.
+  - The intention to distribute the project as free/open source software is maintained; no commercial restrictions were added. The proposal to restrict sales was discarded.
+- [x] **S8-T2: Privacy note and local handling** (`PRIVACY.md`):
+  - Documented the hardware/driver inventory, settings, exclusions, SQLite history and logs that the application keeps locally.
+  - Explained Windows Update Agent, GitHub Pages and links to third-party sites, distinguishing the processing controlled by the project from external services.
+  - Documented that uninstalling does not delete `%ProgramData%\DriverUpdater` and how to delete the local data.
+- [x] **S8-T3: Adjustment of public security and privacy claims** (`README.md`, `docs/index.html`, `docs/styles.css`):
+  - Replaced absolute security claims with descriptions of the existing controls and their limits (signature, restore point and rollback).
+  - Clarified independence from Microsoft and manufacturers, and the absence of affiliation.
+  - Removed the download of typefaces from Google Fonts; the website uses local/system fonts.
+  - Added links to the license and the privacy note.
+- [x] **S8-T4: SBOM generation and third-party notices** (`installer/Generate-ComplianceArtifacts.ps1`):
+  - Added a PowerShell generator of CycloneDX 1.5 from the resolved NuGet dependencies for the service and UI executables, their SHA-256 hashes and self-contained .NET frameworks.
+  - Generates a list of packages, versions, declared licenses, authors, copyright, project links and a dependency graph. Fails explicitly on missing or unrecognized runtime manifests, licenses or notices.
+  - Includes the applicable MIT, Apache-2.0 and BSD-3-Clause texts, plus `LICENSE.txt` and `ThirdPartyNotices.txt` of the .NET runtime.
+- [x] **S8-T5: Integration of the documents into the MSI** (`installer/build.ps1`, `installer/DriverUpdater.wxs`, `installer/README.md`, `installer/licenses/`):
+  - The build generates the SBOM and `THIRD-PARTY-NOTICES.txt` before invoking WiX.
+  - The MSI installs in `Program Files\DriverUpdater` the project license, the notices, the applicable Apache/BSD texts and the version's SBOM.
+  - Documented the flow and the need to review the notices for each release.
+
+### Validation performed
+- Self-contained publish of `Agent.Service` and `Ui.Wpf` for `win-x64` completed.
+- Generation of the sample artifacts `installer/artifacts/DriverUpdater-1.0.0.cdx.json` and `installer/artifacts/THIRD-PARTY-NOTICES.txt`: 65 NuGet packages and 3 .NET frameworks; the SBOM contains 70 components and 71 dependency entries, with no unresolved references.
+- Verified the MIT, Apache-2.0 and BSD-3-Clause license texts in the generated notices.
+- PowerShell and WiX XML syntax checked; `git diff --check` without errors.
+- **MSI not built or tested**: WiX was not installed in the environment. Test in a VM once WiX is available.
+
+### Limitations and follow-up
+- The automated SBOM inventories the NuGet packages with resolved runtime assets for these projects and the frameworks listed in their runtimeconfig. It does not replace a legal audit of the dependencies, the final MSI content or the notices of each distribution.
+- Review the generated SBOM and `THIRD-PARTY-NOTICES.txt` in each version before publishing, and validate that the runtime versions/notices used by the build are the same ones included in the package.
+- The documentary review does not constitute legal advice or a compliance certification.
+
+## Sprint 9 — Quality and optional cleanup on uninstall
+
+- **Date**: 2026-11-07
+- **Status**: 🟡 Implemented; validation of the real flow pending in a VM
+- **Milestone**: Robustness and uninstall experience
+
+### Completed tasks
+- [x] **S9-T1: Interactive option to delete local data** (`installer/DriverUpdater.wxs`):
+  - Added an uninstall dialog with a checkbox unchecked by default to delete `%ProgramData%\DriverUpdater`.
+  - The cleanup only runs during an interactive uninstall when explicitly selected; silent uninstalls and updates keep the data.
+  - Documented the scope of the cleanup and the CLI logs that may remain outside that folder.
+- [x] **S9-T2: Explicit installation failures and WiX dependencies** (`installer/DriverUpdater.wxs`, `installer/build.ps1`, `installer/README.md`):
+  - A failure applying the service ACL now stops the installation instead of being ignored.
+  - The build checks the `WixToolset.Util.wixext` extension, and the EULA command usage, which is incompatible with WiX 4, was fixed.
+  - Documented WiX version 4.0.5 and the required extension.
+- [x] **S9-T3: Updated privacy information** (`PRIVACY.md`, `README.md`, `installer/README.md`):
+  - Explained when local data is kept or deleted on uninstall, and which data falls outside the MSI cleanup.
+
+### Validation performed
+- MSI build `DriverUpdater-1.0.1-x64.msi` completed with WiX 4.0.5.
+- Inspected the tables of the generated MSI: dialog, sequence condition, cleanup action and data directory property present.
+- `dotnet test -c Release`: 151/151 tests passed.
+- `dotnet format --verify-no-changes` and `git diff --check` completed without errors.
+
+### Limitations and follow-up
+- Pending VM test of the interactive uninstall with the checkbox checked and unchecked, the silent uninstall, and an update. The MSI was not run on the development machine.
+- The cleanup only covers `%ProgramData%\DriverUpdater`; CLI logs saved in another path are not deleted.

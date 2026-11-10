@@ -2,182 +2,182 @@
 
 # DriverUpdater
 
-**Busca actualizaciones de drivers de Windows y aplica controles de seguridad en Windows 10 y 11**
+**Finds Windows driver updates and applies safety controls on Windows 10 and 11**
 
 [![CI](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/ci.yml)
 [![GitHub Pages](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml/badge.svg)](https://github.com/sargon494/DriverUI/actions/workflows/pages.yml)
 [![.NET 10 LTS](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011%20(64--bit)-0078D6?logo=windows&logoColor=white)](https://microsoft.com/windows)
-[![Seguridad WHQL](https://img.shields.io/badge/Firma-WHQL%20%2F%20Microsoft-10b981?logo=shield&logoColor=white)](#-controles-de-seguridad)
-[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
+[![WHQL security](https://img.shields.io/badge/Signature-WHQL%20%2F%20Microsoft-10b981?logo=shield&logoColor=white)](#-security-controls)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <br />
 
-### 🌐 [Probar Simulador Interactivo en GitHub Pages](https://sargon494.github.io/DriverUI/)
+### 🌐 [Try the Interactive Simulator on GitHub Pages](https://sargon494.github.io/DriverUI/)
 
 </div>
 
 ---
 
-## 💡 ¿Por qué DriverUpdater?
+## 💡 Why DriverUpdater?
 
-**DriverUpdater** es un proyecto comunitario gratuito y de código abierto, pensado como alternativa a las aplicaciones comerciales de actualización de controladores. No desbloquea, modifica ni evita licencias de otros programas: ofrece una aplicación independiente. En esta versión busca actualizaciones mediante Windows Update Agent (WUA); no mantiene un catálogo ni un servidor de descarga propios. La instalación aplica comprobaciones de firma y requiere un punto de restauración previo según la configuración y el estado del sistema.
+**DriverUpdater** is a free, open-source community project designed as an alternative to commercial driver-update applications. It does not unlock, modify, or bypass the licenses of other programs: it is a standalone application. In this version it searches for updates through the Windows Update Agent (WUA); it does not maintain its own catalog or download server. Installation performs signature checks and requires a restore point beforehand, depending on the configuration and the state of the system.
 
 ---
 
-## 🛡️ Controles de seguridad
+## 🛡️ Security controls
 
-| Garantía | ¿Cómo te protege? |
+| Guarantee | How it protects you |
 |---|---|
-| **1. Comprobación de firmas** | El servicio comprueba firmas mediante `WinVerifyTrust`; la política WHQL está activada por defecto, pero puede modificarse en Ajustes. Una firma válida no garantiza que un controlador sea seguro, compatible o libre de defectos. |
-| **2. Punto de restauración** | Antes de instalar se solicita un punto de restauración; si no se puede crear, el flujo de instalación se aborta. La disponibilidad y eficacia de Restaurar sistema dependen de Windows y de su configuración. |
-| **3. Rollback** | La aplicación ofrece una operación para revertir una instalación registrada. No se puede garantizar que la reversión recupere el estado anterior en todos los equipos. |
-| **4. Separación de privilegios** | La UI se ejecuta como usuario estándar y solicita operaciones al servicio de Windows, que tiene privilegios elevados. Esto reduce la exposición de la UI, pero no elimina todos los riesgos. |
-| **5. Historial local** | El historial SQLite y los registros se guardan localmente en `%ProgramData%\DriverUpdater`. No se eliminan automáticamente al desinstalar; consulta [Privacidad](PRIVACY.md) para conocer los datos y cómo borrarlos. |
+| **1. Signature check** | The service checks signatures with `WinVerifyTrust`. The WHQL policy is enabled by default, but it can be changed in Settings. A valid signature does not guarantee that a driver is safe, compatible, or free of defects. |
+| **2. Restore point** | Before installing, a restore point is requested. If it cannot be created, the installation flow is aborted. The availability and effectiveness of System Restore depend on Windows and its configuration. |
+| **3. Rollback** | The application offers an operation to revert a recorded installation. There is no guarantee that a rollback restores the previous state on every machine. |
+| **4. Privilege separation** | The UI runs as a standard user and asks the Windows service, which has elevated privileges, to perform operations. This reduces the UI's exposure, but does not remove all risks. |
+| **5. Local history** | The SQLite history and the logs are stored locally in `%ProgramData%\DriverUpdater`. They are not deleted automatically when you uninstall; see [Privacy](PRIVACY.md) for the data and how to delete it. |
 
-Estos controles reducen algunos riesgos, pero la instalación de controladores puede causar fallos o pérdida de funcionalidad. Haz copias de seguridad y revisa cada actualización antes de instalarla.
-
----
-
-## 🔎 Datos y conexiones
-
-La aplicación no tiene backend propio, cuentas ni analítica del proyecto. Consulta la [nota de privacidad](PRIVACY.md) para saber qué información se guarda localmente y cómo Windows Update y los sitios de terceros pueden tratar datos.
+These controls reduce some risks, but installing drivers can cause failures or loss of functionality. Make backups and review each update before installing it.
 
 ---
 
-## 🖥️ ¿Cómo funciona la aplicación?
+## 🔎 Data and connections
 
-La aplicación está diseñada para ser intuitiva y clara para cualquier persona:
+The application has no backend of its own, no accounts, and no analytics for the project. See the [privacy note](PRIVACY.md) for what is stored locally and how Windows Update and third-party sites may process data.
+
+---
+
+## 🖥️ How the application works
+
+The application is designed to be intuitive and clear for anyone. The labels in this mock-up are translated; the application currently shows its interface in Spanish.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  DriverUpdater — Panel de Control                                      │
+│  DriverUpdater — Control Panel                                         │
 ├───────────────┬────────────────────────────────────────────────────────┤
-│ 🏠 Inicio     │  Estado de salud: [ 185 Dispositivos Operativos  ✓ ]   │
-│ 🔄 Actualizar │                                                        │
-│ 📜 Historial  │  Placa base: Gigabyte B760M DS3H DDR4                  │
-│ ⚙️ Ajustes    │  [ Enlace a soporte oficial de controladores del OEM ] │
+│ 🏠 Home       │  Health status: [ 185 Devices OK  ✓ ]                  │
+│ 🔄 Updates    │                                                        │
+│ 📜 History    │  Motherboard: Gigabyte B760M DS3H DDR4                 │
+│ ⚙️ Settings   │  [ Link to the OEM's official driver support page ]    │
 └───────────────┴────────────────────────────────────────────────────────┘
 ```
 
-### 1. Pantalla de Inicio (Dashboard)
-- Muestra el estado global de los componentes de tu equipo (tarjeta gráfica, red, sonido, chipset, almacenamiento).
-- Detecta el fabricante y modelo de tu placa base (ASUS, Gigabyte, MSI, ASRock) y te proporciona un botón seguro para abrir la **página oficial de soporte del fabricante** en tu navegador.
+### 1. Home (dashboard)
+- Shows the overall status of your computer's components (graphics card, network, sound, chipset, storage).
+- Detects your motherboard manufacturer and model (ASUS, Gigabyte, MSI, ASRock) and provides a safe button to open the manufacturer's **official support page** in your browser.
 
-### 2. Pantalla de Actualizaciones
-- Al pulsar **Buscar actualizaciones**, consulta a Windows Update qué drivers oficiales tienen una versión más reciente para tu hardware exacto.
-- Te muestra una comparativa clara: **Versión actual instalada → Nueva versión recomendada** y el tamaño de la descarga.
-- Puedes marcar qué controladores quieres actualizar y pulsar **Instalar seleccionadas**. Verás una barra de progreso en tiempo real con las fases (`Descargando` → `Verificando firma` → `Creando punto de restauración` → `Instalando`).
-- Si un componente no quieres actualizarlo nunca (por ejemplo, una tarjeta de sonido dedicada o un mando especial), dispones de un botón **Excluir**.
+### 2. Updates
+- When you press **Search for updates**, it asks Windows Update which official drivers have a newer version for your exact hardware.
+- It shows a clear comparison: **Installed version → Recommended new version**, and the download size.
+- You can select the drivers you want to update and press **Install selected**. A real-time progress bar shows the phases (`Downloading` → `Verifying signature` → `Creating restore point` → `Installing`).
+- If you never want to update a component (for example, a dedicated sound card or a special controller), use the **Exclude** button.
 
-### 3. Pantalla de Historial
-- Muestra una auditoría detallada de cada driver instalado o revertido: fecha, dispositivo, versión previa y resultado.
-- Si una actualización te da problemas, seleccionas la fila y pulsas **Revertir controlador** para volver inmediatamente a la versión previa.
+### 3. History
+- Shows a detailed audit of each driver installed or rolled back: date, device, previous version, and result.
+- If an update causes problems, select the row and press **Roll back driver** to immediately return to the previous version.
 
-### 4. Pantalla de Ajustes
-- **Comprobación automática**: Elige si el servicio en segundo plano debe comprobar si hay drivers nuevos (desactivado, cada 24 horas o cada semana).
-- **Directiva WHQL**: Activada por defecto para exigir certificados oficiales de Microsoft.
-- **Lista de exclusiones**: Consulta o elimina los identificadores de hardware que hayas decidido no actualizar.
-
----
-
-## 📥 Instalación
-
-### Requisitos del sistema
-- **Windows 10 (versión 22H2 o superior)** o **Windows 11** (64 bits).
-- Protección del sistema activa en la unidad del sistema (`C:\`) para permitir puntos de restauración.
-
-### Descarga del instalador
-1. Ve a la sección de [**Releases en GitHub**](https://github.com/sargon494/DriverUI/releases).
-2. Descarga el archivo de instalación `.msi` (ejemplo: `DriverUpdater-1.0.0-x64.msi`).
-3. Ejecuta el instalador con permisos de administrador una sola vez. Registrará el servicio seguro de Windows y creará el acceso directo en tu menú de inicio.
-4. Abre **DriverUpdater** desde el Menú Inicio.
+### 4. Settings
+- **Automatic check**: choose whether the background service checks for new drivers (disabled, every 24 hours, or every week).
+- **WHQL policy**: enabled by default to require official Microsoft certificates.
+- **Exclusion list**: review or remove the hardware identifiers you have decided not to update.
 
 ---
 
-## ⌨️ Herramienta por línea de comandos (CLI)
+## 📥 Installation
 
-Para técnicos de soporte, administradores de sistemas o usuarios avanzados que prefieren la consola sin abrir la interfaz gráfica:
+### System requirements
+- **Windows 10 (version 22H2 or later)** or **Windows 11** (64-bit).
+- System protection enabled on the system drive (`C:\`) so restore points can be created.
+
+### Downloading the installer
+1. Go to the [**Releases on GitHub**](https://github.com/sargon494/DriverUI/releases) section.
+2. Download the `.msi` installer (for example: `DriverUpdater-1.0.0-x64.msi`).
+3. Run the installer as administrator once. It registers the Windows service and creates the shortcut in your Start menu.
+4. Open **DriverUpdater** from the Start menu.
+
+---
+
+## ⌨️ Command-line tool (CLI)
+
+For support technicians, system administrators, or advanced users who prefer the console without the graphical interface:
 
 ```powershell
-# 1. Escanear e inventariar todos los drivers instalados con fabricante y versión
+# 1. Scan and inventory all installed drivers with manufacturer and version
 dotnet run --project src/Cli -- scan
 
-# 2. Comprobar actualizaciones oficiales en Windows Update
+# 2. Check for official updates in Windows Update
 dotnet run --project src/Cli -- updates
 
-# 3. Ver el registro de auditoría e instalaciones previas
+# 3. View the audit log and previous installations
 dotnet run --project src/Cli -- log
 
-# 4. Instalar un controlador concreto mediante su identificador
+# 4. Install a specific driver by its identifier
 dotnet run --project src/Cli -- install <UpdateId>
 
-# 5. Revertir una operación por su ID de historial
+# 5. Roll back an operation by its history ID
 dotnet run --project src/Cli -- rollback <OperationId>
 ```
 
 ---
 
-## ❓ Preguntas Frecuentes (FAQ)
+## ❓ Frequently asked questions (FAQ)
 
-#### ¿Por qué DriverUpdater encuentra menos actualizaciones que otros programas comerciales?
-Porque DriverUpdater **solo te ofrece controladores oficiales publicados y certificados por Microsoft** para tu modelo exacto de hardware. Otros programas comerciales indexan versiones beta de foros, drivers de otros ordenadores parecidos o archivos no certificados que ponen en riesgo la estabilidad del equipo.
+#### Why does DriverUpdater find fewer updates than other commercial programs?
+Because DriverUpdater **only offers official drivers published and certified by Microsoft** for your exact hardware model. Other commercial programs index beta versions from forums, drivers from similar computers, or uncertified files that put system stability at risk.
 
-#### ¿El programa consume recursos en segundo plano?
-Casi cero. El servicio en reposo ocupa menos de **50 MB de memoria RAM** y prácticamente **0% de uso de CPU**. No hace escaneos continuos en bucle ni muestra molestas ventanas emergentes o notificaciones de publicidad.
+#### Does the program use resources in the background?
+Almost none. The idle service uses less than **50 MB of RAM** and practically **0% CPU**. It does not run continuous scans in a loop, and it does not show intrusive pop-ups or advertising notifications.
 
-#### ¿Qué ocurre si se va la luz o se cancela una instalación a mitad?
-DriverUpdater sigue una política de cancelación segura:
-- Si se cancela durante la descarga o verificación, se cancela inmediatamente.
-- Si el driver ya ha empezado a instalarse a bajo nivel en Windows, espera a que termine de copiarse dicho archivo de forma atómica para no dejar el subsistema de Windows corrupto.
-- Además, siempre tienes el **Punto de Restauración del Sistema** generado previamente para volver atrás.
+#### What happens if the power goes out or an installation is cancelled halfway?
+DriverUpdater follows a safe cancellation policy:
+- If you cancel during download or verification, it stops immediately.
+- If the driver has already started installing at a low level in Windows, it waits for that file to finish copying atomically, so the Windows driver subsystem is not left corrupted.
+- In addition, you always have the **System Restore point** created beforehand to go back.
 
 ---
 
-## 🛠️ Para Desarrolladores
+## 🛠️ For developers
 
-### Stack Tecnológico
-- **Lenguaje**: C# 14 / .NET 10 (LTS).
-- **Servicio Windows**: Worker Service en cuenta SYSTEM con Kestrel y transporte nativo de named pipes.
-- **IPC (Comunicación entre procesos)**: gRPC sobre Named Pipe local (`\\.\pipe\DriverUpdater`) con control de acceso estricto a usuarios interactivos (`S-1-5-4`).
-- **Acceso a Windows**: WMI (`System.Management`), COM (`Microsoft.Update.Session`), `WinVerifyTrust` nativo (P/Invoke) y `pnputil`.
-- **Interfaz de Usuario**: WPF en arquitectura MVVM limpia con `CommunityToolkit.Mvvm`.
-- **Pruebas**: 151 pruebas automáticas en xUnit, FluentAssertions y NSubstitute.
-- **Instalador**: WiX Toolset v4 (MSI).
+### Technology stack
+- **Language**: C# 14 / .NET 10 (LTS).
+- **Windows service**: Worker Service under the SYSTEM account with Kestrel and the native named-pipe transport.
+- **IPC (inter-process communication)**: gRPC over a local named pipe (`\\.\pipe\DriverUpdater`) with strict access control limited to interactive users (`S-1-5-4`).
+- **Windows access**: WMI (`System.Management`), COM (`Microsoft.Update.Session`), native `WinVerifyTrust` (P/Invoke), and `pnputil`.
+- **User interface**: WPF with a clean MVVM architecture using `CommunityToolkit.Mvvm`.
+- **Tests**: 151 automated tests with xUnit, FluentAssertions, and NSubstitute. The test suites and their rationale are described in [`TESTING.md`](TESTING.md#4-automated-test-suites).
+- **Installer**: WiX Toolset v4 (MSI).
 
-### Compilar y probar localmente
+### Build and test locally
 ```powershell
-# Clonar el repositorio
+# Clone the repository
 git clone https://github.com/sargon494/DriverUI.git
 cd DriverUI
 
-# Restaurar paquetes y compilar en modo Release
+# Restore packages and build in Release mode
 dotnet restore
 dotnet build -c Release
 
-# Ejecutar la suite completa de 151 pruebas unitarias e integración
+# Run the full suite of 151 unit and integration tests
 dotnet test -c Release
 
-# Generar el instalador MSI con WiX v4
+# Build the MSI installer with WiX v4
 powershell ./installer/build.ps1 -Version 1.0.0
 ```
 
-### Documentación técnica adicional
-- 🗺️ [`ARCHITECTURE.md`](ARCHITECTURE.md): Arquitectura implementada, flujos y puntos de extensión.
-- 📐 [`DESIGN.md`](DESIGN.md): Decisiones técnicas vigentes y cuestiones abiertas.
-- 🎯 [`MVP.md`](MVP.md): Alcance, historias de usuario y criterios de aceptación.
-- 🧪 [`TESTING.md`](TESTING.md): Procedimientos manuales y registro de resultados en VM.
-- 📋 [`SPRINT_LOG.md`](SPRINT_LOG.md): Historial cronológico; no sustituye al estado actual.
-- 🛡️ [`AGENTS.md`](AGENTS.md): Convenciones, reglas de seguridad y mapa de documentación.
+### Additional technical documentation
+- 🗺️ [`ARCHITECTURE.md`](ARCHITECTURE.md): implemented architecture, flows, and extension points.
+- 📐 [`DESIGN.md`](DESIGN.md): current technical decisions and open questions.
+- 🎯 [`MVP.md`](MVP.md): scope, user stories, and acceptance criteria.
+- 🧪 [`TESTING.md`](TESTING.md): manual test procedures, the rationale for the automated test suites, and VM results.
+- 📋 [`SPRINT_LOG.md`](SPRINT_LOG.md): chronological history; it does not replace the current state.
+- 🛡️ [`AGENTS.md`](AGENTS.md): conventions, security rules, and the documentation map.
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-El código de este proyecto se ofrece bajo la licencia [MIT](LICENSE). Los instaladores públicos pueden incluir dependencias y componentes de terceros con licencias y avisos propios. Antes de publicar cada versión compilada, hay que generar y revisar un inventario/SBOM de dependencias y sus avisos de licencia, incluidos los componentes del runtime que se empaqueten.
+The code of this project is available under the [MIT license](LICENSE). Public installers may include third-party dependencies and components with their own licenses and notices. Before publishing each compiled version, generate and review an inventory/SBOM of the dependencies and their license notices, including any runtime components that are packaged.
 
-## ⚠️ Aviso de uso
+## ⚠️ Disclaimer
 
-El software se proporciona «tal cual», conforme a la licencia MIT. No se garantiza que una actualización sea adecuada para un equipo concreto, ni que un punto de restauración o rollback siempre permita recuperar el estado anterior. El usuario decide qué instalar y asume los riesgos de cambios en controladores. No lo uses en equipos críticos sin validación y copias de seguridad adecuadas.
+The software is provided "as is", under the MIT license. There is no guarantee that an update is suitable for a specific computer, or that a restore point or rollback will always allow you to recover the previous state. You decide what to install and accept the risks of driver changes. Do not use it on critical machines without validation and adequate backups.
 
-DriverUpdater es un proyecto comunitario independiente y no está afiliado, patrocinado ni respaldado por Microsoft ni por los fabricantes de dispositivos. Windows, Microsoft y las marcas de terceros pertenecen a sus respectivos titulares.
+DriverUpdater is an independent community project and is not affiliated with, sponsored by, or endorsed by Microsoft or by device manufacturers. Windows, Microsoft, and third-party trademarks belong to their respective owners.

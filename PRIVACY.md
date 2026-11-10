@@ -1,76 +1,36 @@
-# Privacidad y tratamiento de datos
+# Privacy and data handling
 
-Última actualización: 7 de noviembre de 2026
+Last updated: November 7, 2026
 
-Esta nota describe el comportamiento conocido de la versión comunitaria de
-DriverUpdater en este repositorio. No es asesoramiento jurídico ni sustituye
-la información de privacidad de los servicios de terceros que se mencionan.
+This note describes the known behavior of the community version of DriverUpdater in this repository. It is not legal advice and does not replace the privacy information of the third-party services mentioned.
 
-## Aplicación de Windows
+## Windows application
 
-La aplicación no tiene cuentas, backend propio ni un servicio de analítica o
-telemetría del proyecto. El proyecto no recibe los datos que la aplicación lee
-del equipo.
+The application has no accounts, no backend of its own, and no analytics or telemetry service of the project. The project does not receive the data the application reads from the computer.
 
-Para funcionar, la aplicación puede acceder localmente a:
+To work, the application may access locally:
 
-- Inventario de dispositivos y controladores (incluidos nombres, fabricante,
-  versiones, identificadores de dispositivo y hardware).
-- Ajustes y exclusiones de dispositivos que el usuario guarda.
-- Historial de operaciones: dispositivo, identificador de hardware, título de
-  actualización, versiones, fecha, resultado y, si ocurre, mensaje de error.
-- Registros técnicos del servicio, que pueden incluir detalles de errores.
+- Device and driver inventory (including names, manufacturer, versions, device identifiers, and hardware).
+- Settings and device exclusions that the user saves.
+- Operations history: device, hardware identifier, update title, versions, date, result, and, if it occurs, the error message.
+- Technical service logs, which may include error details.
 
-La configuración, el historial y los registros se guardan en el equipo, bajo
-`%ProgramData%\DriverUpdater`. La aplicación no los envía al mantenedor. Al
-desinstalar de forma interactiva, el instalador ofrece una casilla, desmarcada
-por defecto, para borrar esta carpeta. Si se deja desmarcada o se usa una
-desinstalación silenciosa, los datos se conservan y se pueden borrar
-manualmente. Las actualizaciones de versión no eliminan la carpeta. La
-herramienta CLI también puede crear registros en una carpeta `logs` relativa al
-directorio desde el que se ejecuta; esos registros quedan fuera de la limpieza
-del MSI.
+Settings, history, and logs are stored on the computer, under `%ProgramData%\DriverUpdater`. The application does not send them to the maintainer. When you uninstall interactively, the installer offers a checkbox, unchecked by default, to delete this folder. If it is left unchecked or a silent uninstall is used, the data is kept and can be deleted manually. Version updates do not delete the folder. The CLI tool may also create logs in a `logs` folder relative to the directory it is run from; those logs are outside the MSI cleanup.
 
-Al buscar o instalar controladores, la aplicación utiliza Windows Update Agent
-(WUA) de Windows. La comunicación con Windows Update la realizan Windows y sus
-componentes; puede implicar información técnica necesaria para buscar,
-descargar o instalar actualizaciones. El proyecto no controla ni puede
-describir de forma exhaustiva los datos que Windows transmite, sus periodos de
-conservación o sus destinatarios. Consulta la documentación y la configuración
-de privacidad de Microsoft y Windows Update. Si se activa la comprobación
-periódica, el servicio puede iniciar estas búsquedas según el intervalo
-configurado mientras esté ejecutándose.
+When searching for or installing drivers, the application uses the Windows Update Agent (WUA) of Windows. Communication with Windows Update is performed by Windows and its components; it may involve technical information needed to search for, download, or install updates. The project does not control and cannot exhaustively describe the data Windows transmits, its retention periods, or its recipients. Refer to Microsoft's and Windows Update's documentation and privacy settings. If the periodic check is enabled, the service may start these searches at the configured interval while it is running.
 
-La aplicación también puede abrir en el navegador, a petición del usuario,
-páginas de soporte de fabricantes. Esos sitios se rigen por sus propias
-políticas.
+At the user's request, the application may also open manufacturers' support pages in the browser. Those sites are governed by their own policies.
 
-## Sitio web del proyecto
+## Project website
 
-La página de demostración se sirve mediante GitHub Pages. El sitio no incluye
-un servicio de analítica del proyecto y las fuentes tipográficas se sirven
-desde el propio sitio; GitHub puede tratar datos de conexión y uso conforme a
-sus propias condiciones y política de privacidad. Los enlaces a GitHub,
-Microsoft y otros sitios llevan a servicios de terceros.
+The demonstration page is served through GitHub Pages. The site includes no project analytics service, and its typefaces are served from the site itself. GitHub may process connection and usage data under its own terms and privacy policy. Links to GitHub, Microsoft, and other sites lead to third-party services.
 
-## Elección y control
+## Choice and control
 
-El inventario y los datos guardados se mantienen en el equipo. Puedes dejar de
-usar la aplicación y borrar los datos locales siguiendo los pasos anteriores.
-No publiques identificadores de hardware, registros o datos de tu equipo en
-incidencias o foros públicos.
+Inventory and saved data are kept on the computer. You can stop using the application and delete the local data by following the steps above. Do not publish hardware identifiers, logs, or data from your computer in issues or public forums.
 
-## Responsable y consultas
+## Controller and contact
 
-Este es un proyecto comunitario gratuito publicado por Sargon494. El código y
-los instaladores pueden estar disponibles públicamente en GitHub. No se ha
-indicado una entidad jurídica ni un canal privado de contacto para solicitudes
-formales de privacidad. Para consultas generales sobre el código, utiliza los
-canales del repositorio de GitHub y no incluyas información personal o
-identificadores de hardware en una incidencia pública.
+This is a free community project published by Sargon494. The code and installers may be publicly available on GitHub. No legal entity or private contact channel has been designated for formal privacy requests. For general questions about the code, use the repository's GitHub channels and do not include personal information or hardware identifiers in a public issue.
 
-Antes de ofrecer los instaladores públicamente, el mantenedor debe confirmar
-los datos de contacto adecuados, revisar los requisitos legales aplicables en
-los territorios a los que se dirige el proyecto y comprobar esta nota con
-asesoramiento cualificado si corresponde. Esta nota no afirma que cumpla por
-sí sola con todas las obligaciones legales.
+Before the installers are offered publicly, the maintainer must confirm the appropriate contact details, review the legal requirements that apply in the territories the project targets, and check this note with qualified advice where appropriate. This note does not by itself claim to comply with all legal obligations.
