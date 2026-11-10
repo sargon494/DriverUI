@@ -66,18 +66,21 @@ public class OperationHistoryIntegrationTests
         string updateId,
         bool success = true,
         string? error = null,
-        DateTime? timestamp = null) => new()
+        DateTime? timestamp = null)
     {
-        Id = 0,
-        OperationType = operationType,
-        UpdateId = updateId,
-        DeviceName = "Dispositivo de prueba",
-        HardwareId = "PCI\\VEN_1000&DEV_0001",
-        DriverTitle = "Controlador de prueba",
-        PreviousVersion = "1.0.0.0",
-        NewVersion = "2.0.0.0",
-        Success = success,
-        ErrorMessage = error,
-        Timestamp = timestamp ?? DateTime.UtcNow
-    };
+        return new OperationLogEntry
+        {
+            Id = 0,
+            OperationType = operationType,
+            UpdateId = updateId,
+            DeviceName = "Dispositivo de prueba",
+            HardwareId = "PCI\\VEN_1000&DEV_0001",
+            DriverTitle = "Controlador de prueba",
+            PreviousVersion = "1.0.0.0",
+            NewVersion = "2.0.0.0",
+            Success = success,
+            ErrorMessage = error,
+            Timestamp = timestamp ?? DateTime.UtcNow
+        };
+    }
 }
